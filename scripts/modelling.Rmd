@@ -1,0 +1,18 @@
+---
+title: "Modelling First Iteration of Eriogonum coloradense"
+author: "steppe"
+output: html_document
+---
+
+
+```{r}
+library(tidyverse)
+library(sf)
+library(terra)
+```
+
+
+```{r import spatial data}
+occurrence_data <- st_read('../data/collections/occurrences/occurrences.shp')
+```
+

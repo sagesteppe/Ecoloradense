@@ -1,0 +1,4 @@
+coreid,materialSampleID,sampleType,catalogNumber,sampleCondition,disposition,preservationType,preparationDetails,preparationDate,preparedBy,individualCount,sampleSize,storageLocation,remarks,recordID,concentration,concentrationMethod,ratioOfAbsorbance260_230,ratioOfAbsorbance260_280,volume,weight,weightMethod,purificationMethod,quality,qualityRemarks,qualityCheckDate,sieving,dnaHybridization,dnaMeltingPoint,estimatedSize,poolDnaExtracts,sampleDesignation
+21305630,33badc60-8ae7-4c7d-81e5-53acf31865ca,tissue,LY6670,,"in collection",dessicated,,,,,,,,
+21305634,245a7d25-5494-4ae7-8c1e-8b5ba8d116eb,tissue,LY6674,,"in collection",dessicated,,,,,,,,
+21305635,c7af7c8a-b6c1-4cb4-b00b-3d52374ed166,tissue,LY6675,,"in collection",dessicated,,,,,,,,

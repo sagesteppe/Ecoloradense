@@ -1,0 +1,32 @@
+---
+title: "Modelling First Iteration of Eriogonum coloradense"
+author: "steppe"
+output: html_document
+---
+
+
+```{r}
+library(tidyverse)
+library(sf)
+library(terra)
+```
+
+
+```{r import spatial data}
+occurrence_data <- st_read(
+  '../data/collections/occurrences_coloradense/occurrences.shp', quiet = T)
+
+rastReader <- function(x){
+  
+  p <- paste0('../data/spatial/processed/', x, '/geomorphology/')
+  f <- paste0(p, list.files(p))
+  
+  f <- f[! grepl('D8pntr|basins', f) ] # remove the D8pntr & Basins 
+  s <- terra::rast(f)
+  
+}
+
+stack <- rastReader('dem_1arc') 
+
+```
+
