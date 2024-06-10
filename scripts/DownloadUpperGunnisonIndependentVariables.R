@@ -114,17 +114,17 @@ morphoMaker(x = '../data/spatial/processed/dem_3m/dem.tif',
 # it unfortunately requires that we extract the .sid files from the .zip files!!! 
 cd /media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/raw/NAIP
   
-  for file in *zip; do
+for file in *zip; do
 
-in_path='/media/sagesteppe/ExternalHD/NAIP/raw_imagery/'
-out_path='/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/NAIP'
-infilename="$in_path${file%.zip}/${file%.zip}.sid"
+in_path='/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/raw/NAIP/'
+out_path='/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/NAIP/'
+infilename="$in_path${file%.zip}/${file%.zip}/${file%.zip}.sid"
 outfilename="$out_path${file%.zip}.tif"
 
 mkdir ${file%.zip}
-unzip $file -d ${file%.zip}
-~/MrSID_DSDK-9.5.1.4427-linux.x86-64.gcc48/Raster_DSDK/bin/mrsiddecode -i $infilename -o  $outfilename -s 4
-rm -r ${file%.zip} # reduce by  a factor of 4 from 60cm -> 120 -> 240 -> 960 and resample to align with DEM
+#unzip $file -d ${file%.zip}
+~/MrSID_DSDK-9.5.1.4427-linux.x86-64.gcc48/Raster_DSDK/bin/mrsiddecode -i $infilename -o  $outfilename -s 1
+#rm -r ${file%.zip} 
 
 now=$(date)
 printf "${file%.zip} was processed at: $now\n"
@@ -133,35 +133,43 @@ done
 
 
 
+## we will write these data to generate rasters using ClimateNA for the study area
+##
+setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
+
+writeRaster(
+  rast('../data/spatial/processed/dem_3arc/dem.tif'),
+  filename = '../data/spatial/processed/dem_3arc/dem_3arc.asc'
+)
+
+writeRaster(
+  rast('../data/spatial/processed/dem_1-3arc/dem.tif'),
+  filename = '../data/spatial/processed/dem_1-3arc/dem_1-3arc.asc'
+)
+
+writeRaster(
+  rast('../data/spatial/processed/dem_1arc/dem.tif'),
+  filename = '../data/spatial/processed/dem_1arc/dem1.asc'
+)
 
 
+############ naip #####
+setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/')
 
+f <- vrt(file.path('NAIP', list.files('NAIP', pattern = 'tif')))
+arc3_template <- rast(
+  '/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/dem_3arc/dem.tif')
+arc1_template <- rast(
+  '/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/dem_1arc/dem.tif')
+arc13_template <- rast(
+  '/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/dem_1-3arc/dem.tif')
+m3_template <- rast(
+  '/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/dem_3m/dem.tif')
 
-
-
-
-
-
-
-
-# From NAIP data we calculate the following metrics  
-# Percent fractional rock/bedrock  
-# Percent soil cover   
-# Canopy height model 
-# NDVI 
-
-#' NAIPerville
-#' Calculate a few derived metrics from NAIP
-#' @param x input files
-
-NAIPerville <- function(x){
-  
-  # NDVI
-  # Soil Color Index
-  # percent fractional rock/bedrock
-  
-  
-}
+terra::resample(f, arc3_template, threads = 16, filename = './NAIP/3arc/NAIP.tif') # 6:40 start
+terra::resample(f, arc1_template, threads = 16, filename = './NAIP/1arc/NAIP.tif') # 9:00 start
+terra::resample(f, arc13_template, threads = 16, filename = './NAIP/1-3arc/NAIP.tif') # about 2 hours
+terra::resample(f, m3_template, threads = 16, filename = './NAIP/3m/NAIP.tif') # about 2 hours
 
 
 LiDar <- function(x){
