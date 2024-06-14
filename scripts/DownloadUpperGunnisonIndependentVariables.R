@@ -14,7 +14,7 @@
 library(tidyverse)
 library(sf)
 library(terra)
-
+library(GLCMtextures)
 
 # first we will create a domain for all analysis. The 'closest' this bounding box is to a known 
 # occurrence is 10 miles. The furthest distances vary. 
@@ -112,19 +112,19 @@ morphoMaker(x = '../data/spatial/processed/dem_3m/dem.tif',
 
 
 # it unfortunately requires that we extract the .sid files from the .zip files!!! 
-cd /media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/raw/NAIP
+cd /media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/raw/NAIP/4band
   
 for file in *zip; do
 
-in_path='/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/raw/NAIP/'
+in_path='/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/raw/NAIP/4band/'
 out_path='/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/NAIP/'
 infilename="$in_path${file%.zip}/${file%.zip}/${file%.zip}.sid"
 outfilename="$out_path${file%.zip}.tif"
 
 mkdir ${file%.zip}
-#unzip $file -d ${file%.zip}
+unzip $file -d ${file%.zip}
 ~/MrSID_DSDK-9.5.1.4427-linux.x86-64.gcc48/Raster_DSDK/bin/mrsiddecode -i $infilename -o  $outfilename -s 1
-#rm -r ${file%.zip} 
+rm -r ${file%.zip} 
 
 now=$(date)
 printf "${file%.zip} was processed at: $now\n"
@@ -133,27 +133,25 @@ done
 
 
 
-## we will write these data to generate rasters using ClimateNA for the study area
-##
+## we will write these data to generate rasters using ClimateNA for the study area ##
 setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
 
-writeRaster(
-  rast('../data/spatial/processed/dem_3arc/dem.tif'),
-  filename = '../data/spatial/processed/dem_3arc/dem_3arc.asc'
-)
+## these will need to be in WGS 84, the same CRS as (epsg 4326) as PRISM data ##
+project(rast('../data/spatial/processed/dem_3arc/dem.tif'), "EPSG:4326", threads = 16, 
+        filename = '../data/spatial/processed/dem_3arc/dem_3arc-wgs84.asc', NAFLAG = -9999)
+subst(
+  rast('../data/spatial/processed/dem_3arc/dem_3arc.asc'), NA, -9999, 
+  filename = '../data/spatial/processed/dem_3arc/dem_3arc.asc')
 
-writeRaster(
-  rast('../data/spatial/processed/dem_1-3arc/dem.tif'),
-  filename = '../data/spatial/processed/dem_1-3arc/dem_1-3arc.asc'
-)
+# and we will make the file work with the climateNA executable on windows.. 
 
-writeRaster(
-  rast('../data/spatial/processed/dem_1arc/dem.tif'),
-  filename = '../data/spatial/processed/dem_1arc/dem1.asc'
-)
+temp <- readLines('../data/spatial/processed/dem_3arc/dem_3arc.asc')
+write.table(temp,'../data/spatial/processed/dem_3arc/dem_3arc.asc',
+            row.names=F,col.names=F,quote=F)
 
+# from this file we will simply cut it into smaller cells for the other variables 
 
-############ naip #####
+############ naip create products at each resolution ########
 setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/')
 
 f <- vrt(file.path('NAIP', list.files('NAIP', pattern = 'tif')))
@@ -171,6 +169,32 @@ terra::resample(f, arc1_template, threads = 16, filename = './NAIP/1arc/NAIP.tif
 terra::resample(f, arc13_template, threads = 16, filename = './NAIP/1-3arc/NAIP.tif') # about 2 hours
 terra::resample(f, m3_template, threads = 16, filename = './NAIP/3m/NAIP.tif') # about 2 hours
 
+############ we will also create a GLCM texture for the NAIP imagery. ##########
+
+setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/')
+f <- vrt(file.path('NAIP', list.files('NAIP', pattern = 'tif')))
+
+glcm <- glcm::glcm(raster::raster(rast('NAIP/3arc/NAIP.tif')), # 30 minutes or so
+                   window = c(5,5), shift = list(c(0,1), c(1,1), c(1,0), c(1,-1)), 
+                          min_x = 1, max_x = 255, na_opt = 'ignore', na_val = 0)
+writeRaster(glcm, 'NAIP/3arc/GLCM.tif')
+
+glcm <- glcm::glcm(raster::raster(rast('NAIP/1arc/NAIP.tif')), # 1.5 or so
+                   window = c(5,5), shift = list(c(0,1), c(1,1), c(1,0), c(1,-1)), 
+                   min_x = 1, max_x = 255, na_opt = 'ignore', na_val = 0)
+writeRaster(glcm, 'NAIP/1arc/GLCM.tif')
+
+glcm <- glcm::glcm(raster::raster(rast('NAIP/1-3arc/NAIP.tif')), # 3 hours or so
+                   window = c(5,5), shift = list(c(0,1), c(1,1), c(1,0), c(1,-1)), 
+                   min_x = 1, max_x = 255, na_opt = 'ignore', na_val = 0)
+writeRaster(glcm, 'NAIP/1-3arc/GLCM.tif')
+
+glcm <- glcm::glcm(raster::raster(rast('NAIP/3m/NAIP.tif')), # 10 hours or so
+                   window = c(5,5), shift = list(c(0,1), c(1,1), c(1,0), c(1,-1)), 
+                   min_x = 1, max_x = 255, na_opt = 'ignore', na_val = 0)
+writeRaster(glcm, 'NAIP/3m/GLCM.tif')
+
+rm(glcm)
 
 LiDar <- function(x){
   
