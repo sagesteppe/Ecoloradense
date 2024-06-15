@@ -4,29 +4,50 @@ author: "steppe"
 output: html_document
 ---
 
+We will perform first iteration modelling of E. coloradense at 4 resolutions. 
+Each resolution will undergo the same steps regarding model selection. 
 
 ```{r}
 library(tidyverse)
 library(sf)
 library(terra)
+library(Boruta)
+library(sdm)
 ```
 
 
 ```{r import spatial data}
+
 occurrence_data <- st_read(
   '../data/collections/occurrences_coloradense/occurrences.shp', quiet = T)
 
+res <- c('dem_3arc', 'dem_1arc', 'dem_1-3arc', 'dem_3m')
+
 rastReader <- function(x){
   
+  # list all files at level 1 with .tif extensions
+  rassts <- file.path('../data/spatial/processed', x,
+    list.files(
+      file.path('../data/spatial/processed', x), pattern = 'tif') 
+  )
+
+  # import geomorphology data. 
   p <- paste0('../data/spatial/processed/', x, '/geomorphology/')
   f <- paste0(p, list.files(p))
   
-  f <- f[! grepl('D8pntr|basins', f) ] # remove the D8pntr & Basins 
+  f <- f[! grepl('D8pntr|basins|DEM_filled.tif', f) ] # remove these 
+  f <- c(rassts, f)
   s <- terra::rast(f)
   
 }
 
-stack <- rastReader('dem_1arc') 
+r <- rastReader(res[1])
+```
 
+
+Using boruta analysis determine which variables are useful for discriminating between presences and absences. 
+
+```{r}
+Boruta::Boruta()
 ```
 

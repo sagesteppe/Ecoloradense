@@ -1,0 +1,20 @@
+---
+title: "Generate Absences for Modelling"
+author: "steppe"
+output: html_document
+---
+
+## Iteration 1
+The goal of the model from iteration 1 is to generate many more presences which 
+can be used for generating larger training/test data set. 
+
+Accordingly at this stage we focus more on elucidating the currently known 
+distribution of the species at the expense of expanding the expected distribution. 
+
+
+```{r iteration 1 absence generation}
+
+
+
+```
+

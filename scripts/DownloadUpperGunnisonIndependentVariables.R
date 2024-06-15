@@ -250,10 +250,10 @@ names(veg) <- c('Tree', 'Shrub', 'Herbaceous')
 
 setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed')
 
-terra::resample(forest, arc3_template, threads = 16, filename = './dem_3arc/Vegetation.tif') 
-terra::resample(forest, arc1_template, threads = 16, filename = 'dem_1arc/Vegetation.tif') 
-terra::resample(forest, arc13_template, threads = 16, filename = 'dem_1-3arc/Vegetation.tif')
-terra::resample(forest, m3_template, threads = 16, filename = 'dem_3m/Vegetation.tif')
+terra::resample(veg, arc3_template, threads = 16, filename = './dem_3arc/Vegetation.tif') 
+terra::resample(veg, arc1_template, threads = 16, filename = 'dem_1arc/Vegetation.tif') 
+terra::resample(veg, arc13_template, threads = 16, filename = 'dem_1-3arc/Vegetation.tif')
+terra::resample(veg, m3_template, threads = 16, filename = 'dem_3m/Vegetation.tif')
 
 rm(forest, shrubs, herbs, veg)
 list.files(p2d)
