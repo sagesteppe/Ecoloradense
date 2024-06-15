@@ -14,7 +14,6 @@
 library(tidyverse)
 library(sf)
 library(terra)
-library(GLCMtextures)
 
 # first we will create a domain for all analysis. The 'closest' this bounding box is to a known 
 # occurrence is 10 miles. The furthest distances vary. 
@@ -133,12 +132,16 @@ done
 
 
 
+################################################################################
 ## we will write these data to generate rasters using ClimateNA for the study area ##
+# we will generate projections at both 3arc and 1arc, the 1arc projections will go through
+# simple bilinear interpolation to generate the finer grains 
+
 setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
 
 ## these will need to be in WGS 84, the same CRS as (epsg 4326) as PRISM data ##
 project(rast('../data/spatial/processed/dem_3arc/dem.tif'), "EPSG:4326", threads = 16, 
-        filename = '../data/spatial/processed/dem_3arc/dem_3arc-wgs84.asc', NAFLAG = -9999)
+        filename = '../data/spatial/processed/dem_3arc/dem_3arc-wgs84.asc', NAflag = -9999)
 subst(
   rast('../data/spatial/processed/dem_3arc/dem_3arc.asc'), NA, -9999, 
   filename = '../data/spatial/processed/dem_3arc/dem_3arc.asc')
@@ -149,7 +152,38 @@ temp <- readLines('../data/spatial/processed/dem_3arc/dem_3arc.asc')
 write.table(temp,'../data/spatial/processed/dem_3arc/dem_3arc.asc',
             row.names=F,col.names=F,quote=F)
 
-# from this file we will simply cut it into smaller cells for the other variables 
+# once climateNA processes this file it will simply be 'cut' into smaller cells 
+# for the remaining variables. 
+
+
+############# Resample ClimateNA data for each Resolution ########################
+# we ran climateNA on ~90m resolution data, which is roughly 11% of the native resolution
+# of prism data. We will bring these data into the lower resolutions so they can be used
+# with each modelling approach. 
+
+setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/climateNA_Normal_1961_1990Y-3arc')
+f <- rast(list.files())
+crs(f) <- 'EPSG:4326'
+f <- project(f, crs(arc3_template))
+
+# write out the 3arc data here. 
+resample(f, arc3_template, threads = 16, method = 'bilinear',
+         filename = '../../processed/dem_3arc/climateNA.tif', overwrite = T)
+
+resample(f, 
+         rast('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/dem_1arc/dem.tif'), 
+         threads = 16, method = 'bilinear',
+         filename = '../../processed/dem_1arc/climateNA.tif', overwrite = T)
+
+resample(f, 
+         rast('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/dem_1-3arc/dem.tif'), 
+         threads = 16, method = 'bilinear',
+         filename = '../../processed/dem_1-3arc/climateNA.tif', overwrite = T)
+
+resample(f, 
+         rast('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/dem_3m/dem.tif'), 
+         threads = 16, method = 'bilinear',
+         filename = '../../processed/dem_3m/climateNA.tif', overwrite = T)
 
 ############ naip create products at each resolution ########
 setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/')
@@ -196,10 +230,31 @@ writeRaster(glcm, 'NAIP/3m/GLCM.tif')
 
 rm(glcm)
 
-LiDar <- function(x){
-  
-  # canopy height model
-  # percent veg cover
-  # percent fractional rock/bedrock
-}
+
+
+############# make the vegetation cover match each grain ######################
+
+# we want to combine the trees into a single dataset for 'forest'
+
+p2d <- '/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/raw/VegCover'
+forest <- rast(file.path(p2d, 'DecidiousBroadleafTrees.tif')) + 
+  rast(file.path(p2d, 'MixedTrees.tif')) +
+  rast(file.path(p2d, 'NeedleleafTrees.tif'))
+shrubs <- rast(file.path(p2d, 'Shrubs.tif'))
+herbs <- rast(file.path(p2d, 'HerbaceousVegetation.tif'))
+
+veg <- c(forest, shrubs, herbs)
+veg <- crop(veg, ext(project(arc3_template, crs(veg))))
+veg <- project(veg, crs(arc3_template))
+names(veg) <- c('Tree', 'Shrub', 'Herbaceous')
+
+setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed')
+
+terra::resample(forest, arc3_template, threads = 16, filename = './dem_3arc/Vegetation.tif') 
+terra::resample(forest, arc1_template, threads = 16, filename = 'dem_1arc/Vegetation.tif') 
+terra::resample(forest, arc13_template, threads = 16, filename = 'dem_1-3arc/Vegetation.tif')
+terra::resample(forest, m3_template, threads = 16, filename = 'dem_3m/Vegetation.tif')
+
+rm(forest, shrubs, herbs, veg)
+list.files(p2d)
 
