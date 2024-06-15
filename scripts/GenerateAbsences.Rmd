@@ -15,53 +15,71 @@ distribution of the species at the expense of expanding the expected distributio
 library(tidyverse)
 library(sf)
 library(terra)
+source('functions.R')
 set.seed(27)
 ```
 
 
-```{r iteration 1 absence generation, eval = F}
 
-occurrence_data <- st_read(
-  '../data/collections/occurrences_coloradense/occurrences.shp', quiet = T) %>% 
+First we will reduce the number of Presences in the data set to ensure that we do not have any in the same cells at 90m. 
+Ten we will apply spThin to them, to avoid underestimating suitable habitat in less botanized areas. 
+```{r}
+
+occ <-  st_read('../data/collections/occurrences_coloradense/occurrences.shp', quiet = T) %>% 
+  mutate(
+    Longitude = unlist(map(.$geometry,1)),
+    Latitude = unlist(map(.$geometry,2)), 
+    Species = 'Eriogonum coloradense'
+  ) %>% # do this to explictely drop repeat observations
+  distinct(Longitude, Latitude, .keep_all = T)
+
+thinned <- spThin::thin(
+  loc.data = occ, lat.col = 'Latitude', long.col = 'Longitude', spec.col = 'Species',
+  thin.par = 0.09, reps = 100, write.files = FALSE, write.log.file = FALSE, 
+  locs.thinned.list.return = TRUE)
+
+thinned <- thinned[[which.max(unlist(lapply(thinned, nrow)))]] %>% 
+  st_as_sf(coords = c(x = 'Longitude', y = 'Latitude'), crs = 4326)
+
+occ <- occ[ lengths(st_intersects(occ, thinned)) > 0, ] %>% 
+  dplyr::select(-Longitude, -Latitude) %>% 
   st_transform(32613)
 
-extent_rast <- rast('../data/spatial/processed/dem_3arc/dem.tif')
+rm(thinned)
+```
+
+We will generate pseudo-absences which are from environments notable distinct from our presence records. 
+```{r iteration 1 absence generation, eval = F}
+
+p2proc <- '../data/spatial/processed'
+arc3 <- rastReader('dem_3arc', p2proc) 
 
 # we want to be SURE that we are finding more populations, or segments of populations
 # during this iteration of field sampling. Accordingly, we will want a model which 
 # is more conservative in predicting suitable habitat. 
 
-abs_poss <- st_sample(st_bbox(extent_rast), size = nrow(occurrence_data)+20) %>% 
-  st_as_sf() %>% 
-  rename(geometry = x) %>% 
-  mutate(ID = 1:nrow(.), .before = geometry)
-
-# thin each absence, we don't need any more than 1 per km2 right now. 
-
-abs_poss <- abs_poss[ 
-  as.numeric(
-    st_distance(abs_poss, abs_poss[st_nearest_feature(abs_poss),], by_element = T))
-  > 1000, ]
-
-abs_poss <- abs_poss[ 
-  as.numeric(
-    st_distance(abs_poss, 
-                abs_poss[st_nearest_feature(abs_poss, occurrence_data),], by_element = T))
-  > 1000, ]
-
-ggplot(occurrence_data) + 
-  geom_sf(data = occurrence_data, color = 'green') + 
-  geom_sf(data = abs_poss, color = 'red')
+PA_possible <- sdm::background(arc3, 
+                n = nrow(occ) + (nrow(occ)*0.1),
+                method = 'eDist', sp = occ) %>% 
+  select(x, y) %>% 
+  st_as_sf(coords = c(x = 'x', y = 'y'), crs = 32613) %>% 
+  mutate(Occurrence = 0, ID = 1:nrow(.))
 
 # points were then manually investigated, and those which could foresee-ably be within
 # subjectively evaluated suitable habitat were removed. 
 
-st_write(abs_poss, '../data/spatial/raw/pseudo-absences/iteration1/absences.shp', append = F)
+st_write(PA_possible, 
+         '../data/spatial/raw/pseudo-absences/iteration1/absences.shp', append = F)
 
-# these points were identified in QGIS as liekly occurring in suitable habitat. 
-removals <- c(22, 133, 48, 16, 89, 61, 45, 69, 36, 31, 24, 6, 75, 115)
-abs_poss <- filter(abs_poss, ! ID %in% removals)
+# these points were identified in QGIS as likely occurring in suitable habitat. 
+removals <- c(19, 41, 42, 46, 67, 76)
+PA_possible <- filter(PA_possible, ! ID %in% removals)
 
-st_write(abs_poss, '../data/spatial/processed/pseudo-absences/iteration1/absences.shp')
+if(nrow(PA_possible) > nrow(occ)){
+  PA_possible <- PA_possible[sample(1:nrow(PA_possible), size = nrow(occ)),]
+}
+
+st_write(PA_possible, append = F,
+         '../data/spatial/processed/pseudo-absences/iteration1/absences.shp')
 ```
 

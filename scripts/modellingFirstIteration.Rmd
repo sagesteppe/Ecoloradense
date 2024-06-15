@@ -6,56 +6,95 @@ output: html_document
 
 
 ```{r}
-library(tidyverse)
 library(sf)
+library(tidyverse)
 library(terra)
+source('functions.R')
 ```
 
 
 ```{r import spatial data}
-occurrence_data <- st_read(
-  '../data/collections/occurrences_coloradense/occurrences.shp', quiet = T)
-absence_data <- st_read(
-  '../data/spatial/processed/pseudo-absences/iteration1/absences.shp', quiet = T)
-rastReader <- function(x){
-  
-  p <- paste0('../data/spatial/processed/', x, '/geomorphology/')
-  f <- paste0(p, list.files(p))
-  
-  f <- f[! grepl('D8pntr|basins', f) ] # remove the D8pntr & Basins 
-  s <- terra::rast(f)
-  
-}
 
-stack <- rastReader('dem_1arc') 
+occ_data <- bind_rows(
+  st_read('../data/collections/occurrences_coloradense/occurrences.shp', quiet = T) %>% 
+    mutate(Occurrence = 1) %>% 
+    st_transform(32613),
+  st_read('../data/spatial/processed/pseudo-absences/iteration1/absences.shp', quiet = T) 
+)
 
+res <- c('3arc', '1arc', '1-3arc', '3m')
+p2proc <- '../data/spatial/processed'
 
+arc3 <- rastReader('dem_3arc', p2proc) 
+arc1 <- rastReader('dem_1arc', p2proc) 
+arc13 <- rastReader('dem_1-3arc', p2proc) 
+m3 <- rastReader('dem_3m', p2proc) 
 
+od3arc <- bind_cols(
+  dplyr::select(occ_data, Occurrence), 
+  dplyr::select(extract(arc3, occ_data), -ID), 
+) %>% 
+  drop_na() %>% 
+  mutate(
+    Occurrence = as.factor(Occurrence), 
+    Pennock = as.factor(Pennock), 
+    geomorphons = as.factor(geomorphons), 
+    Longitude = unlist(map(.$geometry,1)),
+    Latitude = unlist(map(.$geometry,2))) %>% 
+  st_drop_geometry()
+
+rm(p2proc)
 ```
 
-
-Using Boruta analysis we will drop features which evidently show absolutely no relation to the individuals marks. 
+Using Boruta analysis we will drop features which show absolutely no relation to the individuals marks. 
 
 ```{r}
 
-BorutaRes <- Boruta::Boruta(Occurrence ~ ., data = x, num.threads = cores, doTrace = 1)
+# now save out the information on which variables were used by the model.. 
+
+cores <- parallel::detectCores()
+BorutaRes <- Boruta::Boruta(Occurrence ~ ., data = od3arc, num.threads = cores, doTrace = 1)
 importance <- Boruta::attStats(BorutaRes)
-rn <- rownames(importance)
+rn <- rownames(importance[importance$decision %in% c('Confirmed'),])
 important_vars <- Boruta::getSelectedAttributes(BorutaRes, withTentative = F)
   
- 
-  sdm_data_obj <- sdmData(formula=occurrence~., 
-                          train = taxon, 
-                          predictors = WPDPV2)
-  sdm_model <- sdm(formula = occurrence~., 
-                   data = sdm_data_obj, 
-                   methods = c('rf','brt'), replication='sub', test.percent=30, n=2)
-  
-  fname <- paste0(here(), '/results/maps/', binomial, "_ml_", Sys.time(),'.tif')
-  fname <- gsub(' ', '_', fname)
-  sdm_ensemble_prediction <- sdm::ensemble(sdm_model, WPDPV2, 
-                                           setting = list(method = "weighted", stat = 'tss', opt = 2), 
-                                           filename = fname)
-  
+od3arc <- dplyr::select(od3arc, all_of(c('Occurrence', important_vars)))
+
+# define the cross-fold validation 
+repeat_cv <- caret::trainControl(method='repeatedcv', number=5, repeats=10)
+
+# now we will split od3arc into both an explicit train and test data set. 
+TrainIndex <- caret::createDataPartition(
+  od3arc$Occurrence, p = .8, list = FALSE, times = 1)
+
+Train <- od3arc[ TrainIndex,]; Test <- od3arc[-TrainIndex,]
+
+opt_mtry <- data.frame(
+    randomForest::tuneRF(Train[,-1], Train[,1], stepFactor = 1.5))
+opt_mtry <- opt_mtry[ which.min(opt_mtry$OOBError), 'mtry'] # here we subset the lowest OOB. \
+
+rf_model <- randomForest::randomForest(Occurrence ~ ., data = Train, 
+        method='rf', myry = opt_mtry,
+        trControl=repeat_cv,
+        ntree = 500, mTry = opt_mtry,
+        metric = 'Sensitivity')
+
+prediction <- predict(rf_model, Test)
+cmRestrat <- caret::confusionMatrix(prediction, Test$Occurrence)
+
+prediction_prob <- predict(rf_model, Test, type = 'prob') # use this for auc/roc
+result.roc <- pROC::roc(Test$Occurrence, prediction_prob[,1]) # Draw ROC curve.
+
+Longitude <- init(arc3, 'x') ; names(Longitude) <- 'Longitude'
+Latitude <- init(arc3, 'y') ; names(Latitude) <- 'Latitude'
+arc3 <- c(arc3, Longitude, Latitude)
+names(arc3)
+
+pout <- '../results/suitability_maps'
+terra::predict(
+  type = 'prob', cores = 16,
+  arc3, rf_model, cpkgs="randomForest",
+  filename = file.path(pout, paste0('Arc3-Iteration1', '.tif')),
+  wopt = c(names = 'predicted_suitability'))
 ```
 
