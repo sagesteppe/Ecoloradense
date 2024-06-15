@@ -25,76 +25,101 @@ occ_data <- bind_rows(
 res <- c('3arc', '1arc', '1-3arc', '3m')
 p2proc <- '../data/spatial/processed'
 
-arc3 <- rastReader('dem_3arc', p2proc) 
-arc1 <- rastReader('dem_1arc', p2proc) 
-arc13 <- rastReader('dem_1-3arc', p2proc) 
-m3 <- rastReader('dem_3m', p2proc) 
-
-od3arc <- bind_cols(
-  dplyr::select(occ_data, Occurrence), 
-  dplyr::select(extract(arc3, occ_data), -ID), 
-) %>% 
-  drop_na() %>% 
-  mutate(
-    Occurrence = as.factor(Occurrence), 
-    Pennock = as.factor(Pennock), 
-    geomorphons = as.factor(geomorphons), 
-    Longitude = unlist(map(.$geometry,1)),
-    Latitude = unlist(map(.$geometry,2))) %>% 
-  st_drop_geometry()
-
-rm(p2proc)
 ```
 
 Using Boruta analysis we will drop features which show absolutely no relation to the individuals marks. 
 
 ```{r}
 
-# now save out the information on which variables were used by the model.. 
-
-cores <- parallel::detectCores()
-BorutaRes <- Boruta::Boruta(Occurrence ~ ., data = od3arc, num.threads = cores, doTrace = 1)
-importance <- Boruta::attStats(BorutaRes)
-rn <- rownames(importance[importance$decision %in% c('Confirmed'),])
-important_vars <- Boruta::getSelectedAttributes(BorutaRes, withTentative = F)
+#' @param x input occurrence data
+#' @param resolution list of paths to geodata at different resolutions. 
+#' @param iteration numeric, which iteration of modelling is being performed? 
+modeller <- function(x, resolution, iteration){
   
-od3arc <- dplyr::select(od3arc, all_of(c('Occurrence', important_vars)))
+  rast_dat <- rastReader(paste0('dem_', resolution), p2proc) 
+  
+  df <- dplyr::bind_cols(
+    dplyr::select(x, Occurrence), 
+    dplyr::select(terra::extract(rast_dat, x), -ID), 
+  ) |> 
+  tidyr::drop_na() %>% 
+  dplyr::mutate(
+    Occurrence = as.factor(Occurrence), 
+    Pennock = as.factor(Pennock), 
+    geomorphons = as.factor(geomorphons), 
+    Longitude = unlist(purrr::map(.$geometry,1)),
+    Latitude  = unlist(purrr::map(.$geometry,2))) |> 
+  sf::st_drop_geometry()
+  
+  # first we will perform boruta analysis, this will drop variables which have
+  # no relationship to the marks at the resolution under analysis. 
+  cores <- parallel::detectCores()
+  BorutaRes <- Boruta::Boruta(Occurrence ~ ., data = df, num.threads = cores, doTrace = 0)
+  importance <- Boruta::attStats(BorutaRes)
+  rn <- rownames(importance[importance$decision %in% c('Confirmed'),])
+  important_vars <- Boruta::getSelectedAttributes(BorutaRes, withTentative = F)
+  
+  df <- dplyr::select(df, dplyr::all_of(c('Occurrence', important_vars)))
+  rm(BorutaRes, importance, rn, important_vars)
+ 
+  # define the cross-fold validation 
+  repeat_cv <- caret::trainControl(method = 'repeatedcv', number = 5, repeats = 10) 
+  
+  # split the input data into both an explicit train and test data set. 
+  TrainIndex <- caret::createDataPartition(
+    df$Occurrence, p = .8, list = FALSE, times = 1)
+  Train <- df[ TrainIndex,]; Test <- df[-TrainIndex,]
+  
+  # verify the optimal mtry is the default value
+  opt_mtry <- data.frame(
+      randomForest::tuneRF(Train[,-1], Train[,1], stepFactor = 1.5), trace = FALSE)
+  opt_mtry <- opt_mtry[ which.min(opt_mtry$OOBError), 'mtry'] # here we subset the lowest OOB. \
 
-# define the cross-fold validation 
-repeat_cv <- caret::trainControl(method='repeatedcv', number=5, repeats=10)
+  # perform the random forest modelling
+  rf_model <- randomForest::randomForest(
+    Occurrence ~ ., data = Train, 
+    method = 'rf', myry = opt_mtry,
+    trControl = repeat_cv,
+    ntree = 500, mTry = opt_mtry,
+    metric = 'Sensitivity')
+  
+  # save the model
+  saveRDS(rf_model,
+          file = paste0('../results/models/', resolution, '-Iteration', iteration, '.rds'))
+  
+  prediction <- predict(rf_model, Test)
+  cmRestrat <- caret::confusionMatrix(prediction, Test$Occurrence)
+  saveRDS(cmRestrat,
+        file = paste0('../results/tables/', resolution, '-Iteration', iteration, '.rds'))
+  # save the confusion matrix. 
 
-# now we will split od3arc into both an explicit train and test data set. 
-TrainIndex <- caret::createDataPartition(
-  od3arc$Occurrence, p = .8, list = FALSE, times = 1)
+  # create these layers of coordinates for the models. 
+  Longitude <- init(rast_dat, 'x') ; names(Longitude) <- 'Longitude'
+  Latitude <- init(rast_dat, 'y') ; names(Latitude) <- 'Latitude'
+  rast_dat <- c(rast_dat, Longitude, Latitude)
+  
+  #OneClass <- \(...) predict(...)[,2]
+  pout <- '../results/suitability_maps'
+  terra::predict(
+    type = 'prob', cores = 1,
+    rast_dat, rf_model, cpkgs = "randomForest",
+    filename = file.path(pout, paste0(resolution, '-IterationCoarse', iteration, '.tif')),
+    wopt = c(names = 'predicted_suitability'), 
+    overwrite = T)
+  
+  writeRaster(
+    rast(file.path(pout, paste0(resolution, '-IterationCoarse', iteration, '.tif')))[[2]],
+    file.path(pout, paste0(resolution, '-Iteration', iteration, '.tif'))
+    )
+  file.remove(file.path(pout, paste0(resolution, '-IterationCoarse', iteration, '.tif')))
+  
+  gc()
+}
 
-Train <- od3arc[ TrainIndex,]; Test <- od3arc[-TrainIndex,]
+pr <- function(mdl, ...) predict(mdl, ...)$predictions # for predictions
+se <- function(mdl, ...) predict(mdl, ...)$se # ???? # for uncertainty. 
 
-opt_mtry <- data.frame(
-    randomForest::tuneRF(Train[,-1], Train[,1], stepFactor = 1.5))
-opt_mtry <- opt_mtry[ which.min(opt_mtry$OOBError), 'mtry'] # here we subset the lowest OOB. \
-
-rf_model <- randomForest::randomForest(Occurrence ~ ., data = Train, 
-        method='rf', myry = opt_mtry,
-        trControl=repeat_cv,
-        ntree = 500, mTry = opt_mtry,
-        metric = 'Sensitivity')
-
-prediction <- predict(rf_model, Test)
-cmRestrat <- caret::confusionMatrix(prediction, Test$Occurrence)
-
-prediction_prob <- predict(rf_model, Test, type = 'prob') # use this for auc/roc
-result.roc <- pROC::roc(Test$Occurrence, prediction_prob[,1]) # Draw ROC curve.
-
-Longitude <- init(arc3, 'x') ; names(Longitude) <- 'Longitude'
-Latitude <- init(arc3, 'y') ; names(Latitude) <- 'Latitude'
-arc3 <- c(arc3, Longitude, Latitude)
-names(arc3)
-
-pout <- '../results/suitability_maps'
-terra::predict(
-  type = 'prob', cores = 16,
-  arc3, rf_model, cpkgs="randomForest",
-  filename = file.path(pout, paste0('Arc3-Iteration1', '.tif')),
-  wopt = c(names = 'predicted_suitability'))
+modeller(x = occ_data, resolution = '1-3arc', iteration = 1)
+  
 ```
 
