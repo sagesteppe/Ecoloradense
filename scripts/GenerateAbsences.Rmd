@@ -11,10 +11,57 @@ can be used for generating larger training/test data set.
 Accordingly at this stage we focus more on elucidating the currently known 
 distribution of the species at the expense of expanding the expected distribution. 
 
+```{r}
+library(tidyverse)
+library(sf)
+library(terra)
+set.seed(27)
+```
 
-```{r iteration 1 absence generation}
 
+```{r iteration 1 absence generation, eval = F}
 
+occurrence_data <- st_read(
+  '../data/collections/occurrences_coloradense/occurrences.shp', quiet = T) %>% 
+  st_transform(32613)
 
+extent_rast <- rast('../data/spatial/processed/dem_3arc/dem.tif')
+
+# we want to be SURE that we are finding more populations, or segments of populations
+# during this iteration of field sampling. Accordingly, we will want a model which 
+# is more conservative in predicting suitable habitat. 
+
+abs_poss <- st_sample(st_bbox(extent_rast), size = nrow(occurrence_data)+20) %>% 
+  st_as_sf() %>% 
+  rename(geometry = x) %>% 
+  mutate(ID = 1:nrow(.), .before = geometry)
+
+# thin each absence, we don't need any more than 1 per km2 right now. 
+
+abs_poss <- abs_poss[ 
+  as.numeric(
+    st_distance(abs_poss, abs_poss[st_nearest_feature(abs_poss),], by_element = T))
+  > 1000, ]
+
+abs_poss <- abs_poss[ 
+  as.numeric(
+    st_distance(abs_poss, 
+                abs_poss[st_nearest_feature(abs_poss, occurrence_data),], by_element = T))
+  > 1000, ]
+
+ggplot(occurrence_data) + 
+  geom_sf(data = occurrence_data, color = 'green') + 
+  geom_sf(data = abs_poss, color = 'red')
+
+# points were then manually investigated, and those which could foresee-ably be within
+# subjectively evaluated suitable habitat were removed. 
+
+st_write(abs_poss, '../data/spatial/raw/pseudo-absences/iteration1/absences.shp', append = F)
+
+# these points were identified in QGIS as liekly occurring in suitable habitat. 
+removals <- c(22, 133, 48, 16, 89, 61, 45, 69, 36, 31, 24, 6, 75, 115)
+abs_poss <- filter(abs_poss, ! ID %in% removals)
+
+st_write(abs_poss, '../data/spatial/processed/pseudo-absences/iteration1/absences.shp')
 ```
 

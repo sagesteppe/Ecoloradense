@@ -4,50 +4,58 @@ author: "steppe"
 output: html_document
 ---
 
-We will perform first iteration modelling of E. coloradense at 4 resolutions. 
-Each resolution will undergo the same steps regarding model selection. 
 
 ```{r}
 library(tidyverse)
 library(sf)
 library(terra)
-library(Boruta)
-library(sdm)
 ```
 
 
 ```{r import spatial data}
-
 occurrence_data <- st_read(
   '../data/collections/occurrences_coloradense/occurrences.shp', quiet = T)
-
-res <- c('dem_3arc', 'dem_1arc', 'dem_1-3arc', 'dem_3m')
-
+absence_data <- st_read(
+  '../data/spatial/processed/pseudo-absences/iteration1/absences.shp', quiet = T)
 rastReader <- function(x){
   
-  # list all files at level 1 with .tif extensions
-  rassts <- file.path('../data/spatial/processed', x,
-    list.files(
-      file.path('../data/spatial/processed', x), pattern = 'tif') 
-  )
-
-  # import geomorphology data. 
   p <- paste0('../data/spatial/processed/', x, '/geomorphology/')
   f <- paste0(p, list.files(p))
   
-  f <- f[! grepl('D8pntr|basins|DEM_filled.tif', f) ] # remove these 
-  f <- c(rassts, f)
+  f <- f[! grepl('D8pntr|basins', f) ] # remove the D8pntr & Basins 
   s <- terra::rast(f)
   
 }
 
-r <- rastReader(res[1])
+stack <- rastReader('dem_1arc') 
+
+
+
 ```
 
 
-Using boruta analysis determine which variables are useful for discriminating between presences and absences. 
+Using Boruta analysis we will drop features which evidently show absolutely no relation to the individuals marks. 
 
 ```{r}
-Boruta::Boruta()
+
+BorutaRes <- Boruta::Boruta(Occurrence ~ ., data = x, num.threads = cores, doTrace = 1)
+importance <- Boruta::attStats(BorutaRes)
+rn <- rownames(importance)
+important_vars <- Boruta::getSelectedAttributes(BorutaRes, withTentative = F)
+  
+ 
+  sdm_data_obj <- sdmData(formula=occurrence~., 
+                          train = taxon, 
+                          predictors = WPDPV2)
+  sdm_model <- sdm(formula = occurrence~., 
+                   data = sdm_data_obj, 
+                   methods = c('rf','brt'), replication='sub', test.percent=30, n=2)
+  
+  fname <- paste0(here(), '/results/maps/', binomial, "_ml_", Sys.time(),'.tif')
+  fname <- gsub(' ', '_', fname)
+  sdm_ensemble_prediction <- sdm::ensemble(sdm_model, WPDPV2, 
+                                           setting = list(method = "weighted", stat = 'tss', opt = 2), 
+                                           filename = fname)
+  
 ```
 

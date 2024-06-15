@@ -256,5 +256,3 @@ terra::resample(veg, arc13_template, threads = 16, filename = 'dem_1-3arc/Vegeta
 terra::resample(veg, m3_template, threads = 16, filename = 'dem_3m/Vegetation.tif')
 
 rm(forest, shrubs, herbs, veg)
-list.files(p2d)
-
