@@ -14,3 +14,11 @@ rastReader <- function(x, p2proc){
   s <- terra::rast(f)
   
 }
+
+#' identify the SW corner of a 3m raster cell for ground truthing. 
+#' 
+#' @param template
+SWcorner <- function(x){
+  
+  
+}
