@@ -39,11 +39,13 @@ Drawing Field
 ```{r}
 
 trails <- st_read('../data/hikingTrails/MtBaldyRoute.shp') %>% 
-  st_make_valid() %>% 
+  st_make_valid() 
+
+trails_buf <- trails %>% 
   st_transform(32613) %>% 
   st_buffer(45)
 
-pts <- st_sample(trails, size = 500, type = 'random') %>% 
+pts <- st_sample(trails_buf, size = 500, type = 'random') %>% 
   st_as_sf() %>% 
   st_transform(4326) %>% 
   rename(geometry = x) %>% 
@@ -59,8 +61,7 @@ thinned <- spThin::thin( # no points found within 90m of each other !
   locs.thinned.list.return = TRUE)
 
 thinned <- thinned[[which.max(unlist(lapply(thinned, nrow)))]] %>% 
-  st_as_sf(coords = c(x = 'Longitude', y = 'Latitude'), crs = 4326) %>% 
-  mutate(ID = 1:nrow(.), .before = geometry)
+  st_as_sf(coords = c(x = 'Longitude', y = 'Latitude'), crs = 4326) 
 
 # just checking again... 
 # st_distance(thinned, thinned[ st_nearest_feature(thinned), ], by_element = T)
@@ -69,15 +70,16 @@ ggplot() +
   geom_sf(data = trails) +
   geom_sf(data = thinned)
 
-st_write(thinned, '../data/GroundTruthPts/Iteration1.shp', append = TRUE)
+#st_write(thinned, '../data/GroundTruthPts/Iteration1.shp', append = TRUE)
 rm(pts)
 ```
 
 We are going to give the points sensible identification numbers based on which trail or area they are located in . 
 First we need to update the 'Trails' dataset so that small branches of trails are joined to their main trunk.
-```{r}
+```{r name the trails}
+
 trails <- trails %>% 
-  mutate(id =case_when(
+  mutate(id = case_when(
     id %in% c(2) ~ 1,
     id %in% c(9, 11) ~ 8,
     id %in% c(20) ~ 7,
@@ -89,6 +91,7 @@ trails <- trails %>%
     id %in% c(41, 42, 43) ~ 40, # north pole basin trails
     id %in% 48 ~ 51, 
     id %in% c(50) ~ 49,
+    id %in% c(62) ~ 61,
     .default = as.numeric(id)
   )
 ) %>% 
@@ -98,19 +101,80 @@ trails <- trails %>%
   group_by(ID) %>% 
   summarize(geometry = st_union(geometry))
 
-st_write(trails, '../data/hikingTrails/trails.shp', append=F)
+st_write(trails, '../data/hikingTrails/trails.shp', append = F)
 
-v <- data.frame(
-  ID = c(1:20),
+v <- data.frame( 
+  ID = c(1:21),
   Trail = c(
     'Mt. Baldy', 'Baldy Emerald', 'Cinnamon', 'Yule', 'Gothic Natural Area', 
-    'Mt. Bellview', 'Frigid Air Pass', 'Treasury Mtn.', 'Hasley Pass', 'Rustlers Gulch & Virginia Basin', 
+    'Mt. Bellview', 'Frigid Air Pass', 'Treasury Mtn.', 'Hasley Pass', 'Virginia Basin', 
     '401', 'East Maroon Pass', 'Cassi Mines', 'Triangle Pass', 'North Pole Basin',
-    'Red Rock', 'Cassi North', '13043 Ridge', '13043-Cassi Basin', ''
+    'Red Rock', 'Cassi North', '13043 Ridge', '13043-Cassi Basin', 'Robinson Basin',
+    'Rustlers Gulch'
     )
 )
 
-left_join(trails, v, by = 'ID') %>% 
+trails <- left_join(trails, v, by = 'ID') %>% 
   relocate(Trail, .before = geometry)
+
+ggplot(trails) + geom_sf(aes(color = Trail))
+
+rm(v)
+```
+
+
+Now group the points by their trails, and number them from the trailheads. 
+```{r}
+
+trails <- st_transform(trails, 32613)
+
+#' function to put a decent order to the ID's of random points based on trail positions
+#' @param trails the trails network used to draw the random sample
+#' @param points the output points
+OrderRandomPtsIDS <- function(trails, points){
+  
+  segments <- sf::st_segmentize(trails, dfMaxLength = 150)
+  vertices <- sf::st_cast(segments, 'POINT')
+  
+  segments <- lwgeom::st_split(segments, vertices) |>
+    sf::st_collection_extract("LINESTRING") |>
+    unique() |>
+    dplyr::mutate(lineID = 1:n(), .before = geometry) |>
+    dplyr::mutate(lineID = dplyr::case_when(
+      lineID == min(lineID) ~ max(lineID), 
+      lineID != min(lineID) ~ lineID - 1, 
+      .default = as.numeric(lineID)
+    )) |>
+    arrange(lineID)
+  
+  points_cp <- sf::st_transform(points, sf::st_crs(segments))
+  points_cp <- points_cp[ # determine which points are within the buffered areas  
+    lengths(
+      sf::st_intersects(points_cp, sf::st_buffer(segments, dist = 45)
+        )
+    ) > 0,
+  ]
+  points_cp <- points_cp |> 
+    dplyr::mutate(
+      Segment = st_nearest_feature(points_cp, segments),
+      Trail = trails$Trail[1], .before = geometry) |>
+    dplyr::arrange(Segment) |>
+    dplyr::mutate(TrailID = 1:n(), .before = geometry) |>
+    dplyr::select(-Segment)
+  
+  return(points_cp)
+
+}
+
+trails_sp <- split(trails, f = trails$Trail)
+obbies <- lapply(trails_sp, FUN = OrderRandomPtsIDS, points = thinned)
+
+ggplot() +
+ # geom_sf(data = PTS) + 
+  geom_sf(data = LINES, aes(color = lineID)) #+
+#  geom_sf_label(data = LINES, aes(label = lineID)) +
+  theme_void()
+
+#st_write(thinned, '../data/GroundTruthPts/Iteration1.shp', append = TRUE) 
 ```
 
