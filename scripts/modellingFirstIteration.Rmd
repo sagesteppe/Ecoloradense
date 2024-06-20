@@ -76,7 +76,7 @@ rm(pts)
 We are going to give the points sensible identification numbers based on which trail or area they are located in . 
 First we need to update the 'Trails' dataset so that small branches of trails are joined to their main trunk.
 ```{r}
-tr <- trails %>% 
+trails <- trails %>% 
   mutate(id =case_when(
     id %in% c(2) ~ 1,
     id %in% c(9, 11) ~ 8,
@@ -98,8 +98,19 @@ tr <- trails %>%
   group_by(ID) %>% 
   summarize(geometry = st_union(geometry))
 
+st_write(trails, '../data/hikingTrails/trails.shp', append=F)
 
-st_write(tr, '../data/hikingTrails/trails.shp', append=F)
+v <- data.frame(
+  ID = c(1:20),
+  Trail = c(
+    'Mt. Baldy', 'Baldy Emerald', 'Cinnamon', 'Yule', 'Gothic Natural Area', 
+    'Mt. Bellview', 'Frigid Air Pass', 'Treasury Mtn.', 'Hasley Pass', 'Rustlers Gulch & Virginia Basin', 
+    '401', 'East Maroon Pass', 'Cassi Mines', 'Triangle Pass', 'North Pole Basin',
+    'Red Rock', 'Cassi North', '13043 Ridge', '13043-Cassi Basin', ''
+    )
+)
 
+left_join(trails, v, by = 'ID') %>% 
+  relocate(Trail, .before = geometry)
 ```
 
