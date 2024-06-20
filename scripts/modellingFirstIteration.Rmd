@@ -10,6 +10,7 @@ library(sf)
 library(tidyverse)
 library(terra)
 source('functions.R')
+set.seed(23)
 ```
 
 
@@ -27,171 +28,78 @@ p2proc <- '../data/spatial/processed'
 
 ```
 
-Using Boruta analysis we will drop features which show absolutely no relation to the individuals marks. 
+First iteration of modelling. 
+
+```{r}
+modeller(x = occ_data, resolution = '1-3arc', iteration = 1)
+```
+
+Drawing Field 
 
 ```{r}
 
-#' @param x input occurrence data
-#' @param resolution list of paths to geodata at different resolutions. 
-#' @param iteration numeric, which iteration of modelling is being performed? 
-modeller <- function(x, resolution, iteration){
-  
-  rast_dat <- rastReader(paste0('dem_', resolution), p2proc) 
-  
-  df <- dplyr::bind_cols(
-    dplyr::select(x, Occurrence), 
-    dplyr::select(terra::extract(rast_dat, x), -ID), 
-  ) |> 
-  tidyr::drop_na() %>% 
-  dplyr::mutate(
-    Occurrence = as.factor(Occurrence), 
-    Pennock = as.factor(Pennock), 
-    geomorphons = as.factor(geomorphons), 
-    Longitude = unlist(purrr::map(.$geometry,1)),
-    Latitude  = unlist(purrr::map(.$geometry,2))) |> 
-  sf::st_drop_geometry()
-  
-  # first we will perform boruta analysis, this will drop variables which have
-  # no relationship to the marks at the resolution under analysis. 
-  cores <- parallel::detectCores()
-  BorutaRes <- Boruta::Boruta(Occurrence ~ ., data = df, num.threads = cores, doTrace = 0)
-  importance <- Boruta::attStats(BorutaRes)
-  rn <- rownames(importance[importance$decision %in% c('Confirmed'),])
-  important_vars <- Boruta::getSelectedAttributes(BorutaRes, withTentative = F)
-  
-  df <- dplyr::select(df, dplyr::all_of(c('Occurrence', important_vars)))
-  rm(BorutaRes, importance, rn, important_vars)
- 
-  # define the cross-fold validation 
-  repeat_cv <- caret::trainControl(method = 'repeatedcv', number = 5, repeats = 10) 
-  
-  # split the input data into both an explicit train and test data set. 
-  TrainIndex <- caret::createDataPartition(
-    df$Occurrence, p = .8, list = FALSE, times = 1)
-  Train <- df[ TrainIndex,]; Test <- df[-TrainIndex,]
+trails <- st_read('../data/hikingTrails/MtBaldyRoute.shp') %>% 
+  st_make_valid() %>% 
+  st_transform(32613) %>% 
+  st_buffer(45)
 
-  # perform the random forest modelling
-  rf_model <- ranger::ranger(
-    Occurrence ~ ., data = Train, probability = T, keep.inbag = TRUE)
-  
-  # save the model
-  saveRDS(rf_model,
-          file = paste0('../results/models/', resolution, '-Iteration', iteration, '.rds'))
-  
-  # save the confusion matrix.
-  predictions <- predict(rf_model, Test, type = 'se', se.method = 'infjack', probability=TRUE)
-  predictions$binary <- as.factor(if_else(predictions$predictions[,2] <= 0.49, 0, 1))
-  cmRestrat <- caret::confusionMatrix(predictions$binary, Test$Occurrence)
-  saveRDS(cmRestrat,
-        file = paste0('../results/tables/', resolution, '-Iteration', iteration, '.rds'))
+pts <- st_sample(trails, size = 500, type = 'random') %>% 
+  st_as_sf() %>% 
+  st_transform(4326) %>% 
+  rename(geometry = x) %>% 
+   mutate(
+    Longitude = unlist(map(.$geometry,1)),
+    Latitude = unlist(map(.$geometry,2)), 
+    Species = 'Points'
+  )
 
-  # create these layers of coordinates for the models. 
-  Longitude <- init(rast_dat, 'x') ; names(Longitude) <- 'Longitude'
-  Latitude <- init(rast_dat, 'y') ; names(Latitude) <- 'Latitude'
-  rast_dat <- c(rast_dat, Longitude, Latitude)
-  
-  pout <- '../results/suitability_maps'
+thinned <- spThin::thin( # no points found within 90m of each other !
+  loc.data = pts, lat.col = 'Latitude', long.col = 'Longitude', spec.col = 'Species',
+  thin.par = 0.128, reps = 100, write.files = FALSE, write.log.file = FALSE, 
+  locs.thinned.list.return = TRUE)
 
-  ###################      PREDICT ONTO SURFACE        #########################
-  pr <- function(...) predict(..., type = 'response', num.threads = 1)$predictions 
-  
-  dir.create( file.path(pout, 'tiles'), showWarnings = F)
-  dir.create( file.path(pout, 'pr_tiles'), showWarnings = F)
-  if(resolution == '3arc'){ntile = 1}
-    if(resolution == '1arc'){ntile = 1} else # has succeeded -narrowly- at 1 
-      if(resolution == '1-3arc'){ntile = 2} else # 4 tiles 
-        if(resolution == '3m'){ntile = 3} # 9 tiles. 
-  
-  if(ntile > 1){
-    template <- rast(nrows = ntile, ncols = ntile, extent = ext(rast_dat), crs = crs(rast_dat))
-    message('Making tiles for prediction of standard errors')
-    terra::makeTiles(rast_dat, template, filename = file.path(pout, 'tiles', "tile_.tif"))
-    tiles <- file.path(pout, 'tiles', list.files(file.path(pout, 'tiles')))
-  
-    pb <- txtProgressBar(
-      min = 0,  max = length(tiles), style = 3, width = 50, char = "+")
-    for (i in seq_along(tiles)){
-          terra::predict(
-            rast(tiles[i]), rf_model, f = se, 
-            filename = file.path(pout, 'pr_tiles', paste0(i, '.tif')),
-            overwrite = T, na.rm=TRUE)
-       setTxtProgressBar(pb, i)
-      }
-  close(pb)
-    
-  mos <- terra::mosaic(sprc(
-    file.path(pout, 'pr_tiles', list.files(file.path(pout, 'pr_tiles')))
-  ), fun = 'mean')
-  writeRaster(
-    mos[[2]], 
-    wopt = c(names = 'Probability'),
-    filename = file.path(pout, paste0(resolution, '-Iteration', iteration, '-Pr.tif')))
-  unlink(file.path(pout, 'tiles')); unlink(file.path(pout, 'pr_tiles'))
-  } else { # don't want to spend time copying the contents of the predictor
-    terra::predict( # rasters, skip straight to modelling. 
-      type = 'prob', cores = 1, f = pr,
-      rast_dat, rf_model, cpkgs = "ranger",
-      filename = file.path(pout, paste0(resolution, '-IterationCoarse', iteration, '.tif')),
-      wopt = c(names = 'predicted_suitability'), 
-      overwrite = T)
-  
-    writeRaster(
-      rast(file.path(pout, paste0(resolution, '-IterationCoarse', iteration, '.tif')))[[2]],
-      file.path(pout, paste0(resolution, '-Iteration', iteration, '.tif'))
-      )
-    file.remove(file.path(pout, paste0(resolution, '-IterationCoarse', iteration, '.tif')))
-  }
-  
-  gc(verbose = FALSE)
+thinned <- thinned[[which.max(unlist(lapply(thinned, nrow)))]] %>% 
+  st_as_sf(coords = c(x = 'Longitude', y = 'Latitude'), crs = 4326) %>% 
+  mutate(ID = 1:nrow(.), .before = geometry)
 
-  ###############      STANDARD ERROR PREDICTION        ########################
-  # the SE predictions are absurdly memory hungry, We will create 'tiles' to 
-  # predict onto, and then combine them once the predictions are complete
-  
-  dir.create( file.path(pout, 'tiles'), showWarnings = F)
-  dir.create( file.path(pout, 'se_tiles'), showWarnings = F)
-  if(resolution == '3arc'){ntile = 2} else # 4 tiles 
-    if(resolution == '1arc'){ntile = 5} else # 25 tiles needed # 16 FAILED 
-      if(resolution == '1-3arc'){ntile = 8} else # 64 tiles 
-        if(resolution == '3m'){ntile = 11} # 121 tiles. 
-  
-  template <- rast(nrows = ntile, ncols = ntile, extent = ext(rast_dat), crs = crs(rast_dat))
-  message('Making tiles for prediction of standard errors')
-  terra::makeTiles(rast_dat, template, filename = file.path(pout, 'tiles', "tile_.tif"))
-  tiles <- file.path(pout, 'tiles', list.files(file.path(pout, 'tiles')))
-  
-  se <- function(...) predict(..., type = 'se', se.method = 'infjack',
-                              predict.all = FALSE,
-                              probability = TRUE, num.threads = cores)$se
-  
-  # # predict the standard error onto the tiles.
-  # create and initialize progress bar
-  pb <- txtProgressBar(
-    min = 0,  max = length(tiles), style = 3, width = 50, char = "+")
-  for (i in seq_along(tiles)){
-      terra::predict(
-        rast(tiles[i]), rf_model, f = se, 
-        filename = file.path(pout, 'se_tiles', paste0('SE', i, '.tif')),
-        overwrite = T, na.rm=TRUE)
-   setTxtProgressBar(pb, i)
-  }
-  close(pb)
-  
-  mos <- terra::mosaic(sprc(
-    file.path(pout, 'se_tiles', list.files(file.path(pout, 'se_tiles')))
-  ), fun = 'mean')
-  writeRaster(
-    mos[[2]], 
-    wopt = c(names = 'standardError'),
-    filename = file.path(pout, paste0(resolution, '-Iteration', iteration, '-SE.tif')))
-  
-  unlink(file.path(pout, 'tiles')); unlink(file.path(pout, 'se_tiles'))
-  gc(verbose = FALSE)
-  
-}
+# just checking again... 
+# st_distance(thinned, thinned[ st_nearest_feature(thinned), ], by_element = T)
 
-modeller(x = occ_data, resolution = '1arc', iteration = 1)
+ggplot() +
+  geom_sf(data = trails) +
+  geom_sf(data = thinned)
+
+st_write(thinned, '../data/GroundTruthPts/Iteration1.shp', append = TRUE)
+rm(pts)
 ```
 
+We are going to give the points sensible identification numbers based on which trail or area they are located in . 
+First we need to update the 'Trails' dataset so that small branches of trails are joined to their main trunk.
+```{r}
+tr <- trails %>% 
+  mutate(id =case_when(
+    id %in% c(2) ~ 1,
+    id %in% c(9, 11) ~ 8,
+    id %in% c(20) ~ 7,
+    id %in% c(13, 14, 15, 16, 17, 18, 52) ~ 12,
+    id %in% c(23, 24, 26, 44, 47) ~ 25, 
+    id %in% c(27, 28) ~ 29, 
+    id %in% c(33) ~ 30, 
+    id %in% c(38, 39, 19) ~ 7,
+    id %in% c(41, 42, 43) ~ 40, # north pole basin trails
+    id %in% 48 ~ 51, 
+    id %in% c(50) ~ 49,
+    .default = as.numeric(id)
+  )
+) %>% 
+  group_by(id) %>% 
+  mutate(ID = cur_group_id()) %>% 
+  ungroup() %>% 
+  group_by(ID) %>% 
+  summarize(geometry = st_union(geometry))
 
+
+st_write(tr, '../data/hikingTrails/trails.shp', append=F)
+
+```
 
