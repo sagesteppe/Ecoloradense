@@ -128,48 +128,75 @@ trails <- st_transform(trails, 32613)
 #' @param points the output points
 OrderRandomPtsIDS <- function(trails, points){
   
-  segments <- sf::st_segmentize(trails, dfMaxLength = 150)
-  vertices <- sf::st_cast(segments, 'POINT')
+  # first we split the data frame and lapply the process through each constituent
   
-  segments <- lwgeom::st_split(segments, vertices) |>
-    sf::st_collection_extract("LINESTRING") |>
-    unique() |>
-    dplyr::mutate(lineID = 1:n(), .before = geometry) |>
-    dplyr::mutate(lineID = dplyr::case_when(
-      lineID == min(lineID) ~ max(lineID), 
-      lineID != min(lineID) ~ lineID - 1, 
-      .default = as.numeric(lineID)
-    )) |>
-    arrange(lineID)
+  point_assigner <- function(trails, points){
+    segments <- sf::st_segmentize(trails, dfMaxLength = 150)
+    vertices <- sf::st_cast(segments, 'POINT')
   
-  points_cp <- sf::st_transform(points, sf::st_crs(segments))
-  points_cp <- points_cp[ # determine which points are within the buffered areas  
-    lengths(
-      sf::st_intersects(points_cp, sf::st_buffer(segments, dist = 45)
-        )
-    ) > 0,
-  ]
-  points_cp <- points_cp |> 
-    dplyr::mutate(
-      Segment = st_nearest_feature(points_cp, segments),
-      Trail = trails$Trail[1], .before = geometry) |>
-    dplyr::arrange(Segment) |>
-    dplyr::mutate(TrailID = 1:n(), .before = geometry) |>
-    dplyr::select(-Segment)
+    segments <- lwgeom::st_split(segments, vertices) |>
+      sf::st_collection_extract("LINESTRING") |>
+      unique() |>
+      dplyr::mutate(lineID = 1:n(), .before = geometry) |>
+      dplyr::mutate(lineID = dplyr::case_when(
+        lineID == min(lineID) ~ max(lineID), 
+        lineID != min(lineID) ~ lineID - 1, 
+        .default = as.numeric(lineID)
+      )) |>
+      arrange(lineID)
   
-  return(points_cp)
+    points_cp <- sf::st_transform(points, sf::st_crs(segments))
+    points_cp <- points_cp[ # determine which points are within the buffered areas  
+      lengths(
+        sf::st_intersects(points_cp, sf::st_buffer(segments, dist = 45)
+          )
+      ) > 0,
+    ]
+    points_cp <- points_cp |> 
+      dplyr::mutate(
+        Segment = st_nearest_feature(points_cp, segments),
+        Trail = trails$Trail[1], 
+        UID = 1:dplyr::n(),
+        Pts = dplyr::n(), .before = geometry) |>
+      dplyr::arrange(Segment) |>
+      dplyr::mutate(TrailID = 1:n(), .before = geometry) |>
+      dplyr::select(-Segment)
+  
+    return(points_cp)
+  }
+  
+  split_trails <- split(trails, f = trails$Trail)
+  raw_pts <- lapply(split_trails, FUN = point_assigner, points = points) |> 
+    dplyr::bind_rows()
+  
+  # now ensure that any plots which are 'duplicated' across trails are reduced 
+  # to a single representative. The plot will be retained in the trail which has
+  # fewer points. 
 
+  duplicate_pts <- raw_pts[lengths( st_intersects(raw_pts)) > 1, ]
+  singletons <- duplicate_pts |> 
+    dplyr::group_by(geometry) |> 
+    dplyr::slice_min(n = 1, order_by = Pts) 
+  duplicate_pts <- duplicate_pts[! duplicate_pts$UID %in% singletons$UID, ]
+  # now remove all but one copy of the duplicate points. 
+  final_pts <- raw_pts[! raw_pts$UID %in% duplicate_pts$UID, -which(names(raw_pts) %in% c("UID","Pts"))]
+  
+  return(final_pts)
 }
 
-trails_sp <- split(trails, f = trails$Trail)
-obbies <- lapply(trails_sp, FUN = OrderRandomPtsIDS, points = thinned)
+ob <- OrderRandomPtsIDS(trails, thinned)
+
+
+
+
 
 ggplot() +
  # geom_sf(data = PTS) + 
-  geom_sf(data = LINES, aes(color = lineID)) #+
+  geom_sf(data = ob, aes(color = Trail)) #+
 #  geom_sf_label(data = LINES, aes(label = lineID)) +
   theme_void()
+  
 
-#st_write(thinned, '../data/GroundTruthPts/Iteration1.shp', append = TRUE) 
+st_write(obbies, '../data/GroundTruthPts/Iteration1.shp', append = FALSE) 
 ```
 
