@@ -79,43 +79,38 @@ First we need to update the 'Trails' dataset so that small branches of trails ar
 ```{r name the trails}
 
 trails <- trails %>% 
-  mutate(id = case_when(
-    id %in% c(2) ~ 1,
-    id %in% c(9, 11) ~ 8,
-    id %in% c(20) ~ 7,
-    id %in% c(13, 14, 15, 16, 17, 18, 52) ~ 12,
-    id %in% c(23, 24, 26, 44, 47) ~ 25, 
-    id %in% c(27, 28) ~ 29, 
-    id %in% c(33) ~ 30, 
-    id %in% c(38, 39, 19) ~ 7,
-    id %in% c(41, 42, 43) ~ 40, # north pole basin trails
-    id %in% 48 ~ 51, 
-    id %in% c(50) ~ 49,
-    id %in% c(62) ~ 61,
-    .default = as.numeric(id)
+  mutate(Trail = case_when(
+    id %in% c(1, 2, 3, 66) ~ 'Mt. Baldy',
+    id %in% c(4) ~ 'Cinnamon',
+    id %in% c(5) ~ 'Yule Pass',
+    id %in% c(6) ~ 'Gothic NRA',
+    id %in% c(8, 9, 11) ~ 'Frigid Air Pass',
+    id %in% c(19, 20) ~ 'Mt. Bellview',
+    id %in% c(21) ~ 'Treasury',
+    id %in% c(12, 13, 14, 15, 16, 17, 18, 52) ~ 'Hasley Pass',
+    id %in% c(23, 24, 25, 26, 44) ~ 'Virginia Basin',  
+    id %in% c(7, 27, 29) ~ '401', 
+    id %in% c(28, 47, 63, 65) ~ 'Bellview Mines', 
+    id %in% c(36, 69) ~ 'Cassi Mines', 
+    id %in% c(30, 33, 36, 37, 69, 71, 72) ~ 'Copper Lake/East Maroon Pass', 
+    id %in% c(10) ~ 'West Maroon Trail',
+    id %in% c(35, 38, 39) ~ 'West Maroon Pass', 
+    id %in% c(40, 41, 42, 43, 64, 68) ~ 'North Pole Basin', 
+    id %in% c(45) ~ 'Red Rock', 
+    id %in% c(48, 51) ~ '13043-Cassi Basin', 
+    id %in% c(49, 50) ~ '13043 Ridge', 
+    id %in% c(53) ~ 'Robinson Basin',
+    id %in% c(47, 61, 62) ~ 'Rustlers Gulch',
+    id %in% c(67) ~ 'Elko Park',
+    id %in% c(70) ~ 'Copper Creek',
+    id %in% c(46, 73, 74, 75, 77) ~ 'Avalanche Lake/Mt. Daly',
+    .default = as.character('blobby')
   )
 ) %>% 
-  group_by(id) %>% 
-  mutate(ID = cur_group_id()) %>% 
-  ungroup() %>% 
-  group_by(ID) %>% 
+  group_by(Trail) %>% 
   summarize(geometry = st_union(geometry))
 
 st_write(trails, '../data/hikingTrails/trails.shp', append = F)
-
-v <- data.frame( 
-  ID = c(1:21),
-  Trail = c(
-    'Mt. Baldy', 'Baldy Emerald', 'Cinnamon', 'Yule', 'Gothic Natural Area', 
-    'Mt. Bellview', 'Frigid Air Pass', 'Treasury Mtn.', 'Hasley Pass', 'Virginia Basin', 
-    '401', 'East Maroon Pass', 'Cassi Mines', 'Triangle Pass', 'North Pole Basin',
-    'Red Rock', 'Cassi North', '13043 Ridge', '13043-Cassi Basin', 'Robinson Basin',
-    'Rustlers Gulch'
-    )
-)
-
-trails <- left_join(trails, v, by = 'ID') %>% 
-  relocate(Trail, .before = geometry)
 
 ggplot(trails) + geom_sf(aes(color = Trail))
 

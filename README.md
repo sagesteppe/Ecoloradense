@@ -9,6 +9,7 @@ These models were used to guide field sampling efforts that had two efforts, ver
 
 Spatial data products of all trails known to the analysts in the alpine population cluster, and found via review of topographic maps and satellite imagery, were generated to define areas which were feasible for field sampling. 
 500 random points, all separated by more than 90meters, within 100 meters of these locations were then generated for ground truthing. 
+Given the noted relative sparsity of the taxon any occurrences encountered had data collected at their sites. 
 
 ## Methods
 
