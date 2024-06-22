@@ -30,7 +30,7 @@ p2proc <- '../data/spatial/processed'
 
 First iteration of modelling. 
 
-```{r}
+```{r, eval = F}
 modeller(x = occ_data, resolution = '1-3arc', iteration = 1)
 ```
 
@@ -50,7 +50,7 @@ pts <- st_sample(trails_buf, size = 500, type = 'random') %>%
   st_transform(4326) %>% 
   rename(geometry = x) %>% 
    mutate(
-    Longitude = unlist(map(.$geometry,1)),
+    Longitude = unlist(map(.$geometry,1)), 
     Latitude = unlist(map(.$geometry,2)), 
     Species = 'Points'
   )
@@ -58,7 +58,7 @@ pts <- st_sample(trails_buf, size = 500, type = 'random') %>%
 thinned <- spThin::thin( # no points found within 90m of each other !
   loc.data = pts, lat.col = 'Latitude', long.col = 'Longitude', spec.col = 'Species',
   thin.par = 0.128, reps = 100, write.files = FALSE, write.log.file = FALSE, 
-  locs.thinned.list.return = TRUE)
+  locs.thinned.list.return = TRUE) 
 
 thinned <- thinned[[which.max(unlist(lapply(thinned, nrow)))]] %>% 
   st_as_sf(coords = c(x = 'Longitude', y = 'Latitude'), crs = 4326) 
@@ -66,16 +66,16 @@ thinned <- thinned[[which.max(unlist(lapply(thinned, nrow)))]] %>%
 # just checking again... 
 # st_distance(thinned, thinned[ st_nearest_feature(thinned), ], by_element = T)
 
-ggplot() +
-  geom_sf(data = trails) +
-  geom_sf(data = thinned)
+ggplot() + 
+  geom_sf(data = trails) + 
+  geom_sf(data = thinned) 
 
 #st_write(thinned, '../data/GroundTruthPts/Iteration1.shp', append = TRUE)
 rm(pts)
 ```
 
-We are going to give the points sensible identification numbers based on which trail or area they are located in . 
-First we need to update the 'Trails' dataset so that small branches of trails are joined to their main trunk.
+We are going to give the points sensible identification numbers based on which trail or area they are located in. 
+First we need to update the 'Trails' data set so that small branches of trails are joined to their main trunk.
 ```{r name the trails}
 
 trails <- trails %>% 
@@ -113,90 +113,30 @@ trails <- trails %>%
 st_write(trails, '../data/hikingTrails/trails.shp', append = F)
 
 ggplot(trails) + geom_sf(aes(color = Trail))
-
-rm(v)
 ```
 
-
-Now group the points by their trails, and number them from the trailheads. 
+Now group the points by their trails, and number them from the trail heads. 
 ```{r}
 
 trails <- st_transform(trails, 32613)
 
-#' function to put a decent order to the ID's of random points based on trail positions
-#' @param trails the trails network used to draw the random sample
-#' @param points the output points
-OrderRandomPtsIDS <- function(trails, points){
-  
-  # first we split the data frame and lapply the process through each constituent
-  
-  point_assigner <- function(trails, points){
-    segments <- sf::st_segmentize(trails, dfMaxLength = 150)
-    vertices <- sf::st_cast(segments, 'POINT')
-  
-    segments <- lwgeom::st_split(segments, vertices) |>
-      sf::st_collection_extract("LINESTRING") |>
-      unique() |>
-      dplyr::mutate(lineID = 1:n(), .before = geometry) |>
-      dplyr::mutate(lineID = dplyr::case_when(
-        lineID == min(lineID) ~ max(lineID), 
-        lineID != min(lineID) ~ lineID - 1, 
-        .default = as.numeric(lineID)
-      )) |>
-      arrange(lineID)
-  
-    points_cp <- sf::st_transform(points, sf::st_crs(segments))
-    points_cp <- points_cp[ # determine which points are within the buffered areas  
-      lengths(
-        sf::st_intersects(points_cp, sf::st_buffer(segments, dist = 45)
-          )
-      ) > 0,
-    ]
-    points_cp <- points_cp |> 
-      dplyr::mutate(
-        Segment = st_nearest_feature(points_cp, segments),
-        Trail = trails$Trail[1], 
-        UID = 1:dplyr::n(),
-        Pts = dplyr::n(), .before = geometry) |>
-      dplyr::arrange(Segment) |>
-      dplyr::mutate(TrailID = 1:n(), .before = geometry) |>
-      dplyr::select(-Segment)
-  
-    return(points_cp)
-  }
-  
-  split_trails <- split(trails, f = trails$Trail)
-  raw_pts <- lapply(split_trails, FUN = point_assigner, points = points) |> 
-    dplyr::bind_rows()
-  
-  # now ensure that any plots which are 'duplicated' across trails are reduced 
-  # to a single representative. The plot will be retained in the trail which has
-  # fewer points. 
+occurrence_only <- filter(occ_data, Occurrence == 1) %>% 
+  drop_na(eventDate) %>% 
+  select(-ID, -Occurrence)
 
-  duplicate_pts <- raw_pts[lengths( st_intersects(raw_pts)) > 1, ]
-  singletons <- duplicate_pts |> 
-    dplyr::group_by(geometry) |> 
-    dplyr::slice_min(n = 1, order_by = Pts) 
-  duplicate_pts <- duplicate_pts[! duplicate_pts$UID %in% singletons$UID, ]
-  # now remove all but one copy of the duplicate points. 
-  final_pts <- raw_pts[! raw_pts$UID %in% duplicate_pts$UID, -which(names(raw_pts) %in% c("UID","Pts"))]
-  
-  return(final_pts)
-}
+ob <- OrderRandomPtsIDS(trails, thinned, occurrence_only)
 
-ob <- OrderRandomPtsIDS(trails, thinned)
+st_write(ob[[1]], '../data/GroundTruthPts/Iteration1.shp', append = F, quiet = T) 
+st_write(ob[[2]], '../data/GroundTruthPts/Revisits.shp', append = F, quiet = T) 
 
+mutate(ob[[1]]) %>% 
+  select(-Trail, -TrailID, name = UID) %>% 
+  st_transform(4326)  %>% 
+  st_write(., dsn = "../results/geodata/Iteration1_GroundTruth.gpx", driver = "GPX")
 
-
-
-
-ggplot() +
- # geom_sf(data = PTS) + 
-  geom_sf(data = ob, aes(color = Trail)) #+
-#  geom_sf_label(data = LINES, aes(label = lineID)) +
-  theme_void()
-  
-
-st_write(obbies, '../data/GroundTruthPts/Iteration1.shp', append = FALSE) 
+mutate(ob[[2]]) %>% 
+  select(-eventDate, -Trail, -TrailID, name = UID) %>% 
+  st_transform(4326)  %>% 
+  st_write(., dsn = "../results/geodata/Presences.gpx", driver = "GPX")
 ```
 

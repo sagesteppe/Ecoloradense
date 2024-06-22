@@ -187,3 +187,124 @@ modeller <- function(x, resolution, iteration){
   gc(verbose = FALSE)
   
 }
+
+
+#' assign each random point to it's nearest trail
+#' @param trails same as input to parent function `OrderRandomPtsIDS`
+#' @param points same as input to parent function `OrderRandomPtsIDS`
+point_assigner <- function(trails, points){
+  segments <- sf::st_segmentize(trails, dfMaxLength = 150)
+  vertices <- sf::st_cast(segments, 'POINT')
+  
+  segments <- lwgeom::st_split(segments, vertices) |>
+    sf::st_collection_extract("LINESTRING") |>
+    unique() |>
+    dplyr::mutate(lineID = 1:n(), .before = geometry) |>
+    dplyr::mutate(lineID = dplyr::case_when(
+      lineID == min(lineID) ~ max(lineID), 
+      lineID != min(lineID) ~ lineID - 1, 
+      .default = as.numeric(lineID)
+    )) |>
+    arrange(lineID)
+  
+  points_cp <- sf::st_transform(points, sf::st_crs(segments))
+  points_cp <- points_cp[ # determine which points are within the buffered areas  
+    lengths(
+      sf::st_intersects(points_cp, sf::st_buffer(segments, dist = 45)
+      )
+    ) > 0,
+  ]
+  points_cp <- points_cp |> 
+    dplyr::mutate(
+      Segment = st_nearest_feature(points_cp, segments),
+      Trail = trails$Trail[1], 
+      UID = 1:dplyr::n(),
+      Pts = dplyr::n(), .before = geometry) |>
+    dplyr::arrange(Segment) |>
+    dplyr::mutate(TrailID = 1:n(), .before = geometry) |>
+    dplyr::select(-Segment)
+  
+  return(points_cp)
+}
+
+#' snap occurrence data to trails which will be surveyed
+#' @param trails same as input to parent function `OrderRandomPtsIDS`
+#' @param presences same as input to parent function `OrderRandomPtsIDS`
+#' @param final_pts the output of `point_assigner` within the fn `OrderRandomPtsIDS` 
+#' after some minor cleaning
+presenceSnapper <- function(trails, presences, final_pts){
+  
+  nearest <- sf::st_nearest_feature(presences, trails)
+  Trail <- trails[nearest,] |>
+    dplyr::pull(Trail)
+  presences <- dplyr::mutate(presences, Trail = Trail, .before = geometry)
+  
+  Dist <- as.numeric(sf::st_distance(presences, trails[nearest,], by_element = T))  
+  
+  pres <- dplyr::mutate(presences, Dist = Dist,
+                        Trail = dplyr::if_else(Dist <= 400, Trail, NA), .before = geometry)
+  # now associate the presences points with the nearest random point along the 
+  # trail and give it a letter associated with that plots TrailID. 
+  
+  revisit <- dplyr::filter(pres, ! is.na(pres$Trail))
+  novisit <- dplyr::filter(pres, is.na(pres$Trail))
+  revis_trails <- split(revisit, f = revisit$Trail)
+  
+  addTrailID <- function(revis_trails, random_pts){
+    
+    rnd_pts <- dplyr::filter(random_pts, Trail %in% 
+                               unique(dplyr::pull(revis_trails, Trail)))
+    TrailIDs <- sf::st_drop_geometry(rnd_pts)[sf::st_nearest_feature(revis_trails, rnd_pts), 'TrailID'] 
+    
+    revis_trails <- dplyr::mutate(revis_trails, TrailID = TrailIDs, .before = geometry)
+    revis_trails <- dplyr::group_by(revis_trails, TrailID) |>
+      mutate(TrailID = paste0(TrailID, LETTERS[1:n()])) |>
+      dplyr::select(-Dist)
+    
+    return(revis_trails)
+  }
+  
+  revis_trails <- dplyr::bind_rows(
+    lapply(revis_trails, FUN = addTrailID, random_pts = final_pts)
+  )
+  return(revis_trails)
+}
+
+
+#' function to put a decent order to the ID's of random points based on trail positions
+#' @param trails the trails network used to draw the random sample
+#' @param points the random output points for which novel survey data should be collected
+#' @param revisits the existing occurrence points which can be revisted as novel data are collected
+OrderRandomPtsIDS <- function(trails, points, revisits){
+  
+  # first we split the data frame and lapply the process through each constituent
+  
+  split_trails <- split(trails, f = trails$Trail)
+  raw_pts <- lapply(split_trails, FUN = point_assigner, points = points) |> 
+    dplyr::bind_rows()
+  
+  # now ensure that any plots which are 'duplicated' across trails are reduced 
+  # to a single representative. The plot will be retained in the trail which has
+  # fewer points. 
+  
+  duplicate_pts <- raw_pts[lengths(sf::st_intersects(raw_pts)) > 1, ]
+  singletons <- duplicate_pts |> 
+    dplyr::group_by(geometry) |> 
+    dplyr::slice_min(n = 1, order_by = Pts) 
+  duplicate_pts <- duplicate_pts[! duplicate_pts$UID %in% singletons$UID, ]
+  # now remove all but one copy of the duplicate points. 
+  
+  final_pts <- raw_pts[! raw_pts$UID %in% duplicate_pts$UID, 
+                       -which(names(raw_pts) %in% c("Pts"))]
+  final_pts$UID <- 1:nrow(final_pts)
+  
+  
+  # now assign the historic occurrence points to the relevant trail #
+  # since these were not generated off of our buffer trails, we will #
+  # restrict the search to points within 400m of our trails, the other #
+  # points we would need permits to access. #
+  occurrence_revisits <- presenceSnapper(trails, occurrence_only, final_pts)
+  occurrence_revisits <- dplyr::mutate(occurrence_revisits, 
+                                       UID = paste0('P-', 1:n()), .before = geometry) 
+  return(list(final_pts, occurrence_revisits))
+}
