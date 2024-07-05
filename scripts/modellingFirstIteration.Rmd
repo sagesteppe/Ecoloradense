@@ -132,11 +132,11 @@ st_write(ob[[2]], '../data/GroundTruthPts/Revisits.shp', append = F, quiet = T)
 mutate(ob[[1]]) %>% 
   select(-Trail, -TrailID, name = UID) %>% 
   st_transform(4326)  %>% 
-  st_write(., dsn = "../results/geodata/Iteration1_GroundTruth.gpx", driver = "GPX")
+  st_write(., dsn = "../data/GroundTruthPts/Iteration1_GroundTruth.gpx", driver = "GPX")
 
 mutate(ob[[2]]) %>% 
   select(-eventDate, -Trail, -TrailID, name = UID) %>% 
   st_transform(4326)  %>% 
-  st_write(., dsn = "../results/geodata/Presences.gpx", driver = "GPX")
+  st_write(., dsn = "../data/GroundTruthPts/Presences.gpx", driver = "GPX")
 ```
 

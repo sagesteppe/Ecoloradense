@@ -1,0 +1,76 @@
+---
+title: Predicting, habitat suitability, habitat occupancy, and census sizes of a rare plant species 
+author:  |
+    | Reed Clark Benkendorf$^1$^[Correspondence: rbenkendorf@chicagobotanic.org], Jeremie B. Fant$^1$$^,$$^2$, Sophie Taddeo$^3$
+    |  $^1$ Chicago Botanic Garden, Glencoe, Illinois 60022, USA  
+    |  $^2$ Plant Biology and Conservation, Northwestern University, Evanston, Illinois 60208, USA  
+    |  $^3$ Department of Environmental and Ocean Sciences, University of San Diego, San Diego, California 92110, USA
+abstract:  |  
+keywords: |
+  species distribution model, occupancy, census size estimates
+orcid: |
+ Reed Benkendorf https://orcid.org/0000-0003-3110-6687  
+ Jeremie Fant https://orcid.org/0000-0001-9276-1111  
+ Sophie Taddeo https://orcid.org/0000-0002-7789-1417  
+output:
+  pdf_document: default
+  toc: no
+  word_document: default
+csl: "../citations/methods-in-ecology-and-evolution.csl"
+bibliography: ../citations/citations.bib
+link-citations: yes
+fig_caption: yes
+always_allow_html: yes
+header-includes:
+- \usepackage{endfloat}
+- \usepackage{setspace}\doublespacing
+- \usepackage{lineno}
+- \linenumbers
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+```{r Required Libraries, message=F, warning=F, results='hide'}
+library(tidyverse)
+library(bookdown)
+library(knitr)
+library(kableExtra)
+```
+
+# 1 \| INTRODUCTION
+
+...Loss of Species...
+
+Determining which species to focus our conservation efforts (e.g. ...), and the relative amounts, towards requires an array of data which seldom exist for decision makers. 
+These data outline simple parameters of the species, detailing the rarity of it, and how it's distribution relates to anthropogenic stressors such as land use and climate change. 
+Chief amongst these parameters, are the geographic extent (range), the distribution of suitable habitat, and the occupation of suitable habitats by the species, as well as the geographic and census size of individual populations. 
+Environmental niche models have made enormous headway in resolving the former two problems, however the historic mis-match between the resolution of variables governing species distributions and the data available to serve as predictors of environmental have restricted the interpretation and implementation of these models. 
+Recent advances in remote-sensing technologies have allowed for well-designed ground truthing campaigns, and efforts made towards better understanding parameters of individual populations e.g. both the geographic and census sizes of them. 
+However, the acquisition of ground truthed data sets to guide our modelling efforts are still ostensibly rare, likely given the expense and difficulty in obtaining them.
+
+\< p2\> \~ ENM's and mismatch between spatial and temporal resolutions
+
+Considerable headway has been made in generating statistically robust environmental niche models (ENM's), spirited by recent advances in collecting high-resolution environmental data, compute power, digitization of natural history museum records and the acquisition of citizen science records, and perhaps most importantly - statistical methods.
+*However, ENM's are rarely tested on the ground, and even more seldom at landscape scales - further many recent advances, especially statistically, have recently been made with individual populations of common species rather than rare species. * 
+A complication with the implementation and interpretation of these models is a fundamental mismatch between the spatial resolution of the independent variables and the factors governing the distribution of populations. 
+Recent advances in remote sensing and statistical downsampling (e.g. ClimateNA, 3DEP) are bridging this gap, however the resolution of these data are now oftentimes finer than the occurrence data used as dependent variables. 
+Using low quality geo-located data can lead to spurious results, negating the effect of high resolution independent variables *MORE*. 
+A further mismatch of resolution is the year in which data on geographic localities were obtained and current conditions which allow for positive population growth. 
+Indeed, historic occurrence data may now represent conditions which are inhospitable to the maintenance of populations, or may even represent populations which even then were simply sinks from more robust populations. 
+Collecting data on whether areas are favorable to continued recruitment of individuals from the soil seed bank, are perhaps more astute than whether long-lived individuals persist.  
+
+Application of high resolution (e.g. \< 1/3 arc second, \~10m at 35\*N) is highly desirable, but may incur enormous computational costs dependent on the domain of analysis.
+
+\< p3 \> Prioritizing survey effort of ENM's - Iterative Modelling; Occupied Sites
+
+An ENM predicts a single outcome; the probability of suitable habitat for the species. 
+Although, in general, an analysts true feature of interest is the species realized distribution.   
+Iterative-adaptive modelling, e.g. using new ground truthed dependent data to feed into new models,  has recently emerged as a method for increasing the ecological realism of these models i.e. there ability to detect a population. 
+However, the bridge between an ENM and a populations presence is related to the dispersal of propagules and the establishment of the population, rather than factors intrinsic to the species biology. 
+
+
+\< p4 \> Estimating deme borders and census sizes
+
+

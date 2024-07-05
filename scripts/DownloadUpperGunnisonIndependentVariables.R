@@ -2,7 +2,7 @@
 # 90m or 3 arc seconds, 30m or 1 arc second, 10m or 1/3 arc second, and 3 meters. 
 # These values will be compared via ground truthing, generating an interesting
 # albeit small intermediary paper, how do these different resolution data perform 
-# for predicting presence and absence. 
+# for predicting presence and absence? 
 
 # In order for the most possible comparisons of these products, we will generate
 # each predictor from a DEM native to the above generation using the same functions
@@ -15,6 +15,8 @@ library(tidyverse)
 library(sf)
 library(terra)
 
+setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
+
 # first we will create a domain for all analysis. The 'closest' this bounding box is to a known 
 # occurrence is 10 miles. The furthest distances vary. 
 domain <- sf::st_read('../data/collections/occurrences_coloradense/occurrences.shp', quiet = T) %>% 
@@ -24,7 +26,7 @@ domain <- sf::st_read('../data/collections/occurrences_coloradense/occurrences.s
   st_transform(4326) %>% 
   vect() 
 
-
+ext(domain)
 # now we will assemble single DEM tifs which cover our domain
 
 #' assmeble and crop DEM's' to an area. 
@@ -53,6 +55,7 @@ DEMcrop('../data/spatial/raw/dem_3arc', domain = domain)
 DEMcrop('../data/spatial/raw/dem_1arc', domain = domain)
 DEMcrop('../data/spatial/raw/dem_1-3arc', domain = domain)
 DEMcrop('../data/spatial/raw/dem_3m', domain = domain)
+DEMcrop('../data/spatial/raw/dem_1m', domain = domain)
 
 # the domain for all analyses will be the Upper Gunnison, where 3m resolution data are 
 # available. 

@@ -1,0 +1,307 @@
+<?xml version="1.0"?>
+<gpx version="1.1" creator="GDAL 3.4.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.topografix.com/GPX/1/1" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+<metadata><bounds minlat="38.961310000000005" minlon="-107.146799999999999" maxlat="39.165191666699997" maxlon="-106.910383999999993"/></metadata>              
+<wpt lat="38.991084" lon="-106.971292">
+  <name>P-1</name>
+</wpt>
+<wpt lat="38.991213" lon="-106.970278">
+  <name>P-2</name>
+</wpt>
+<wpt lat="38.990774" lon="-106.970327">
+  <name>P-3</name>
+</wpt>
+<wpt lat="38.991151" lon="-106.97036">
+  <name>P-4</name>
+</wpt>
+<wpt lat="38.992454968399997" lon="-106.979298787299996">
+  <name>P-5</name>
+</wpt>
+<wpt lat="38.992288797199997" lon="-106.979598691800007">
+  <name>P-6</name>
+</wpt>
+<wpt lat="38.991444488100001" lon="-106.981833474799998">
+  <name>P-7</name>
+</wpt>
+<wpt lat="38.992509241299992" lon="-106.979363327900003">
+  <name>P-8</name>
+</wpt>
+<wpt lat="38.992316205999984" lon="-106.979766497499995">
+  <name>P-9</name>
+</wpt>
+<wpt lat="38.9903" lon="-106.9785">
+  <name>P-10</name>
+</wpt>
+<wpt lat="38.995098" lon="-106.97348">
+  <name>P-11</name>
+</wpt>
+<wpt lat="39.01018055" lon="-107.03199717">
+  <name>P-12</name>
+</wpt>
+<wpt lat="39.163942" lon="-107.071337">
+  <name>P-13</name>
+</wpt>
+<wpt lat="39.013015" lon="-106.9813013">
+  <name>P-14</name>
+</wpt>
+<wpt lat="39.014045829" lon="-106.9848733396">
+  <name>P-15</name>
+</wpt>
+<wpt lat="39.165191666699997" lon="-107.073075">
+  <name>P-16</name>
+</wpt>
+<wpt lat="38.9911" lon="-107.0657">
+  <name>P-17</name>
+</wpt>
+<wpt lat="38.9911" lon="-107.0657">
+  <name>P-18</name>
+</wpt>
+<wpt lat="38.9911" lon="-107.0657">
+  <name>P-19</name>
+</wpt>
+<wpt lat="38.9943" lon="-106.910384">
+  <name>P-20</name>
+</wpt>
+<wpt lat="39.1135" lon="-107.1468">
+  <name>P-21</name>
+</wpt>
+<wpt lat="39.055967" lon="-107.02483">
+  <name>P-22</name>
+</wpt>
+<wpt lat="39.056069" lon="-107.02487">
+  <name>P-23</name>
+</wpt>
+<wpt lat="39.061865" lon="-107.027448">
+  <name>P-24</name>
+</wpt>
+<wpt lat="39.053170164199997" lon="-107.020406741700015">
+  <name>P-25</name>
+</wpt>
+<wpt lat="39.05267783330001" lon="-107.018677833300003">
+  <name>P-26</name>
+</wpt>
+<wpt lat="39.053282649300002" lon="-107.020353097599994">
+  <name>P-27</name>
+</wpt>
+<wpt lat="39.0" lon="-107.03">
+  <name>P-28</name>
+</wpt>
+<wpt lat="39.049121" lon="-107.047354">
+  <name>P-29</name>
+</wpt>
+<wpt lat="39.05157" lon="-107.050962">
+  <name>P-30</name>
+</wpt>
+<wpt lat="39.05157" lon="-107.050962">
+  <name>P-31</name>
+</wpt>
+<wpt lat="39.0483" lon="-107.0372">
+  <name>P-32</name>
+</wpt>
+<wpt lat="39.0483" lon="-107.0372">
+  <name>P-33</name>
+</wpt>
+<wpt lat="39.036788833299994" lon="-107.034766666699994">
+  <name>P-34</name>
+</wpt>
+<wpt lat="39.036832481300003" lon="-107.0348462627">
+  <name>P-35</name>
+</wpt>
+<wpt lat="38.996548" lon="-107.045294">
+  <name>P-36</name>
+</wpt>
+<wpt lat="38.996548" lon="-107.045294">
+  <name>P-37</name>
+</wpt>
+<wpt lat="38.984090625299991" lon="-107.033405313399996">
+  <name>P-38</name>
+</wpt>
+<wpt lat="38.998979148499984" lon="-107.039790228100017">
+  <name>P-39</name>
+</wpt>
+<wpt lat="39.006453123900002" lon="-107.047646753600006">
+  <name>P-40</name>
+</wpt>
+<wpt lat="38.984011500199998" lon="-107.033793646899994">
+  <name>P-41</name>
+</wpt>
+<wpt lat="38.984077549600002" lon="-107.033511093">
+  <name>P-42</name>
+</wpt>
+<wpt lat="38.983713523499993" lon="-107.031257366899993">
+  <name>P-43</name>
+</wpt>
+<wpt lat="39.01196" lon="-107.02182">
+  <name>P-44</name>
+</wpt>
+<wpt lat="39.01592" lon="-107.02621">
+  <name>P-45</name>
+</wpt>
+<wpt lat="39.018731" lon="-107.021501">
+  <name>P-46</name>
+</wpt>
+<wpt lat="39.016101" lon="-107.016713">
+  <name>P-47</name>
+</wpt>
+<wpt lat="39.01531945" lon="-107.030608333300009">
+  <name>P-48</name>
+</wpt>
+<wpt lat="39.027359" lon="-107.090947">
+  <name>P-49</name>
+</wpt>
+<wpt lat="39.02701798" lon="-107.09098688">
+  <name>P-50</name>
+</wpt>
+<wpt lat="38.96131" lon="-106.95718">
+  <name>P-51</name>
+</wpt>
+<wpt lat="38.96712" lon="-106.95229">
+  <name>P-52</name>
+</wpt>
+<wpt lat="38.96131" lon="-106.95718">
+  <name>P-53</name>
+</wpt>
+<wpt lat="38.96759" lon="-106.95171">
+  <name>P-54</name>
+</wpt>
+<wpt lat="38.967576893100002" lon="-106.951669687500015">
+  <name>P-55</name>
+</wpt>
+<wpt lat="38.967723618299985" lon="-106.9517522493">
+  <name>P-56</name>
+</wpt>
+<wpt lat="38.96780601239999" lon="-106.951702293099999">
+  <name>P-57</name>
+</wpt>
+<wpt lat="39.022228" lon="-106.978235">
+  <name>P-58</name>
+</wpt>
+<wpt lat="39.022228" lon="-106.978235">
+  <name>P-59</name>
+</wpt>
+<wpt lat="38.984772" lon="-106.970217">
+  <name>P-60</name>
+</wpt>
+<wpt lat="38.986419" lon="-106.973493">
+  <name>P-61</name>
+</wpt>
+<wpt lat="38.9858" lon="-106.969">
+  <name>P-62</name>
+</wpt>
+<wpt lat="38.983761" lon="-106.967975">
+  <name>P-63</name>
+</wpt>
+<wpt lat="38.983519" lon="-106.967844">
+  <name>P-64</name>
+</wpt>
+<wpt lat="38.983519" lon="-106.967844">
+  <name>P-65</name>
+</wpt>
+<wpt lat="38.98112" lon="-106.9788">
+  <name>P-66</name>
+</wpt>
+<wpt lat="38.985698" lon="-106.976785">
+  <name>P-67</name>
+</wpt>
+<wpt lat="38.985389" lon="-106.971445">
+  <name>P-68</name>
+</wpt>
+<wpt lat="38.984459" lon="-106.968573">
+  <name>P-69</name>
+</wpt>
+<wpt lat="38.984117" lon="-106.977558">
+  <name>P-70</name>
+</wpt>
+<wpt lat="38.98377" lon="-106.972119">
+  <name>P-71</name>
+</wpt>
+<wpt lat="38.982348" lon="-106.978122">
+  <name>P-72</name>
+</wpt>
+<wpt lat="38.98526" lon="-106.97716">
+  <name>P-73</name>
+</wpt>
+<wpt lat="38.98147" lon="-106.9783">
+  <name>P-74</name>
+</wpt>
+<wpt lat="38.981968830399992" lon="-106.978364624199997">
+  <name>P-75</name>
+</wpt>
+<wpt lat="38.985552177799995" lon="-106.969090383600005">
+  <name>P-76</name>
+</wpt>
+<wpt lat="38.984936988" lon="-106.968385465500006">
+  <name>P-77</name>
+</wpt>
+<wpt lat="38.984072059399999" lon="-106.96812462070001">
+  <name>P-78</name>
+</wpt>
+<wpt lat="38.982770056499987" lon="-106.968274573">
+  <name>P-79</name>
+</wpt>
+<wpt lat="38.982055164" lon="-106.968771116900001">
+  <name>P-80</name>
+</wpt>
+<wpt lat="38.98348964289999" lon="-106.977799432500007">
+  <name>P-81</name>
+</wpt>
+<wpt lat="38.984452220599998" lon="-106.969016203799995">
+  <name>P-82</name>
+</wpt>
+<wpt lat="38.984828107099993" lon="-106.968839848499996">
+  <name>P-83</name>
+</wpt>
+<wpt lat="38.98597110530001" lon="-106.968870610099998">
+  <name>P-84</name>
+</wpt>
+<wpt lat="38.98651409" lon="-106.96916785">
+  <name>P-85</name>
+</wpt>
+<wpt lat="38.98022920830001" lon="-106.979154450899998">
+  <name>P-86</name>
+</wpt>
+<wpt lat="38.98287" lon="-106.97824167">
+  <name>P-87</name>
+</wpt>
+<wpt lat="38.98038833" lon="-106.97486167">
+  <name>P-88</name>
+</wpt>
+<wpt lat="38.982008644400004" lon="-106.968813948399998">
+  <name>P-89</name>
+</wpt>
+<wpt lat="38.985685324300007" lon="-106.9768087753">
+  <name>P-90</name>
+</wpt>
+<wpt lat="38.981041456599989" lon="-106.971832942299997">
+  <name>P-91</name>
+</wpt>
+<wpt lat="38.985632895499997" lon="-106.976957973200001">
+  <name>P-92</name>
+</wpt>
+<wpt lat="38.987067374399984" lon="-106.970444563900003">
+  <name>P-93</name>
+</wpt>
+<wpt lat="38.98365" lon="-106.977805">
+  <name>P-94</name>
+</wpt>
+<wpt lat="39.04444" lon="-106.99806">
+  <name>P-95</name>
+</wpt>
+<wpt lat="39.000339" lon="-107.097701">
+  <name>P-96</name>
+</wpt>
+<wpt lat="39.000339" lon="-107.097701">
+  <name>P-97</name>
+</wpt>
+<wpt lat="39.000339" lon="-107.097701">
+  <name>P-98</name>
+</wpt>
+<wpt lat="39.000339" lon="-107.097701">
+  <name>P-99</name>
+</wpt>
+<wpt lat="39.000339" lon="-107.097701">
+  <name>P-100</name>
+</wpt>
+<wpt lat="39.000316666699995" lon="-107.092438833299994">
+  <name>P-101</name>
+</wpt>
+</gpx>
