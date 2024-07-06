@@ -48,13 +48,33 @@ DEMcrop <- function(x, domain){
   
   proj_dem_path <- file.path(
     '../data/spatial/processed', basename(x), 'dem.tif')
+  
   terra::project(DEMs, "epsg:32613", filename = proj_dem_path, overwrite = TRUE)
+
 }
 
 DEMcrop('../data/spatial/raw/dem_3arc', domain = domain)
 DEMcrop('../data/spatial/raw/dem_1arc', domain = domain)
 DEMcrop('../data/spatial/raw/dem_1-3arc', domain = domain)
 DEMcrop('../data/spatial/raw/dem_3m', domain = domain)
+
+# the 1m resolution data set is very large. We need to process it in batches
+# to achieve the desired effect. 
+
+project1m <- function(x){
+  
+  paths <- file.path(x, list.files(x, 'tif$'))
+  
+  for (i in seq_along(paths)){
+    ob <- terra::project(terra::rast(paths[i]), 'EPSG:32613')
+    terra::writeRaster(ob, gsub('USGS_1M_|USGS_one_meter_', '', paths[i]), overwrite = T)
+    unlink(paths[i])(**)
+    gc()
+  }
+  
+}
+project1m('../data/spatial/raw/dem_1m')
+
 DEMcrop('../data/spatial/raw/dem_1m', domain = domain)
 
 # the domain for all analyses will be the Upper Gunnison, where 3m resolution data are 

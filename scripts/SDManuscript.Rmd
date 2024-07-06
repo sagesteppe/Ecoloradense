@@ -1,12 +1,16 @@
 ---
-title: Predicting, habitat suitability, habitat occupancy, and census sizes of a rare plant species 
-author:  |
-    | Reed Clark Benkendorf$^1$^[Correspondence: rbenkendorf@chicagobotanic.org], Jeremie B. Fant$^1$$^,$$^2$, Sophie Taddeo$^3$
+title: Predicting, habitat suitability, habitat occupancy, and census sizes of a rare plant species using iterative adaptive niche based sampling  
+author: |
+    | Reed Clark Benkendorf$^1$^[Author for Correspondence: rbenkendorf@chicagobotanic.org], Jeremie B. Fant$^1$$^,$$^2$, Sophie Taddeo$^3$  
     |  $^1$ Chicago Botanic Garden, Glencoe, Illinois 60022, USA  
     |  $^2$ Plant Biology and Conservation, Northwestern University, Evanston, Illinois 60208, USA  
     |  $^3$ Department of Environmental and Ocean Sciences, University of San Diego, San Diego, California 92110, USA
-abstract:  |  
-keywords: |
+abstract: |
+  1)
+  2)
+  3)
+  4)
+keywords: | 
   species distribution model, occupancy, census size estimates
 orcid: |
  Reed Benkendorf https://orcid.org/0000-0003-3110-6687  
@@ -30,6 +34,7 @@ header-includes:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = F, warning = F, message = F)
+set.seed(27)
 ```
 
 ```{r Required Libraries, message=F, warning=F, results='hide'}
@@ -37,22 +42,26 @@ library(tidyverse)
 library(bookdown)
 library(knitr)
 library(kableExtra)
+
+# packages for analysis
+library(caret) # general data partitioning 
+library(nnet) # multinomial logistic regression 
+library(pRoc)
 ```
 
-# 1 \| INTRODUCTION
+# 1 | INTRODUCTION
 
-...Loss of Species...
-
-Determining which species to focus our conservation efforts (e.g. ...), and the relative amounts, towards requires an array of data which seldom exist for decision makers. 
-These data outline simple parameters of the species, detailing the rarity of it, and how it's distribution relates to anthropogenic stressors such as land use and climate change. 
+The effects of anthropogenic stressors, e.g. land use and climate change, have lead to a global extinction crisis with estimates for the number of plant species facing extinction ranging from X-X%. 
+Determining which plant species to focus our conservation efforts (e.g. ...) towards requires an array of data which seldom exist for decision makers. 
+These data generally outline simple parameters of the species, detailing the rarity of it, and how it's distribution relates to anthropogenic stressors. 
 Chief amongst these parameters, are the geographic extent (range), the distribution of suitable habitat, and the occupation of suitable habitats by the species, as well as the geographic and census size of individual populations. 
-Environmental niche models have made enormous headway in resolving the former two problems, however the historic mis-match between the resolution of variables governing species distributions and the data available to serve as predictors of environmental have restricted the interpretation and implementation of these models. 
+While simple, estimating these parameters is expensive, generally requiring ground truthed data - hence they often require proxies or heuristics for estimation. 
+Environmental niche models have made enormous headway in resolving the former two problems, however the historic mismatch between the resolution of variables governing species distributions and the data available to serve as predictors of environmental have restricted the interpretation and implementation of these models. 
 Recent advances in remote-sensing technologies have allowed for well-designed ground truthing campaigns, and efforts made towards better understanding parameters of individual populations e.g. both the geographic and census sizes of them. 
-However, the acquisition of ground truthed data sets to guide our modelling efforts are still ostensibly rare, likely given the expense and difficulty in obtaining them.
+However, the acquisition of ground truthed data sets to guide our modelling efforts are still ostensibly rare, likely given the expense and difficulty in obtaining them. 
 
-\< p2\> \~ ENM's and mismatch between spatial and temporal resolutions
-
-Considerable headway has been made in generating statistically robust environmental niche models (ENM's), spirited by recent advances in collecting high-resolution environmental data, compute power, digitization of natural history museum records and the acquisition of citizen science records, and perhaps most importantly - statistical methods.
+**ENM's and mismatch between spatial and temporal resolutions**
+Considerable headway has been made in generating statistically robust environmental niche models (ENM's), spirited by recent advances in collecting high-resolution environmental data, compute power, digitization of natural history museum records and the acquisition of citizen science records, and perhaps most importantly - statistical methods. 
 *However, ENM's are rarely tested on the ground, and even more seldom at landscape scales - further many recent advances, especially statistically, have recently been made with individual populations of common species rather than rare species. * 
 A complication with the implementation and interpretation of these models is a fundamental mismatch between the spatial resolution of the independent variables and the factors governing the distribution of populations. 
 Recent advances in remote sensing and statistical downsampling (e.g. ClimateNA, 3DEP) are bridging this gap, however the resolution of these data are now oftentimes finer than the occurrence data used as dependent variables. 
@@ -61,16 +70,84 @@ A further mismatch of resolution is the year in which data on geographic localit
 Indeed, historic occurrence data may now represent conditions which are inhospitable to the maintenance of populations, or may even represent populations which even then were simply sinks from more robust populations. 
 Collecting data on whether areas are favorable to continued recruitment of individuals from the soil seed bank, are perhaps more astute than whether long-lived individuals persist.  
 
-Application of high resolution (e.g. \< 1/3 arc second, \~10m at 35\*N) is highly desirable, but may incur enormous computational costs dependent on the domain of analysis.
+**Improving Model Performance - Iterative adaptive-nice based sampling after expert mapping and sampling.**
+ENM models generally suffer from having few, generally spatially biased, occurrence records to serve as dependent variables, which generally fail to characterize the ecological breadth of the species. 
+While many ENM's have high-performance metrics while tested on small subsets of hold-out data, they are unlikely to detect many new populations during ground truthing. 
+To increase the number of presences, and absences in ecologically 'similar' sites, which can be used for training models iterative adaptive-niche based sampling (IANBS) has become increasingly employed. 
+In IANBS cells with high probabilities of occurrence are preferentially visited, and after each bout of field visits, a new model is fit incorporating the original data, plus the recently collected data.  
+However, we posit that evaluating the effects of IANBS is complicated as the species are oftentimes initially 'under surveyed'; in these instances the true distribution of the population is generally poorly defined - despite it being easy to do so by a naturalist. 
+Here we showcase the usage of a robust first-stage expert subjective sampling effort to generate a large pool of random variables for elaboration after a second modelling bout. 
+Using this process not only allows for the acquisition of a large number of presences, but also absences in the areas in geographic and ecological similarity to these presences. 
+It further allows for verification of the placement of the dependent variables, which are likely to adversely affect each generation of models.  
 
-\< p3 \> Prioritizing survey effort of ENM's - Iterative Modelling; Occupied Sites
-
+**Prioritizing Survey Efforts - Occupied Sites**
 An ENM predicts a single outcome; the probability of suitable habitat for the species. 
-Although, in general, an analysts true feature of interest is the species realized distribution.   
-Iterative-adaptive modelling, e.g. using new ground truthed dependent data to feed into new models,  has recently emerged as a method for increasing the ecological realism of these models i.e. there ability to detect a population. 
-However, the bridge between an ENM and a populations presence is related to the dispersal of propagules and the establishment of the population, rather than factors intrinsic to the species biology. 
+Although, in general, an analysts true feature of interest is the species realized distribution.  
+However, the bridge between an ENM and a populations presence is related to the dispersal of propagules and the establishment of the population, rather than factors intrinsic to the species ecology.  
+To further assist groups in detecting new populations, or extending the range of currently known populations, we propose modelling occupancy as a random variable dependent on distance from sites known to be occupied, and the landscape configuration of the target site. 
+'Distance' may be defined as euclidean (or Haversine for large distances), or as a least-cost distance reflecting a generalized surface which conveys the difficulty for typical seeds to travel between the nearest occupied sites and the site of interest.  
+Landscape metrics postulated to relate to the occupancy at a site include the patch metrics Core Area Index, roughly reflecting the probability of a propagule arriving to a larger patch, and the class metrics proximity and contagion both of which reflect the aggregation between occupied sites.  
+
+\< p5 \> **Estimating deme borders and census sizes** 
+The 
 
 
-\< p4 \> Estimating deme borders and census sizes
 
+
+# 2 | METHODS
+
+Dependent data were gathered from iNaturalist and the Consortium of Southern Rockies herbaria on ... 
+
+
+### Comparision of Different Spatial Resolutions  
+
+compare the results of each spatial resolution at each of the 3 stages (naive, expert, adaptive) 
+
+```{r Compare Models at Different Spatial Resolutions}
+
+## Create 3 regression plots, 1m res predicts the other resolutions. 
+
+## sample the 1m prediction, 
+m1_samp <- terra::sample(m1, method = 'stratified', xy = TRUE, size = 5000)
+
+# now ensure points are > 130 m from each other to accomadate the 3 arc data set. 
+st_as_sf(m1_samp, coords = c(x = 'X', y = 'Y'), crs = 32613) 
+st_nearest_feature() # identify points which are closest to each other. 
+st_distance() # measure the distances 
+# filter for only one record within the distance. 
+```
+
+### Environmental Niche Modelling Results  
+
+here put the number of plots which were occupied in the adaptive modelling effort. 
+
+```{r Create Table of final ENM Results with number of plots with presences}
+
+```
+
+
+### Species Occupancy  
+
+```{r multinomial logistic regression for habit occupancy}
+
+Occupancy$Class <- relevel(Occupancy$Class, ref = 0)
+
+index <- createDataPartition(Occupancy$Class, p = .70, list = FALSE)
+train <- Occupancy[index,]
+test <- Occupancy[-index,]
+
+nnet::multinom()
+```
+
+
+### Plant Density  
+
+```{r}
+
+
+
+```
+
+
+### 
 
