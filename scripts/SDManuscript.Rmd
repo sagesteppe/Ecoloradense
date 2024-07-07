@@ -53,19 +53,17 @@ library(pROC)
 
 The effects of anthropogenic stressors, e.g. land use and climate change, have lead to a global extinction crisis with estimates of the number of plant species facing extinction ranging from 20-40% (@brummitt2015green, @pimm2015many, @nic2020extinction). 
 Determining which plant species to focus our conservation efforts (e.g. active restoration, preserve creation, *ex situ* collections) on requires an array of data which seldom exist for decision makers (@heywood2017plant). 
-These data generally outline simple biological and ecological parameters of the species useful for detailing the rarity of it and how it's distribution relates to current and future anthropogenic stressors. 
+These data generally outline simple biological and ecological parameters of species useful for detailing there rarity and how it's distribution relates to current and future anthropogenic stressors. 
 Chief amongst these parameters, are the geographic extent of occurrence (range), the distribution of suitable habitat - the occupancy of this habitat as well as the spacing of occupied patches, and the census size of individual (sub-)populations (@natural2001iucn, @faber2012natureserve, @usfws2016ssa). 
-While these parameters are seemingly simple, characterizing them can be expensive, generally requiring extensive field work - hence these parameters often require proxies or heuristics for estimation (@juffe2016assessing, @bland2015cost, @pelletier2018predicting). 
-Environmental niche models have made enormous headway in resolving the former two problems, however the historic mismatch between the resolution of variables governing species distributions and the data available to serve as predictors of environmental have restricted the interpretation and implementation of these models (taddeo2024grimes, @guisan2013predicting). 
-Recent advances in remote-sensing technologies have allowed for well-designed ground verification campaigns, and efforts made towards better understanding parameters of individual populations e.g. both the geographic and census sizes of them. 
-However, the acquisition of ground verified data sets to guide our modelling efforts are still ostensibly rare, likely given the expense and difficulty in obtaining them (@chiffard2020anbs). 
+While these parameters are seemingly simple, characterizing them can be time consuming, generally requiring extensive field work - hence they oftentimes require proxies or heuristics for estimation in conservation assessments (@juffe2016assessing, @bland2015cost, @pelletier2018predicting). 
+Environmental niche models have made enormous headway in resolving the former two problems (extent, and occupancy), however the historic mismatch between the resolution of variables governing species distributions and the data available to serve as predictors of environmental have restricted the interpretation and implementation of these models in highly heterogeneous environments (taddeo2024grimes, @guisan2013predicting). 
+Recent advances in remote-sensing technologies have allowed for the generation of useful models in these generally biodiverse systems, further these data offer promise to model additional population parameters (e.g. census size, population extents), however the utility and usage of high resolution have rarely been ground verified or ostensibly reported upon (@chiffard2020anbs). 
 
-Considerable headway has been made in generating statistically robust environmental niche models (ENM's) spirited by: recent advances in collecting high-resolution environmental data, compute power, digitization of natural history museum records and the acquisition of citizen science records, and perhaps most importantly - statistical methods (@markham2023review, @feldman2021trends).  
-However, ENM's are rarely ground verified, and even more seldom at landscape scales - further many recent advances, especially statistically, have recently been made with individual populations of common species rather than rare species; accordingly concerns regarding the association between model predicitons and reality persist.
-A complication with the implementation and interpretation of these models is a mismatch between the spatial resolution of the independent variables available to model the species fundamental niche and the factors governing the true distribution of populations - the realized niche (@carscadden2020niche, @chauvier2022resolution, @lembrechts2019incorporating). 
-Recent advances in remote sensing and statistical down scaling (e.g. ClimateNA, 3DEP) are bridging this gap, however the resolution of these data are now oftentimes finer than the occurrence data used as dependent variables. 
-Recent papers have had mixed results regarding the effects of imprecisely mapped occurrence data on ENM predictions, with indications that models generated in more heterogenous environments, and at finer resolutions (e.g. ca. 3 arc-second relate to 10 arc-minutes (~14.5 km) at 38*)) suffer minor decreases in model performance (@graham2008influence, @smith2023including) with real species, while increasing error in mapping has drastic effects on model predictions with virtually simulated species (@gabor2022positional). 
-Using low quality geo-located data can lead to spurious results, negating the effect of high resolution independent variables *MORE*. 
+Recently, considerable headway has been made in generating statistically robust environmental niche models (ENM's) spirited by: recent advances in collecting high-resolution environmental data, compute power, digitization of natural history museum records and the acquisition of citizen science records, and statistical methods especially downsampling (@markham2023review, @feldman2021trends).  
+However, ENM's are rarely ground verified, and even more seldom at landscape scales.
+Hence, most of our knowledge about producing ENM's rely on simulated species and data, especially at spatial resolutions considered relatively coarse to those desired by many analysts. 
+An historic complication with the implementation and interpretation of ENM's is a mismatch between the spatial resolution of the independent variables available to model the species fundamental niche and the factors governing the true distribution of populations - the realized niche (@carscadden2020niche, @chauvier2022resolution, @lembrechts2019incorporating). 
+Recent papers have had mixed results regarding the effects of imprecisely mapped occurrence data on ENM predictions, with indications that models generated in more heterogenous environments, and at finer resolutions (e.g. ca. 3 arc-second relate to 10 arc-minutes (~14.5 km) at 38*)) suffer minor decreases in model performance (@graham2008influence, @smith2023including) with real species, while increasing error in mapping has drastic effects on model predictions with virtually simulated species (@gabor2022positional).  
 A further mismatch of resolution is the year in which data on geographic localities were obtained and current conditions which allow for positive population growth (@bracken2022maximizing). 
 Indeed, historic occurrence data may now represent conditions which are inhospitable to the maintenance of populations, or may even represent populations which even then were simply sinks from more robust populations (@bracken2022maximizing). 
 Collecting data on whether areas are favorable to continued recruitment of individuals from the soil seed bank, are perhaps more astute than whether long-lived individuals persist.  
@@ -187,11 +185,9 @@ test <- Occupancy[-index,]
 nnet::multinom()
 ```
 
-
 ### Plant Density  
 
 ```{r Regression of Plant Density Observed and Predicted}
-
 
 ```
 
@@ -199,7 +195,18 @@ nnet::multinom()
 
 ```
 
+## Comparision of Juvenile and Mature Plant Models
+
+Using the top performing model resolution () models were refit using only either juvenile or mature plant presences, the number of mature presences were limited to the number of juvenile occurrences. 
+Models were fit at 6 sample sizes (n = 15, 30, 50, 75, 125, 200) 15 times each using a randomly sampled 60%-40% train-test split of data. 
+
+```{r Simulate Model Performance at different Lifestages, eval = F}
+
+```
+
 ## Simulations of Sample Size 
+
+The effect of sample size on model performance was simulated at 8 sample sizes (n = 15, 30, 50, 75, 125, 200, 300, 400) each 25 times, using a randomly sampled 60%-40% train-test split of data. 
 
 ```{r Simulate Model Performance at different Sample Sizes}
 
@@ -207,10 +214,11 @@ nnet::multinom()
 
 ## Simulations of Coordinate Errors 
 
+The effect of sample size on model performance was simulated at 6 sample sizes (n = 15, 30, 50, 75, 125, 200), with three proportions of records in error (0%, 5%, 10%, 20%), and 3 levels of coordinate uncertainty (0m, 10m, 100m, 1000m), at each of the 5 resolutions 25 times. 
+
 ```{r Simulate Model Performance with different amounts, and proportions of Coordinate Inaccuracies}
 
 ```
-
 
 ## 3 | RESULTS  
 
@@ -271,6 +279,20 @@ dev.off()
 ```
 
 ```{r Maps of Suitable Habitat Density and Occupancy predictions}
+
+```
+
+## Comparision of Juvenile and Mature Plant Models
+
+## Simulations of Sample Size 
+
+```{r Boxplot of different Sample Sizes Simulations}
+
+```
+
+## Simulations of Coordinate Errors 
+
+```{r Boxplot of different Coordinate Error Simulations}
 
 ```
 

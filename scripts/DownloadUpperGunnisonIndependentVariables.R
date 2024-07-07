@@ -147,9 +147,8 @@ morphoMaker <- function(x, p){
   
   if(str_detect(x, 'tif$')){demIN <- x} else{
       demIN <- terra::mosaic(terra::sprc(file.path(x, list.files(x, 'tif$'))))
-  }W
- # dir.create(p)
-  
+  }
+  dir.create(p)
   whitebox::wbt_fill_depressions(demIN, output = file.path(p, 'DEM_filled.tif'))
 
   whitebox::wbt_aspect(file.path(p, 'DEM_filled.tif'), output = file.path(p, 'aspect.tif'))
@@ -169,10 +168,10 @@ morphoMaker <- function(x, p){
                            output = file.path(p, 'D8pntr.tif'))
   whitebox::wbt_basins(file.path(p, 'D8pntr.tif'), esri_pntr = F, output = file.path(p, 'basins.tif')) 
   
-}W
+}
 
-morphoMaker(x = '../data/spatial/raw/dem_3m', 
-            p = '../data/spatial/processed/dem_3m/geomorphology')
+morphoMaker(x = '../data/spatial/raw/dem_1m/tiles', 
+            p = '../data/spatial/processed/dem_1m/geomorphology')
 
 
 
