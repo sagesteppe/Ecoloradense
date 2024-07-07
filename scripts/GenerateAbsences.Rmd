@@ -67,7 +67,7 @@ PA_possible <- sdm::background(arc3,
 
 # points were then manually investigated, and those which could foresee-ably be within
 # subjectively evaluated suitable habitat were removed. 
-
+nrow(PA_possible)
 st_write(PA_possible, 
          '../data/spatial/raw/pseudo-absences/iteration1/absences.shp', append = F)
 
@@ -81,5 +81,6 @@ if(nrow(PA_possible) > nrow(occ)){
 
 st_write(PA_possible, append = F,
          '../data/spatial/processed/pseudo-absences/iteration1/absences.shp')
+nrow(PA_possible)
 ```
 

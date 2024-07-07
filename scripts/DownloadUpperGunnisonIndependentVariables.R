@@ -27,6 +27,7 @@ domain <- sf::st_read('../data/collections/occurrences_coloradense/occurrences.s
   vect() 
 
 ext(domain)
+template <- rast(project(domain, 'EPSG:32613'), nrows = 5, ncols = 5)
 # now we will assemble single DEM tifs which cover our domain
 
 #' assmeble and crop DEM's' to an area. 
@@ -68,14 +69,32 @@ project1m <- function(x){
   for (i in seq_along(paths)){
     ob <- terra::project(terra::rast(paths[i]), 'EPSG:32613')
     terra::writeRaster(ob, gsub('USGS_1M_|USGS_one_meter_', '', paths[i]), overwrite = T)
-    unlink(paths[i])(**)
+    unlink(paths[i])
     gc()
   }
   
 }
 project1m('../data/spatial/raw/dem_1m')
 
-DEMcrop('../data/spatial/raw/dem_1m', domain = domain)
+
+# now we will create 'tiles' of the data set. 
+
+tiles1m <- function(x, domain){
+  
+  paths <- file.path(x, list.files(x, 'tif$'))
+  dir.create(tile_p <- file.path(x, 'tiles'))
+  
+  DEMs <- terra::sprc(paths)
+  DEMs <- terra::mosaic(DEMs)
+  
+  d <- terra::project(domain, crs(DEMs)) |>
+    terra::ext()
+  DEMs <- terra::crop(DEMs, d)
+  names(DEMs) <- 'elevation'
+  makeTiles(DEMs, y = template, filename = file.path(x, 'tiles/DEM_.tif'))
+}
+
+tiles1m('../data/spatial/raw/dem_1m', domain = domain)
 
 # the domain for all analyses will be the Upper Gunnison, where 3m resolution data are 
 # available. 
@@ -127,8 +146,6 @@ morphoMaker(x = '../data/spatial/processed/dem_3m/dem.tif',
 ?wbt_cost_allocation()
 
 
-
-
 # The NAIP data were processed as so, using bash, and leaving them at their native
 # resolution 
 
@@ -157,8 +174,7 @@ done
 
 ################################################################################
 ## we will write these data to generate rasters using ClimateNA for the study area ##
-# we will generate projections at both 3arc and 1arc, the 1arc projections will go through
-# simple bilinear interpolation to generate the finer grains 
+# we will generate projections at 3arc. 
 
 setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
 
