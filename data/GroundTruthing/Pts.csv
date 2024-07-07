@@ -1,5 +1,5 @@
 Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_M,Presence_J,GlobalRandomID,Dominant_Phen
-06.28.2024,,,,,,,,130,
+06.28.2024,PABA,Paradise Basin,,,,0,0,130,
 06.28.2024,RAEL,Ridge Above Emerald Lake,1,39.00382,-107.04743,3,,,B
 06.28.2024,RAEL,Ridge Above Emerald Lake,2,39.00371,-107.04739,1,,,B
 06.28.2024,RAEL,Ridge Above Emerald Lake,3,39.00378,-107.0474,3,1,,B
@@ -16,9 +16,11 @@ Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_M,Prese
 06.28.2024,RAEL,Ridge Above Emerald Lake,,39.00571,-107.04786,0,0,,
 06.28.2024,RAEL,Ridge Above Emerald Lake,,39.00642,-107.04798,0,0,,
 06.28.2024,RAEL,Ridge Above Emerald Lake,12,39.00655,-107.04784,10,4,,B
-06.28.2024,RAEL,Ridge Above Emerald Lake,13,39.00639,-107.04761,7,,,B
+06.28.2024,RAEL,Ridge Above Emerald Lake,13,39.00639,-107.04761,7,0,,B
 06.28.2024,RAEL,Ridge Above Emerald Lake,,39.00683,-107.04807,0,0,,
-06.29.2024,BV,Bellview Mountains,1,39.01523,-107.03076,25,,,V
+06.28.2024,RAEL,Ridge Above Emerald Lake,,,,0,0,173,
+06.28.2024,RAEL,Ridge Above Emerald Lake,,,,0,0,174,
+06.29.2024,BV,Bellview Mountains,1,39.01523,-107.03076,25,0,,V
 06.29.2024,BV,Bellview Mountains,,39.0155,-107.03079,0,0,,
 06.29.2024,BV,Bellview Mountains,2,39.01541,-107.03056,37,4,,V
 06.29.2024,BV,Bellview Mountains,P-48,,,7,,,
@@ -71,3 +73,35 @@ Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_M,Prese
 06.29.2024,BV,Bellview Mountains,P-12,,,0,0,,
 06.29.2024,BV,Bellview Mountains,36,39.01013,-107.03207,17,4,,V
 06.29.2024,BV,Bellview Mountains,37,39.01046,-107.03442,5,6,,V
+07.04.2024,GRNA,Gothic Research Natural Area,,38.99952,-107.03661,0,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,,38.99897,-107.03677,0,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,1,38.99879,-107.03734,4,2,,V
+07.04.2024,GRNA,Gothic Research Natural Area,2,38.99898,-107.0377,2,2,,V
+07.04.2024,GRNA,Gothic Research Natural Area,,38.99921,-107.03797,,,,
+07.04.2024,GRNA,Gothic Research Natural Area,3,38.99897,-107.03819,6,1,,V
+07.04.2024,GRNA,Gothic Research Natural Area,4,33.99897,-107.03857,5,0,,V
+07.04.2024,GRNA,Gothic Research Natural Area,5,38.99905,-107.03882,2,0,,V
+07.04.2024,GRNA,Gothic Research Natural Area,6,38.99927,-107.03863,11,3,,V
+07.04.2024,GRNA,Gothic Research Natural Area,7,38.9991,-107.03963,1,3,,B
+07.04.2024,GRNA,Gothic Research Natural Area,p-39,,,2,0,,B
+07.04.2024,GRNA,Gothic Research Natural Area,,38.9988,-107.04064,0,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,,38.99834,-107.04203,0,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,,38.99821,-107.04318,0,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,162,,,0,0,162,
+07.04.2024,GRNA,Gothic Research Natural Area,162,,,0,0,163,
+07.04.2024,GRNA,Gothic Research Natural Area,p-36,,,0,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,8,38.994305,-107.039679,1,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,,38.99399,-107.03821,0,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,,38.99369,-107.03683,0,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,,38.99368,-107.03568,0,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,,38.99368,-107.03568,0,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,,38.99448,-107.03682,0,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,,38.99492,-107.0368,0,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,,38.99623,-107.03172,0,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,,38.99637,-107.0343,0,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,,38.99717,-107.03294,0,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,,38.99654,-107.03247,0,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,,38.99707,-107.03172,0,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,p-28,,,0,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,,,,,,145,
+07.04.2024,GRNA,Gothic Research Natural Area,,,,,,146,

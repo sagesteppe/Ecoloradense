@@ -52,26 +52,26 @@ library(pROC)
 # 1 | INTRODUCTION
 
 The effects of anthropogenic stressors, e.g. land use and climate change, have lead to a global extinction crisis with estimates of the number of plant species facing extinction ranging from 20-40% (@brummitt2015green, @pimm2015many, @nic2020extinction). 
-Determining which plant species to focus our conservation efforts (e.g. ...) towards requires an array of data which seldom exist for decision makers (@heywood2017plant). 
-These data generally outline simple parameters of the species, detailing the rarity of it, and how it's distribution relates to anthropogenic stressors. 
-Chief amongst these parameters, are the geographic extent (range), the distribution of suitable habitat, and the occupation of suitable habitats by the species, as well as the geographic and census size of individual populations (@faber2012natureserve, @usfws2016ssa). 
-While simple, estimating these parameters is expensive, generally requiring ground verified data - hence they often require proxies or heuristics for estimation (@juffe2016assessing, @bland2015cost). 
+Determining which plant species to focus our conservation efforts (e.g. active restoration, preserve creation, *ex situ* collections) on requires an array of data which seldom exist for decision makers (@heywood2017plant). 
+These data generally outline simple biological and ecological parameters of the species useful for detailing the rarity of it and how it's distribution relates to current and future anthropogenic stressors. 
+Chief amongst these parameters, are the geographic extent of occurrence (range), the distribution of suitable habitat - the occupancy of this habitat as well as the spacing of occupied patches, and the census size of individual (sub-)populations (@natural2001iucn, @faber2012natureserve, @usfws2016ssa). 
+While these parameters are seemingly simple, characterizing them can be expensive, generally requiring extensive field work - hence these parameters often require proxies or heuristics for estimation (@juffe2016assessing, @bland2015cost, @pelletier2018predicting). 
 Environmental niche models have made enormous headway in resolving the former two problems, however the historic mismatch between the resolution of variables governing species distributions and the data available to serve as predictors of environmental have restricted the interpretation and implementation of these models (taddeo2024grimes, @guisan2013predicting). 
 Recent advances in remote-sensing technologies have allowed for well-designed ground verification campaigns, and efforts made towards better understanding parameters of individual populations e.g. both the geographic and census sizes of them. 
 However, the acquisition of ground verified data sets to guide our modelling efforts are still ostensibly rare, likely given the expense and difficulty in obtaining them (@chiffard2020anbs). 
 
-**ENM's and mismatch between spatial and temporal resolutions**
-Considerable headway has been made in generating statistically robust environmental niche models (ENM's), spirited by recent advances in collecting high-resolution environmental data, compute power, digitization of natural history museum records and the acquisition of citizen science records, and perhaps most importantly - statistical methods. 
-*However, ENM's are rarely ground verified, and even more seldom at landscape scales - further many recent advances, especially statistically, have recently been made with individual populations of common species rather than rare species.* 
-A complication with the implementation and interpretation of these models is a fundamental mismatch between the spatial resolution of the independent variables and the factors governing the distribution of populations (@chauvier2022resolution, @lembrechts2019incorporating). 
-Recent advances in remote sensing and statistical downsampling (e.g. ClimateNA, 3DEP) are bridging this gap, however the resolution of these data are now oftentimes finer than the occurrence data used as dependent variables. 
+Considerable headway has been made in generating statistically robust environmental niche models (ENM's) spirited by: recent advances in collecting high-resolution environmental data, compute power, digitization of natural history museum records and the acquisition of citizen science records, and perhaps most importantly - statistical methods (@markham2023review, @feldman2021trends).  
+However, ENM's are rarely ground verified, and even more seldom at landscape scales - further many recent advances, especially statistically, have recently been made with individual populations of common species rather than rare species; accordingly concerns regarding the association between model predicitons and reality persist.
+A complication with the implementation and interpretation of these models is a mismatch between the spatial resolution of the independent variables available to model the species fundamental niche and the factors governing the true distribution of populations - the realized niche (@carscadden2020niche, @chauvier2022resolution, @lembrechts2019incorporating). 
+Recent advances in remote sensing and statistical down scaling (e.g. ClimateNA, 3DEP) are bridging this gap, however the resolution of these data are now oftentimes finer than the occurrence data used as dependent variables. 
+Recent papers have had mixed results regarding the effects of imprecisely mapped occurrence data on ENM predictions, with indications that models generated in more heterogenous environments, and at finer resolutions (e.g. ca. 3 arc-second relate to 10 arc-minutes (~14.5 km) at 38*)) suffer minor decreases in model performance (@graham2008influence, @smith2023including) with real species, while increasing error in mapping has drastic effects on model predictions with virtually simulated species (@gabor2022positional). 
 Using low quality geo-located data can lead to spurious results, negating the effect of high resolution independent variables *MORE*. 
-A further mismatch of resolution is the year in which data on geographic localities were obtained and current conditions which allow for positive population growth. 
-Indeed, historic occurrence data may now represent conditions which are inhospitable to the maintenance of populations, or may even represent populations which even then were simply sinks from more robust populations. 
+A further mismatch of resolution is the year in which data on geographic localities were obtained and current conditions which allow for positive population growth (@bracken2022maximizing). 
+Indeed, historic occurrence data may now represent conditions which are inhospitable to the maintenance of populations, or may even represent populations which even then were simply sinks from more robust populations (@bracken2022maximizing). 
 Collecting data on whether areas are favorable to continued recruitment of individuals from the soil seed bank, are perhaps more astute than whether long-lived individuals persist.  
 
 **Improving Model Performance - Iterative adaptive-nice based sampling after expert mapping and sampling.**
-ENM models generally suffer from having few, generally spatially biased, occurrence records to serve as dependent variables, which generally fail to characterize the ecological breadth of the species. 
+ENM models generally suffer from having few, generally spatially biased, occurrence records to serve as dependent variables, which generally fail to characterize the ecological breadth of the species . 
 While many ENM's have high-performance metrics while tested on small subsets of hold-out data, they are unlikely to detect many new populations during ground verified (@a2022species). 
 To increase the number of presences, and absences in ecologically 'similar' sites, which can be used for training models iterative adaptive-niche based sampling (ANBS) has become increasingly employed. 
 In IANBS cells with high probabilities of occurrence are preferentially visited, and after each bout of field visits, a new model is fit incorporating the original data, plus the recently collected data.  
@@ -196,6 +196,18 @@ nnet::multinom()
 ```
 
 ```{r Prepate Data for Final Maps}
+
+```
+
+## Simulations of Sample Size 
+
+```{r Simulate Model Performance at different Sample Sizes}
+
+```
+
+## Simulations of Coordinate Errors 
+
+```{r Simulate Model Performance with different amounts, and proportions of Coordinate Inaccuracies}
 
 ```
 

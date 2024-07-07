@@ -84,23 +84,60 @@ tiles1m <- function(x, domain){
   paths <- file.path(x, list.files(x, 'tif$'))
   dir.create(tile_p <- file.path(x, 'tiles'))
   
-  DEMs <- terra::sprc(paths)
-  DEMs <- terra::mosaic(DEMs)
+  DEMs <- terra::sprc(paths); message('sprc assembled')
+  DEMs <- terra::mosaic(DEMs); message('mosaic complete')
   
-  d <- terra::project(domain, crs(DEMs)) |>
-    terra::ext()
-  DEMs <- terra::crop(DEMs, d)
-  names(DEMs) <- 'elevation'
-  makeTiles(DEMs, y = template, filename = file.path(x, 'tiles/DEM_.tif'))
+ # d <- terra::project(domain, crs(DEMs)) |>
+ #   terra::ext()
+#  DEMs <- terra::crop(DEMs, d)
+  names(DEMs) <- 'elevation'; message('Name set on layers')
+  makeTiles(DEMs, y = template, filename = file.path(x, 'tiles', 'DEM_.tif'))
+}
+
+tiles1m('../data/spatial/raw/dem_1m', domain = domain)
+# now crop to domain
+
+tiles1m <- function(x, domain){
+  
+  paths <- file.path(x, list.files(x, 'tif$'))
+  dir.create(tile_p <- file.path(x, 'tiles'))
+  
+  DEMs <- terra::sprc(paths); message('sprc assembled')
+  DEMs <- terra::mosaic(DEMs); message('mosaic complete')
+  
+  # d <- terra::project(domain, crs(DEMs)) |>
+  #   terra::ext()
+  #  DEMs <- terra::crop(DEMs, d)
+  names(DEMs) <- 'elevation'; message('Name set on layers')
+  makeTiles(DEMs, y = template, filename = file.path(x, 'tiles', 'DEM_.tif'))
 }
 
 tiles1m('../data/spatial/raw/dem_1m', domain = domain)
 
-# the domain for all analyses will be the Upper Gunnison, where 3m resolution data are 
-# available. 
-# From the RMBL Spatial Data Platform we will download an Digital Elevation Model
-# https://rmbl-sdp.s3.us-east-2.amazonaws.com/data_products/released/release3/UG_dem_3m_v1.tif
+# now we will resample these tiles to 3m resolution - usgs does not have a product
+# at this resolution
 
+tiles1m_crop <- function(x, domain){
+  
+  DEMs <- vrt(file.path(x, list.files(x, 'tif$')))
+  
+   d <- terra::project(domain, crs(DEMs)) |>
+     terra::ext()
+  DEMs <- terra::crop(DEMs, d)
+  makeTiles(DEMs, y = template, filename = file.path(x, 'DEMc_.tif'))
+}
+
+tiles1m_crop('../data/spatial/raw/dem_1m/tiles', domain = domain)
+
+tiles3m_make <- function(x, path_out){
+  
+  DEMs <- terra::vrt(file.path(x, list.files(x, 'tif$')))
+  DEMs <- terra::aggregate(DEMs, fact = c(3, 3))
+  terra::makeTiles(DEMs, y = template, filename = file.path(path_out, 'DEM_.tif'))
+}
+
+tiles3m_make(x = '../data/spatial/raw/dem_1m/tiles',
+             path_out = '../data/spatial/raw/dem_3m/')
 
 #' morphoMaker
 #' calculate many geomorphological features of a landscape
@@ -108,10 +145,13 @@ tiles1m('../data/spatial/raw/dem_1m', domain = domain)
 #' @param p an output path where all geomorphologic products should be saved. 
 morphoMaker <- function(x, p){
   
-  demIN <- x
-  dir.create(p)
+  if(str_detect(x, 'tif$')){demIN <- x} else{
+      demIN <- terra::mosaic(terra::sprc(file.path(x, list.files(x, 'tif$'))))
+  }W
+ # dir.create(p)
   
   whitebox::wbt_fill_depressions(demIN, output = file.path(p, 'DEM_filled.tif'))
+
   whitebox::wbt_aspect(file.path(p, 'DEM_filled.tif'), output = file.path(p, 'aspect.tif'))
   whitebox::wbt_slope(file.path(p, 'DEM_filled.tif'), output = file.path(p, 'slope.tif'))
   whitebox::wbt_ruggedness_index(file.path(p, 'DEM_filled.tif'), output = file.path(p, 'ruggedness.tif'))
@@ -129,9 +169,9 @@ morphoMaker <- function(x, p){
                            output = file.path(p, 'D8pntr.tif'))
   whitebox::wbt_basins(file.path(p, 'D8pntr.tif'), esri_pntr = F, output = file.path(p, 'basins.tif')) 
   
-}
+}W
 
-morphoMaker(x = '../data/spatial/processed/dem_3m/dem.tif', 
+morphoMaker(x = '../data/spatial/raw/dem_3m', 
             p = '../data/spatial/processed/dem_3m/geomorphology')
 
 
