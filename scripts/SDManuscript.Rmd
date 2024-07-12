@@ -1,10 +1,10 @@
 ---
-title: Predicting, habitat suitability, occupancy, and census sizes of a rare plant species using iterative adaptive niche based sampling  
+title: 'Predicting, habitat suitability, occupancy, and census sizes of a rare plant species using iterative adaptive niche based sampling' 
 author: | 
     | Reed Clark Benkendorf$^1$^[Author for Correspondence: rbenkendorf@chicagobotanic.org], Jeremie B. Fant$^1$$^,$$^2$, Sophie Taddeo$^3$  
     |  $^1$ Chicago Botanic Garden, Glencoe, Illinois 60022, USA  
     |  $^2$ Plant Biology and Conservation, Northwestern University, Evanston, Illinois 60208, USA  
-    |  $^3$ Department of Environmental and Ocean Sciences, University of San Diego, San Diego, California 92110, USA 
+    |  $^3$ Department of Environmental and Ocean Sciences, University of San Diego, San Diego, California 92110, USA  
 abstract: |
   1) 
   2) 
@@ -50,6 +50,7 @@ library(pROC)
 
 
 ?? use habitation rather than occupancy to avoid confusion with wildlife people??
+
 # 1 | INTRODUCTION
 
 The effects of anthropogenic stressors, e.g. land use and climate change, have lead to a global extinction crisis with estimates of the number of plant species facing extinction ranging from 20-40% (@brummitt2015green, @pimm2015many, @nic2020extinction). 
@@ -106,7 +107,7 @@ It's known geographic range covers XX km^2^, has 26 formally described populatio
 The elevation range from which it is xx - xx, and the broad habitat types it's known from include: high elevation sagebrush steppe, sub-alpine grasslands, and alpine slopes. 
 It is treated as an S3/G3 species by NatureServe, and a Tier 2 species by State Wildlife Action Plan by the Colorado Parks and Wildlife Service. 
 
-### Data Acqusition
+### Data Acqusition 
 Dependent data were gathered from iNaturalist (XX records) and the Consortium of Southern Rockies herbaria (XX records) (@soro2024). 
 These data were manually reviewed and 16 herbarium records which had low geolocation quality, or which were place in localities which did not match their herbarium labels were removed.  
 
