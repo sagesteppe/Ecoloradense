@@ -1,0 +1,84 @@
+---
+title: "Conceptual Figure"
+author: "steppe"
+date: "2024-07-13"
+output: pdf_document
+---
+
+```{r set global options}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+```{r Load libraries}
+library(tidyverse)
+library(sf)
+library(terra)
+library(gtable)
+```
+
+```{r load data}
+r <- rast('../data/ConceptualFigure/DensityPatchSuit.tif')
+boundaries <- st_read('../data/ConceptualFigure/boundaries.shp', quiet = T)
+occ <- read.csv('../data/ConceptualFigure/occupancy.csv')
+```
+
+```{r define global themes for plots}
+
+base <- ggplot() + 
+  xlim(0, 250) + 
+  ylim(0, 250) + 
+  theme_void() +
+  theme(aspect.ratio = 1/1)
+
+```
+
+```{r Create Simple Raster plots}
+
+simpR <- as.data.frame(r, xy = TRUE) 
+simpRocc <- select(simpR, -pr_suit, -pr_dens) |>
+  drop_na() |>
+  left_join(occ)
+
+pl_suit <- base + 
+  geom_raster(data = simpR, aes(fill = pr_suit, x = x, y = y)) + 
+  labs(title = 'Probability of Suitable Habitat', fill = 'Probability') + 
+  theme(legend.position = 'bottom', 
+        title = element_text(hjust = 0.5)) 
+
+pl_dens <- base + 
+  geom_raster(data = simpR, aes(fill = pr_dens, x = x, y = y)) + 
+  labs(title = 'Plant Density', fill = 'Density') + 
+  theme(legend.position = 'bottom', 
+        title = element_text(hjust = 0.5)) 
+
+pl_patches <- base + 
+  geom_raster(data = drop_na(simpR), aes(fill = patches, x = x, y = y)) +
+  labs(title = 'Suitable Habitat Patches', fill = 'Density') + 
+  theme(legend.position = 'bottom', 
+        title = element_text(hjust = 0.5)) 
+
+# use arrows with solid lines to indicate the euclidean distances between patches, 
+# use arrows with dotted lines to show made up least-cost paths distances between patches. 
+
+base + 
+  geom_raster(data = simpRocc, aes(fill = Occupied, x = x, y = y)) +
+  labs(title = 'Plant Density', fill = 'Density') + 
+  theme(legend.position = 'bottom', 
+        title = element_text(hjust = 0.5)) +
+  
+  # might need to shift the patches a bit further apart to make the distances more
+  # prominent. 
+  geom_segment(aes(x = 40, y = 55, xend = 25, yend = 80)) + 
+  geom_segment(aes(x = 135, y = 75, xend = 110, yend = 95)) +
+  geom_segment(aes(x = 210, y = 185, xend = 95, yend = 225)) + 
+  
+  geom_curve(aes(x = 40, y = 55, xend = 25, yend = 80), lty = 3) + 
+  geom_curve(aes(x = 135, y = 75, xend = 110, yend = 95), lty = 3, 
+             angle = 170, curvature = 2) +
+  geom_curve(aes(x = 210, y = 185, xend = 65, yend = 215), lty = 3,
+             angle = 50, curvature = -0.9, ncp = 100) 
+
+# use arrows with solid lines to indicate the euclidean distances between patches, 
+# use arrows with dotted lines to show made up least-cost paths distances between patches. 
+```
+
