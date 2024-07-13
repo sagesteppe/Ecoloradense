@@ -94,16 +94,16 @@ We propose that estimates of plant density are best generated via methods which 
 Precisely mapping the boundaries of a population is another time consuming task, albeit essential for the effective estimates of population census size. 
 Currently, population boundaries are delineated by practitioners walking distances (e.g. 1km) in several directions searching for individuals.  
 However, as the distance from a central location increases the amount of area to survey increases IN A FASHION... 
-Further this approach is problematic for rare species with many small clusters of inconspicuous individuals, which require considerable survey effort to chance upon. 
+Further this approach is problematic for rare species with many small clusters of inconspicuous individuals, which require considerable survey effort to detect.  
 High resolution spatial data eventually offer an ability to determine the extent of individual populations via detection of the edges of suitable habitat. 
 
 # 2 | METHODS
 
 ### Study Species & System 
 *Eriogonum coloradense* Small (Polygonaceae) is a synoecious mat forming perennial herb endemic to the Central Southern Rocky Mountains in Colorado, U.S.A. 
-It's known geographic range covers XX km^2^, has 26 formally described populations, and is thought to occur across a range of elevation, slopes, aspects, soil types and habitats. 
-The elevation range from which it is xx - xx, and the broad habitat types it's known from include: high elevation sagebrush steppe, sub-alpine grasslands, and alpine slopes. 
-It is treated as an S3/G3 species by NatureServe, and a Tier 2 species by State Wildlife Action Plan by the Colorado Parks and Wildlife Service. 
+It's known geographic range covers XX km^2^, with 26 formally described populations, and it is thought to occur across a range of elevation, slopes, aspects, soil types and habitats. 
+It's elevation range spans xx - xx m, and the major habitat types it's known from include: high elevation sagebrush steppe, sub-alpine grasslands, and alpine slopes. 
+It is considered an S3/G3 species by NatureServe, and a Tier 2 species by State Wildlife Action Plan by the Colorado Parks and Wildlife Service. 
 
 ### Data Acqusition 
 Dependent data were gathered from iNaturalist (80 records) and the Consortium of Southern Rockies herbaria (131 records) (@soro2024, INATURALIST). 
@@ -121,10 +121,10 @@ Gray co-occurrence level matrices were produced using the glcm r package using 2
 ### Ground Verification
 
 The first round of ground verification was carried out from June-September 2024. 
-All pre-existing occurrence points were considered candidates for revisits and all X trails leading to them were marked as SAMPLE UNITS. 
+All pre-existing occurrence points were considered candidates for revisits and all 24 trails leading to them were marked as SAMPLE UNITS. 
 Each trail was manually mapped, and buffered 45m in each direction and XXX random points were drawn, thinned to distances > XXXm, leaving XXX random plots for assessment. 
 XX trails were visited, allowing for the assessment of XX random points and XX occurrences. 
-When conducting field work, all presences of *E. coloradense* were opportunistically noted, and to better describe the spread of the population points were subjectively placed ca. 30-50m from the previous one until passing out of the population (n = ). 
+When conducting field work, all presences of *E. coloradense* were opportunistically noted, and to better describe the spread of the population points were subjectively placed, with consdirations of local abudance, ca. 30-50m from the previous one until traversing out of the population (n = ). 
 Additionally subjectively placed absences were also collected in areas which seemed favorable, or were in close proximity, to *E. coloradense* individuals; this occurred both in field (n = ) and through use of aerial imagery on a computer afterwards (n = ). 
 
 Adaptive Niche-Based Sampling was carried out in July of 2025. 
@@ -189,8 +189,8 @@ Plant density was modelled using five methods, a generalized linear model (GLM) 
 Occupancy$Class <- relevel(Occupancy$Class, ref = 0)
 
 index <- createDataPartition(Occupancy$Class, p = .70, list = FALSE)
-train <- Occupancy[index,]
-test <- Occupancy[-index,]
+train <- Occupancy[index,] 
+test <- Occupancy[-index,] 
 
 nnet::multinom()
 ```

@@ -118,7 +118,7 @@ ggplot(trails) + geom_sf(aes(color = Trail))
 Now group the points by their trails, and number them from the trail heads. 
 ```{r}
 
-trails <- st_transform(trails, 32613)
+trails <- st_transform(trails, 32613) 
 
 occurrence_only <- filter(occ_data, Occurrence == 1) %>% 
   drop_na(eventDate) %>% 
