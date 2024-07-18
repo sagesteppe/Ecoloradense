@@ -14,6 +14,9 @@ library(tidyverse)
 library(sf)
 library(terra)
 library(gtable)
+library(ggpubr)
+library(patchwork)
+source('functions.R')
 ```
 
 ```{r load data}
@@ -37,48 +40,141 @@ base <- ggplot() +
 simpR <- as.data.frame(r, xy = TRUE) 
 simpRocc <- select(simpR, -pr_suit, -pr_dens) |>
   drop_na() |>
-  left_join(occ)
+  left_join(occ, by = 'patches')
 
 pl_suit <- base + 
-  geom_raster(data = simpR, aes(fill = pr_suit, x = x, y = y)) + 
+#  scale_fill_grey() + 
+#  scale_color_gradient(low = 'red', high = 'grey10')  +
+  geom_tile(data = simpR, aes(fill = pr_suit, x = x, y = y)) + 
   labs(title = 'Probability of Suitable Habitat', fill = 'Probability') + 
-  theme(legend.position = 'bottom', 
-        title = element_text(hjust = 0.5)) 
+  theme(
+    legend.position = 'bottom',
+    plot.title = element_text(hjust = 0.5)
+    ) 
 
+pl_occ <- base + 
+  geom_tile(data = simpRocc, aes(fill = factor(Occupied), x = x, y = y)) + 
+  scale_fill_manual(values = c('grey20', 'grey60')) +
+  labs(title = 'Patch Occupancy', fill = 'Status') + 
+  theme(
+    legend.position = 'bottom', 
+    plot.title = element_text(hjust = 0.5)
+    ) 
+
+pl_bound <- base + 
+  geom_contour(data = filter(simpR, pr_suit >= 50) , 
+               aes(z = pr_suit, x = x, y = y, color = after_stat(level)), 
+               binwidth = 10) + 
+  labs(color = 'Suitability',
+       title = 'Boundaries at varying levels of predicted Suitability') + 
+  theme(
+    plot.title = element_text(hjust = 0.5)
+    ) 
+
+```
+
+
+```{r}
 pl_dens <- base + 
-  geom_raster(data = simpR, aes(fill = pr_dens, x = x, y = y)) + 
+  geom_tile(data = simpR, aes(fill = pr_dens, x = x, y = y)) + 
   labs(title = 'Plant Density', fill = 'Density') + 
-  theme(legend.position = 'bottom', 
-        title = element_text(hjust = 0.5)) 
+  theme(
+    plot.title = element_text(hjust = 0.5)) 
 
 pl_patches <- base + 
-  geom_raster(data = drop_na(simpR), aes(fill = patches, x = x, y = y)) +
+  geom_tile(data = drop_na(simpR), aes(fill = factor(patches), x = x, y = y)) +
+  scale_fill_manual(values = 
+                      paste0(rep('grey', times = 7), seq(from = 20, to = 90, by = 10))) +
   labs(title = 'Suitable Habitat Patches', fill = 'Density') + 
   theme(legend.position = 'bottom', 
-        title = element_text(hjust = 0.5)) 
+        plot.title = element_text(hjust = 0.5)) 
 
 # use arrows with solid lines to indicate the euclidean distances between patches, 
 # use arrows with dotted lines to show made up least-cost paths distances between patches. 
 
-base + 
-  geom_raster(data = simpRocc, aes(fill = Occupied, x = x, y = y)) +
-  labs(title = 'Plant Density', fill = 'Density') + 
-  theme(legend.position = 'bottom', 
-        title = element_text(hjust = 0.5)) +
+pl_distances <- base + 
+  geom_tile(data = simpRocc, aes(fill = factor(Occupied), x = x, y = y)) +
+  scale_fill_manual(values = c('grey20', 'grey60')) +
+  labs(title = 'Distances', fill = 'Occupied') + 
+  theme( 
+        plot.title = element_text(hjust = 0.5)) + 
   
   # might need to shift the patches a bit further apart to make the distances more
   # prominent. 
   geom_segment(aes(x = 40, y = 55, xend = 25, yend = 80)) + 
-  geom_segment(aes(x = 135, y = 75, xend = 110, yend = 95)) +
+  geom_segment(aes(x = 135, y = 75, xend = 110, yend = 95)) + 
   geom_segment(aes(x = 210, y = 185, xend = 95, yend = 225)) + 
   
-  geom_curve(aes(x = 40, y = 55, xend = 25, yend = 80), lty = 3) + 
-  geom_curve(aes(x = 135, y = 75, xend = 110, yend = 95), lty = 3, 
-             angle = 170, curvature = 2) +
-  geom_curve(aes(x = 210, y = 185, xend = 65, yend = 215), lty = 3,
+  geom_curve(aes(x = 25, y = 55, xend = 25, yend = 80), lty = 3, curvature = -0.5) + 
+  geom_curve(aes(x = 160, y = 90, xend = 110, yend = 105), lty = 3, 
+             angle = 70, curvature = 1) + 
+  geom_curve(aes(x = 210, y = 185, xend = 65, yend = 215), lty = 3, 
              angle = 50, curvature = -0.9, ncp = 100) 
 
 # use arrows with solid lines to indicate the euclidean distances between patches, 
 # use arrows with dotted lines to show made up least-cost paths distances between patches. 
+
 ```
+
+
+```{r}
+rm(simpRocc, base, occ, boundaries, r, simpR)
+```
+
+
+```{r}
+pr_suit <- 'The probability of suitable habitat indicates areas which range from favorable (100%) to inhospitable (0%) for the species, based on the training data. Different techniques are used to interpret this probability, and to apply thresholding to it... This probability can then be used as a covariate in further modelling (e.g. density), or derived for other applications such as generating patch shapes and sizes, noting occupancy, and the distance between occupied and unoccupied patches.' 
+
+occupancy <- 'Training data explicitly denote the occupation status of certain areas of suitable habitat. Using these data we can mark patches of suitable habitat which contain known individuals or populations. These occupied patches can be combined with measures of distance to set up an adaptive sampling schema to find new populations.'   
+
+patches <- 'Species are limited to areas of habitat which are large enough to support positive population growth, or which serve as sinks of propagules. Given the density of populations, and size of invididual plants, not all patches have enough area to support an effective population. Further, species vary in their ability to grow on peripheral or marginal habitat around optimal habitat, decreasing the true patch size. Finally smaller patches create smaller "targets" for propagules to disperse to, decrease the probability of plant establishment.' 
+
+distances <- 'Patches are separated by both geographic (measured as euclidean for short distances or Haversine to accomodate the curvature of the earth) and environmental distances. These distances decrease the likelihood of propagules dispersing between patches. Environmental distances can be estimated by first creating generalized least-cost surfaces and then using various cost algorithms (e.g. electrical conductivity) to link patches known to be occupied with unvisited patches of suitable habitat.' 
+
+boundaries <- 'Different thresholds of habitat probability can be used with field verification to most accurately determine where populations end. These boundaries can then be used to refine patch shapes, the distances between them, and to estimate census sizes of the populations in a final modelling process.' 
+
+density <- 'The number (abundance) of plants per specific area can be modelled and projected onto gridded surfaces. This modelling process can involve using the ENM probability surface as a covariate and clipping estimates to predefined boundaries. Summing values from all raster cells across cells can produce an estimate of the number of plants per (sub-)population.'
+
+text <- list(pr_suit, occupancy, patches, distances, boundaries, density)
+text <- lapply(text, newliner, width = 80)
+txt_gs <- lapply(text, ggpubr::text_grob, # render them to 
+                   face = "plain", size = 11, height = 3.5, width = 6.5,
+                   family = 'Sans Serif')
+
+txt_gs <- setNames(
+  txt_gs,
+  c('pr_suit', 'occupancy', 'patches', 'distances', 'boundaries', 'density')
+  )
+txt_gs <- lapply(txt_gs, ggpubr::as_ggplot) 
+
+rm(pr_suit, occupancy, patches, distances, boundaries, density, text)
+```
+
+
+Assemble the figure. 
+The plot will follow the standard aspect ratio for a sheet of A4 paper. 
+The interior of the plot will have a width of 1 part plot to 2 parts writing. 
+
+```{r}
+
+# column 1, i.e. the plots
+plot_side <- pl_suit + pl_patches +# pl_occ + pl_distances + pl_bound + pl_dens + 
+  plot_layout(ncol = 1)
+ 
+# text side 
+text_side <- txt_gs[['pr_suit']] + 
+  txt_gs[['patches']] +
+  txt_gs[['occupancy']] + 
+  txt_gs[['distances']] + 
+  txt_gs[['boundaries']] +
+  txt_gs[['density']] + 
+  plot_layout(ncol = 1)
+
+?plot_layout
+  
+text_side
+  
+rm(pl_suit, pl_occ, pl_patches, pl_distances, pl_bound, pl_dens)
+```
+
 

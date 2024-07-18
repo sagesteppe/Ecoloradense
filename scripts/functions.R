@@ -308,3 +308,37 @@ OrderRandomPtsIDS <- function(trails, points, revisits){
                                        UID = paste0('P-', 1:n()), .before = geometry) 
   return(list(final_pts, occurrence_revisits))
 }
+
+
+
+#' Split text across multiple lines for use in a text grob
+#' @params x a character vector which should be split out
+#' @parms width the number of characters which each line should contain 
+newliner <- function(x, width){
+  
+  # determine how many lines the text will be split across. 
+  lines <- floor(nchar(x)/ width); wc_line <- ceiling(nchar(x)/lines)
+  theo_cuts <- c(1, (wc_line * seq(lines))[1:lines-1])
+  
+  # determine sensible cuts for the words. Essentially just use the existing spaces.
+  emp_cuts <- vector(mode = 'double', length = lines)
+  for (i in seq(theo_cuts)){ # determine sensible cuts for the words. 
+    emp_cuts[i] <- which(charToRaw(x) == '20')[
+      which.min(abs(theo_cuts[i] - which(charToRaw(x) == '20')))]
+  } 
+  emp_cuts[1] <- 1
+  end_cuts <- c(emp_cuts[2:length(emp_cuts)] - 1, nchar(x))
+  
+  # now we can just iterate through the string with a loop adding the newline
+  # operator as required.
+  new <- vector(mode = 'list', length = lines)
+  for (i in seq(emp_cuts)){
+    new[i] <- stringr::str_trim(rawToChar(charToRaw(x)[emp_cuts[i]:end_cuts[i]]))
+  }
+  newlined <- paste(new, collapse = '\n')
+  
+  # new <- list(emp_cuts, end_cuts)
+  return(newlined)
+  
+}
+
