@@ -30,7 +30,7 @@ occ <- read.csv('../data/ConceptualFigure/occupancy.csv')
 base <- ggplot() + 
   xlim(0, 250) + 
   ylim(0, 250) + 
-  theme_void() +
+  theme_void() + 
   theme(aspect.ratio = 1/1)
 
 ```
@@ -39,37 +39,49 @@ base <- ggplot() +
 
 simpR <- as.data.frame(r, xy = TRUE) 
 simpRocc <- select(simpR, -pr_suit, -pr_dens) |>
-  drop_na() |>
+  drop_na() |> 
   left_join(occ, by = 'patches')
+
+simpR <- mutate(simpR, patches = factor(patches))
+simpRocc <- mutate(simpRocc, Occupied = factor(Occupied))
 
 pl_suit <- base + 
 #  scale_fill_grey() + 
 #  scale_color_gradient(low = 'red', high = 'grey10')  +
   geom_tile(data = simpR, aes(fill = pr_suit, x = x, y = y)) + 
-  labs(title = 'Probability of Suitable Habitat', fill = 'Probability') + 
+  labs(title = 'Suitable Habitat', fill = 'Probability')  + 
   theme(
-    legend.position = 'bottom',
-    plot.title = element_text(hjust = 0.5)
-    ) 
+    plot.title = element_text(hjust = 0.5),
+    legend.title = element_text(angle = 90)
+    ) +
+  guides(fill = guide_colourbar(title.hjust = 0.5, title.position = "left"))
 
 pl_occ <- base + 
-  geom_tile(data = simpRocc, aes(fill = factor(Occupied), x = x, y = y)) + 
+  geom_tile(data = simpRocc, aes(fill = Occupied, x = x, y = y)) + 
   scale_fill_manual(values = c('grey20', 'grey60')) +
   labs(title = 'Patch Occupancy', fill = 'Status') + 
   theme(
-    legend.position = 'bottom', 
-    plot.title = element_text(hjust = 0.5)
-    ) 
+    plot.title = element_text(hjust = 0.5),
+    legend.title = element_text(angle = 90)
+    ) + 
+  guides(fill = guide_legend(title.hjust = 0.5, title.position = "left"))
+
 
 pl_bound <- base + 
-  geom_contour(data = filter(simpR, pr_suit >= 50) , 
+  geom_contour(data = filter(simpR, pr_suit >= 50), 
                aes(z = pr_suit, x = x, y = y, color = after_stat(level)), 
-               binwidth = 10) + 
-  labs(color = 'Suitability',
-       title = 'Boundaries at varying levels of predicted Suitability') + 
+               binwidth = 10)  + 
+  labs(color = 'Probability of Suitability',
+       title = 'Boundaries') + 
   theme(
-    plot.title = element_text(hjust = 0.5)
-    ) 
+    plot.title = element_text(hjust = 0.5),
+    legend.title = element_text(angle = 90)
+    ) +
+  
+#  scale_fill_manual(labels = LETTERS[1:5]) + 
+  guides(color = guide_legend(
+    title.hjust = 0.5, title.position = "left", reverse = TRUE)
+    )
 
 ```
 
@@ -79,26 +91,35 @@ pl_dens <- base +
   geom_tile(data = simpR, aes(fill = pr_dens, x = x, y = y)) + 
   labs(title = 'Plant Density', fill = 'Density') + 
   theme(
-    plot.title = element_text(hjust = 0.5)) 
+    plot.title = element_text(hjust = 0.5),
+    legend.title = element_text(angle = 90)
+    ) +
+  guides(fill = guide_colourbar(title.hjust = 0.5, title.position = "left"))
 
 pl_patches <- base + 
-  geom_tile(data = drop_na(simpR), aes(fill = factor(patches), x = x, y = y)) +
+  geom_tile(data = drop_na(simpR), aes(fill = patches, x = x, y = y)) + 
   scale_fill_manual(values = 
                       paste0(rep('grey', times = 7), seq(from = 20, to = 90, by = 10))) +
-  labs(title = 'Suitable Habitat Patches', fill = 'Density') + 
-  theme(legend.position = 'bottom', 
-        plot.title = element_text(hjust = 0.5)) 
+  labs(title = 'Suitable Patches', fill = 'Patch No.') + 
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.title = element_text(angle = 90)
+    ) + 
+  guides(fill = guide_legend(title.hjust = 0.5, title.position = "left")) 
 
 # use arrows with solid lines to indicate the euclidean distances between patches, 
 # use arrows with dotted lines to show made up least-cost paths distances between patches. 
 
 pl_distances <- base + 
   geom_tile(data = simpRocc, aes(fill = factor(Occupied), x = x, y = y)) +
-  scale_fill_manual(values = c('grey20', 'grey60')) +
+  scale_fill_manual(values = c('grey20', 'grey60')) + 
   labs(title = 'Distances', fill = 'Occupied') + 
-  theme( 
-        plot.title = element_text(hjust = 0.5)) + 
-  
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.title = element_text(angle = 90)
+    ) + 
+  guides(fill = guide_legend(title.hjust = 0.5, title.position = "left")) +
   # might need to shift the patches a bit further apart to make the distances more
   # prominent. 
   geom_segment(aes(x = 40, y = 55, xend = 25, yend = 80)) + 
@@ -136,9 +157,9 @@ boundaries <- 'Different thresholds of habitat probability can be used with fiel
 density <- 'The number (abundance) of plants per specific area can be modelled and projected onto gridded surfaces. This modelling process can involve using the ENM probability surface as a covariate and clipping estimates to predefined boundaries. Summing values from all raster cells across cells can produce an estimate of the number of plants per (sub-)population.'
 
 text <- list(pr_suit, occupancy, patches, distances, boundaries, density)
-text <- lapply(text, newliner, width = 80)
+text <- lapply(text, newliner, width = 62)
 txt_gs <- lapply(text, ggpubr::text_grob, # render them to 
-                   face = "plain", size = 11, height = 3.5, width = 6.5,
+                   face = "plain", size = 12, 
                    family = 'Sans Serif')
 
 txt_gs <- setNames(
@@ -157,24 +178,26 @@ The interior of the plot will have a width of 1 part plot to 2 parts writing.
 
 ```{r}
 
-# column 1, i.e. the plots
-plot_side <- pl_suit + pl_patches +# pl_occ + pl_distances + pl_bound + pl_dens + 
-  plot_layout(ncol = 1)
- 
-# text side 
-text_side <- txt_gs[['pr_suit']] + 
-  txt_gs[['patches']] +
-  txt_gs[['occupancy']] + 
-  txt_gs[['distances']] + 
-  txt_gs[['boundaries']] +
-  txt_gs[['density']] + 
-  plot_layout(ncol = 1)
+title <- ggpubr::text_grob('Relationships between facets of ENMs',
+                           face = "bold", size = 22, family = 'Sans Serif')
 
-?plot_layout
-  
-text_side
-  
-rm(pl_suit, pl_occ, pl_patches, pl_distances, pl_bound, pl_dens)
+# column 1, i.e. the plots 
+plot_side <- cowplot::plot_grid(pl_suit, pl_patches, pl_occ, pl_distances, pl_bound, 
+                                pl_dens, ncol = 1)
+
+# text side 
+text_side <- cowplot::plot_grid(txt_gs[['pr_suit']], txt_gs[['patches']],
+  txt_gs[['occupancy']], 
+  txt_gs[['distances']],  
+  txt_gs[['boundaries']],  
+  txt_gs[['density']], ncol = 1) 
+
+plot_components <- cowplot::plot_grid(plot_side, text_side, ncol = 2, rel_widths = c(0.33, 0.8))
+plot_components <- cowplot::plot_grid(title, plot_components, ncol = 1, rel_heights = c(0.1, 1))
+ggsave('../results/ConceptualFigure.png', plot_components, height = 13, width = 9, units = 'in')
+
+rm(pl_suit, pl_occ, pl_patches, pl_distances, pl_bound, pl_dens, txt_gs, plot_side,
+   plot_components, title, text_side)
 ```
 
 
