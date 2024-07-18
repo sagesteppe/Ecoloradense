@@ -46,39 +46,40 @@ simpR <- mutate(simpR, patches = factor(patches))
 simpRocc <- mutate(simpRocc, Occupied = factor(Occupied))
 
 pl_suit <- base + 
-#  scale_fill_grey() + 
-#  scale_color_gradient(low = 'red', high = 'grey10')  +
-  geom_tile(data = simpR, aes(fill = pr_suit, x = x, y = y)) + 
+  geom_tile(data = simpR, aes(fill = pr_suit/100, x = x, y = y)) + 
+  scale_fill_distiller(palette = 'PuRd', labels = scales::percent) +
   labs(title = 'Suitable Habitat', fill = 'Probability')  + 
   theme(
     plot.title = element_text(hjust = 0.5),
     legend.title = element_text(angle = 90)
-    ) +
+    ) + 
   guides(fill = guide_colourbar(title.hjust = 0.5, title.position = "left"))
 
 pl_occ <- base + 
   geom_tile(data = simpRocc, aes(fill = Occupied, x = x, y = y)) + 
-  scale_fill_manual(values = c('grey20', 'grey60')) +
-  labs(title = 'Patch Occupancy', fill = 'Status') + 
+  scale_fill_manual(
+    values = c('grey20', 'grey60')) +
+  labs(title = 'Patch Occupancy', fill = 'Occupied') + 
   theme(
     plot.title = element_text(hjust = 0.5),
-    legend.title = element_text(angle = 90)
+    legend.title = element_text(angle = 90),
+    legend.text = element_text(margin = margin(r = 24, unit = "pt"))
     ) + 
   guides(fill = guide_legend(title.hjust = 0.5, title.position = "left"))
 
 
 pl_bound <- base + 
-  geom_contour(data = filter(simpR, pr_suit >= 50), 
-               aes(z = pr_suit, x = x, y = y, color = after_stat(level)), 
+  geom_contour(data = filter(simpR, pr_suit >= 40), 
+               aes(z = pr_suit, x = x, y = y, color = factor(after_stat(level))), 
                binwidth = 10)  + 
-  labs(color = 'Probability of Suitability',
+  labs(color = 'Probability',
        title = 'Boundaries') + 
   theme(
     plot.title = element_text(hjust = 0.5),
-    legend.title = element_text(angle = 90)
-    ) +
-  
-#  scale_fill_manual(labels = LETTERS[1:5]) + 
+    legend.title = element_text(angle = 90),
+    legend.text = element_text(margin = margin(r = 24, unit = "pt"))
+    ) + 
+  scale_color_brewer(palette = 'PuRd', labels = paste0(seq(50, 100, by = 10), '%')) +
   guides(color = guide_legend(
     title.hjust = 0.5, title.position = "left", reverse = TRUE)
     )
@@ -92,7 +93,8 @@ pl_dens <- base +
   labs(title = 'Plant Density', fill = 'Density') + 
   theme(
     plot.title = element_text(hjust = 0.5),
-    legend.title = element_text(angle = 90)
+    legend.title = element_text(angle = 90),
+    legend.text = element_text(margin = margin(r = 24, unit = "pt"))
     ) +
   guides(fill = guide_colourbar(title.hjust = 0.5, title.position = "left"))
 
@@ -104,20 +106,24 @@ pl_patches <- base +
   theme(plot.title = element_text(hjust = 0.5)) + 
   theme(
     plot.title = element_text(hjust = 0.5),
-    legend.title = element_text(angle = 90)
+    legend.title = element_text(angle = 90),
+    legend.text = element_text(margin = margin(r = 24, unit = "pt"))
     ) + 
   guides(fill = guide_legend(title.hjust = 0.5, title.position = "left")) 
 
 # use arrows with solid lines to indicate the euclidean distances between patches, 
 # use arrows with dotted lines to show made up least-cost paths distances between patches. 
 
+# NEED TO MAKE A FAKE LEGEND FOR THE LINETYPES  - AND SWAP FROM DOTTED TO DASHED LINE
+# IF NEED BE MAKE IT THICKER SO IT STANDS OUT AT THE LOWER RESOLUTIONS. 
 pl_distances <- base + 
   geom_tile(data = simpRocc, aes(fill = factor(Occupied), x = x, y = y)) +
   scale_fill_manual(values = c('grey20', 'grey60')) + 
   labs(title = 'Distances', fill = 'Occupied') + 
   theme(
     plot.title = element_text(hjust = 0.5),
-    legend.title = element_text(angle = 90)
+    legend.title = element_text(angle = 90),
+    legend.text = element_text(margin = margin(r = 24, unit = "pt"))
     ) + 
   guides(fill = guide_legend(title.hjust = 0.5, title.position = "left")) +
   # might need to shift the patches a bit further apart to make the distances more
@@ -126,10 +132,10 @@ pl_distances <- base +
   geom_segment(aes(x = 135, y = 75, xend = 110, yend = 95)) + 
   geom_segment(aes(x = 210, y = 185, xend = 95, yend = 225)) + 
   
-  geom_curve(aes(x = 25, y = 55, xend = 25, yend = 80), lty = 3, curvature = -0.5) + 
-  geom_curve(aes(x = 160, y = 90, xend = 110, yend = 105), lty = 3, 
+  geom_curve(aes(x = 25, y = 55, xend = 25, yend = 80), lty = 2, curvature = -0.5) + 
+  geom_curve(aes(x = 160, y = 90, xend = 110, yend = 105), lty = 2,
              angle = 70, curvature = 1) + 
-  geom_curve(aes(x = 210, y = 185, xend = 65, yend = 215), lty = 3, 
+  geom_curve(aes(x = 210, y = 185, xend = 65, yend = 215), lty = 2, 
              angle = 50, curvature = -0.9, ncp = 100) 
 
 # use arrows with solid lines to indicate the euclidean distances between patches, 
@@ -158,7 +164,7 @@ density <- 'The number (abundance) of plants per specific area can be modelled a
 
 text <- list(pr_suit, occupancy, patches, distances, boundaries, density)
 text <- lapply(text, newliner, width = 62)
-txt_gs <- lapply(text, ggpubr::text_grob, # render them to 
+txt_gs <- lapply(text, ggpubr::text_grob, # render them to ggplots. 
                    face = "plain", size = 12, 
                    family = 'Sans Serif')
 
