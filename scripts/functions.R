@@ -47,6 +47,12 @@ modeller <- function(x, resolution, iteration){
   
   # first we will perform boruta analysis, this will drop variables which have
   # no relationship to the marks at the resolution under analysis. 
+  # RandomForests do an excellent job of this - likely better than Boruta analysis... 
+  # However what ends up happening is that many vars with very minor contributions to the
+  # model are kept. WHen it comes time to predict these models onto gridded surfaces
+  # these added terms (oftentimes requiring the re-reading of the rasters in a virtual context)
+  # make the prediction take AGES. 
+  # We want to avoid everything taking ages. 
   cores <- parallel::detectCores()
   BorutaRes <- Boruta::Boruta(Occurrence ~ ., data = df, num.threads = cores, doTrace = 0)
   importance <- Boruta::attStats(BorutaRes)
@@ -95,7 +101,7 @@ modeller <- function(x, resolution, iteration){
   if(resolution == '3arc'){ntile = 1}
   if(resolution == '1arc'){ntile = 1} else # has succeeded -narrowly- at 1 
     if(resolution == '1-3arc'){ntile = 2} else # 4 tiles 
-      if(resolution == '3m'){ntile = 2} # 9 tiles. 
+      if(resolution == '3m'){ntile = 2} # 4 tiles. 
   
   if(ntile > 1){
     template <- rast(nrows = ntile, ncols = ntile, extent = ext(rast_dat), crs = crs(rast_dat))

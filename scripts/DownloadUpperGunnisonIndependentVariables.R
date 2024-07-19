@@ -139,6 +139,10 @@ tiles3m_make <- function(x, path_out){
 tiles3m_make(x = '../data/spatial/raw/dem_1m/tiles',
              path_out = '../data/spatial/raw/dem_3m/')
 
+f <- paste0('../data/spatial/raw/dem_3m/', list.files('../data/spatial/raw/dem_3m/'))
+dem3m <- vrt(f)
+writeRaster(dem3m, '../data/spatial/processed/dem_3m/dem.tif')
+
 #' morphoMaker
 #' calculate many geomorphological features of a landscape
 #' @param x a path to a digital elevation model
