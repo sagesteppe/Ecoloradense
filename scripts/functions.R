@@ -28,7 +28,9 @@ SWcorner <- function(x){
 #' @param x input occurrence data
 #' @param resolution list of paths to geodata at different resolutions. 
 #' @param iteration numeric, which iteration of modelling is being performed? 
-modeller <- function(x, resolution, iteration){
+#' @param se_prediction boolean, whether to predict the SE surfaces or not, can add roughly
+#' a week onto the prediction at 3m. 
+modeller <- function(x, resolution, iteration, se_prediction){
   
   rast_dat <- rastReader(paste0('dem_', resolution), p2proc) 
   
@@ -44,12 +46,12 @@ modeller <- function(x, resolution, iteration){
       Longitude = unlist(purrr::map(.$geometry,1)),
       Latitude  = unlist(purrr::map(.$geometry,2))) |> 
     sf::st_drop_geometry()
-  
+
   # first we will perform boruta analysis, this will drop variables which have
   # no relationship to the marks at the resolution under analysis. 
   # RandomForests do an excellent job of this - likely better than Boruta analysis... 
   # However what ends up happening is that many vars with very minor contributions to the
-  # model are kept. WHen it comes time to predict these models onto gridded surfaces
+  # model are kept. When it comes time to predict these models onto gridded surfaces
   # these added terms (oftentimes requiring the re-reading of the rasters in a virtual context)
   # make the prediction take AGES. 
   # We want to avoid everything taking ages. 
@@ -62,28 +64,38 @@ modeller <- function(x, resolution, iteration){
   df <- dplyr::select(df, dplyr::all_of(c('Occurrence', important_vars)))
   rm(BorutaRes, importance, rn, important_vars)
   
-  # define the cross-fold validation 
-  repeat_cv <- caret::trainControl(method = 'repeatedcv', number = 5, repeats = 10) 
-  
   # split the input data into both an explicit train and test data set. 
   TrainIndex <- caret::createDataPartition(
     df$Occurrence, p = .8, list = FALSE, times = 1)
   Train <- df[ TrainIndex,]; Test <- df[-TrainIndex,]
-  
+
   # perform the random forest modelling
   rf_model <- ranger::ranger(
-    Occurrence ~ ., data = Train, probability = T, keep.inbag = TRUE)
+    Occurrence ~ ., data = Train, probability = T, keep.inbag = TRUE, importance = 'permutation')
   
   # save the model
   saveRDS(rf_model,
           file = paste0('../results/models/', resolution, '-Iteration', iteration, '.rds'))
   
-  # save the confusion matrix.
+  # save the confusion matrix
   predictions <- predict(rf_model, Test, type = 'se', se.method = 'infjack', probability=TRUE)
   predictions$binary <- as.factor(if_else(predictions$predictions[,2] <= 0.49, 0, 1))
-  cmRestrat <- caret::confusionMatrix(predictions$binary, Test$Occurrence)
+  
+  cmRestrat <- caret::confusionMatrix(predictions$binary, Test$Occurrence, 
+                                      prevalence = 1, mode = 'everything')
   saveRDS(cmRestrat,
           file = paste0('../results/tables/', resolution, '-Iteration', iteration, '.rds'))
+  
+  # we will also save the Pr-AUC as some folks find it a useful metric. 
+  df <- data.frame(
+    truth = Test$Occurrence,
+    Class1 = predictions$predictions[,1]
+  ) 
+  yardstick::pr_auc(df, truth, Class1) |>
+    mutate(resolution = resolution, iteration = iteration) |>
+    write.csv(
+      paste0('../results/tables/', resolution, '-Iteration', iteration, '.csv'),
+      row.names = F)
   
   # create these layers of coordinates for the models. 
   Longitude <- init(rast_dat, 'x') ; names(Longitude) <- 'Longitude'
@@ -96,43 +108,52 @@ modeller <- function(x, resolution, iteration){
   ###################      PREDICT ONTO SURFACE        #########################
   pr <- function(...) predict(..., type = 'response', num.threads = 1)$predictions 
   
-  dir.create( file.path(pout, 'tiles'), showWarnings = F)
-  dir.create( file.path(pout, 'pr_tiles'), showWarnings = F)
-  if(resolution == '3arc'){ntile = 1}
-  if(resolution == '1arc'){ntile = 1} else # has succeeded -narrowly- at 1 
-    if(resolution == '1-3arc'){ntile = 2} else # 4 tiles 
-      if(resolution == '3m'){ntile = 2} # 4 tiles. 
+  if(resolution %in% c('3arc', '1arc', '1-3arc', '3m')){ntile = 1} else
+    if(resolution == '1m'){ntile = 3}  
   
   if(ntile > 1){
-    template <- rast(nrows = ntile, ncols = ntile, extent = ext(rast_dat), crs = crs(rast_dat))
-    message('Making tiles for prediction')
-    terra::makeTiles(rast_dat, template, filename = file.path(pout, 'tiles', "tile_.tif"))
+    
+    tile_path <- file.path(pout, paste0('tiles', '_', resolution))
+    if(exists(tile_path)){
+      message('Tiles already created for this resolution, skipping to prediction!\n')
+    } else {
+  
+      dir.create(tile_path, showWarnings = F)
+      template <- rast(nrows = ntile, ncols = ntile, extent = ext(rast_dat), crs = crs(rast_dat))
+      message('Making tiles for prediction')
+      terra::makeTiles(rast_dat, template, filename = file.path(tile_path, "tile_.tif"))
+      
+    }
+    
     tiles <- file.path(pout, 'tiles', list.files(file.path(pout, 'tiles')))
+    pr_tile_path <- file.path(pout, paste0('pr_tiles', '_', resolution, iteration))
+    dir.create(pr_tile_path, showWarnings = F)
     
     pb <- txtProgressBar(
       min = 0,  max = length(tiles), style = 3, width = 50, char = "+")
     for (i in seq_along(tiles)){
       terra::predict(
         rast(tiles[i]), rf_model, f = pr, 
-        filename = file.path(pout, 'pr_tiles', paste0(i, '.tif')),
+        filename = file.path(pr_tile_path, paste0(i, '.tif')),
         overwrite = T, na.rm=TRUE)
       setTxtProgressBar(pb, i)
     }
     close(pb)
     
     mos <- terra::mosaic(sprc(
-      file.path(pout, 'pr_tiles', list.files(file.path(pout, 'pr_tiles')))
+      file.path(pr_tile_path, list.files(pr_tile_path))
     ), fun = 'mean')
     writeRaster(
       mos[[2]], 
       wopt = c(names = 'Probability'),
       filename = file.path(pout, paste0(resolution, '-Iteration', iteration, '-Pr.tif')))
     
-    unlink(file.path(pout, 'tiles')); unlink(file.path(pout, 'pr_tiles'))
-  } else { # don't want to spend time copying the contents of the predictor
+    unlink(file.path(pout, 'pr_tiles')) # remove the tiles we used for the probability surface.
+  } else { # in these cases, we only need to use a single tile for prediction, we can
+    # just use the existing virtual raster to do this. 
     terra::predict( # rasters, skip straight to modelling. 
-      type = 'prob', cores = 1, f = pr,
-      rast_dat, rf_model, cpkgs = "ranger",
+      cores = 1, f = pr,
+      rast_dat, rf_model,
       filename = file.path(pout, paste0(resolution, '-IterationCoarse', iteration, '.tif')),
       wopt = c(names = 'predicted_suitability'), 
       overwrite = T)
@@ -144,7 +165,7 @@ modeller <- function(x, resolution, iteration){
     file.remove(file.path(pout, paste0(resolution, '-IterationCoarse', iteration, '.tif')))
   }
   
-  unlink(file.path(pout, 'tiles')); unlink(file.path(pout, 'pr_tiles'))
+  unlink(file.path(pout, 'pr_tiles'))
   gc(verbose = FALSE)
   
   
@@ -152,12 +173,17 @@ modeller <- function(x, resolution, iteration){
   # the SE predictions are absurdly memory hungry, We will create 'tiles' to 
   # predict onto, and then combine them once the predictions are complete
   
+  if(se_prediction == TRUE){
+  if(resolution == '3arc'){ntile = 2} else # 4 tiles 
+    if(resolution == '1arc'){ntile = 5} else # 25 tiles Needed # earlier iteration with 16 FAILED 
+      if(resolution == '1-3arc'){ntile = 9} else # 81 tiles
+        if(resolution == '3m'){ntile = 13} # 169 tiles. 
+  
+ # if(exists())
+  
+  
   dir.create( file.path(pout, 'tiles'), showWarnings = F)
   dir.create( file.path(pout, 'se_tiles'), showWarnings = F)
-  if(resolution == '3arc'){ntile = 2} else # 4 tiles 
-    if(resolution == '1arc'){ntile = 5} else # 25 tiles needed # 16 FAILED 
-      if(resolution == '1-3arc'){ntile = 8} else # 81 tiles
-        if(resolution == '3m'){ntile = 12} # 144 tiles. 
   
   template <- rast(nrows = ntile, ncols = ntile, extent = ext(rast_dat), crs = crs(rast_dat))
   message('Making tiles for prediction of standard errors')
@@ -191,7 +217,7 @@ modeller <- function(x, resolution, iteration){
   
   unlink(file.path(pout, 'tiles')); unlink(file.path(pout, 'se_tiles'))
   gc(verbose = FALSE)
-  
+  }
 }
 
 
