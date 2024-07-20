@@ -1,0 +1,772 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\newlength{\cslhangindent}
+\setlength{\cslhangindent}{1.5em}
+\newlength{\csllabelwidth}
+\setlength{\csllabelwidth}{3em}
+\newlength{\cslentryspacingunit} % times entry-spacing
+\setlength{\cslentryspacingunit}{\parskip}
+\newenvironment{CSLReferences}[2] % #1 hanging-ident, #2 entry spacing
+ {% don't indent paragraphs
+  \setlength{\parindent}{0pt}
+  % turn on hanging indent if param 1 is 1
+  \ifodd #1
+  \let\oldpar\par
+  \def\par{\hangindent=\cslhangindent\oldpar}
+  \fi
+  % set entry spacing
+  \setlength{\parskip}{#2\cslentryspacingunit}
+ }%
+ {}
+\usepackage{calc}
+\newcommand{\CSLBlock}[1]{#1\hfill\break}
+\newcommand{\CSLLeftMargin}[1]{\parbox[t]{\csllabelwidth}{#1}}
+\newcommand{\CSLRightInline}[1]{\parbox[t]{\linewidth - \csllabelwidth}{#1}\break}
+\newcommand{\CSLIndent}[1]{\hspace{\cslhangindent}#1}
+\usepackage{endfloat}
+\usepackage{setspace}\doublespacing
+\usepackage{lineno}
+\linenumbers
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+\usepackage{xcolor}
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same} % disable monospaced font for URLs
+\hypersetup{
+  pdftitle={Predicting, habitat suitability, occupancy, and census sizes of a rare plant species using iterative adaptive niche based sampling},
+  pdfkeywords={species distribution model, occupancy, census size
+estimates,},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Predicting, habitat suitability, occupancy, and census sizes of a
+rare plant species using iterative adaptive niche based sampling}
+\author{Reed Clark Benkendorf\(^1\)\footnote{Author for Correspondence:
+  \href{mailto:rbenkendorf@chicagobotanic.org}{\nolinkurl{rbenkendorf@chicagobotanic.org}}},
+Jeremie B. Fant\(^1\)\(^,\)\(^2\), Sophie Taddeo\(^3\)\\
+\hspace*{0.333em}\(^1\) Chicago Botanic Garden, Glencoe, Illinois 60022,
+USA\\
+\hspace*{0.333em}\(^2\) Plant Biology and Conservation, Northwestern
+University, Evanston, Illinois 60208, USA\\
+\hspace*{0.333em}\(^3\) Department of Environmental and Ocean Sciences,
+University of San Diego, San Diego, California 92110, USA}
+\date{}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi})}
+\tightlist
+\item
+\item
+\item
+\item
+\end{enumerate}
+\end{abstract}
+
+\hypertarget{introduction}{%
+\section{1 \textbar{} INTRODUCTION}\label{introduction}}
+
+The effects of anthropogenic stressors, e.g.~land use and climate
+change, have lead to a global extinction crisis with estimates of the
+number of plant species facing extinction ranging from 20-40\% (Brummitt
+\emph{et al.} (\protect\hyperlink{ref-brummitt2015green}{2015}), Pimm \&
+Joppa (\protect\hyperlink{ref-pimm2015many}{2015}), Nic Lughadha
+\emph{et al.} (\protect\hyperlink{ref-nic2020extinction}{2020})).
+Determining which plant species to focus our conservation efforts
+(e.g.~active restoration, preserve creation, \emph{ex situ} collections)
+on requires an array of data which seldom exist for decision makers
+(Heywood (\protect\hyperlink{ref-heywood2017plant}{2017})). These data
+generally outline simple biological and ecological parameters of species
+useful for detailing there rarity and how it's distribution relates to
+current and future anthropogenic stressors. Chief amongst these
+parameters, are the geographic extent of occurrence (range), the
+distribution of suitable habitat - the occupancy of this habitat as well
+as the spacing of occupied patches, and the census size of individual
+(sub-)populations (Commission
+(\protect\hyperlink{ref-natural2001iucn}{2001}), Faber-Langendoen
+\emph{et al.} (\protect\hyperlink{ref-faber2012natureserve}{2012}),
+\emph{USFWS species status assessment framework}
+(\protect\hyperlink{ref-usfws2016ssa}{2016})). While these parameters
+are relatively simple, characterizing them can be time consuming,
+generally requiring extensive field work and travel to field sites -
+hence they oftentimes require proxies or heuristics for estimation in
+conservation assessments (Juffe-Bignoli \emph{et al.}
+(\protect\hyperlink{ref-juffe2016assessing}{2016}), Bland \emph{et al.}
+(\protect\hyperlink{ref-bland2015cost}{2015}), Pelletier \emph{et al.}
+(\protect\hyperlink{ref-pelletier2018predicting}{2018})). Environmental
+niche models (ENMs or Species Distribution Models SDMs) have made
+enormous and respectable headway, respectively, in resolving the former
+two problems (extent, and occupancy) (Anderson
+(\protect\hyperlink{ref-anderson2023integrating}{2023}) , @), however
+the historic mismatch between the resolution of variables governing
+species distributions and the data available to serve as predictors of
+environmental conditions have restricted the interpretation and
+implementation of these models in highly heterogeneous environments
+(Guisan \emph{et al.}
+(\protect\hyperlink{ref-guisan2013predicting}{2013})). Recent advances
+in remote-sensing technologies have allowed for the generation of useful
+models in these generally biodiverse systems, further these data offer
+promise to model additional population parameters (e.g.~census size,
+population extents), however the utility and usage of high resolution
+have rarely been ground verified or ostensibly reported upon (Chiffard
+\emph{et al.} (\protect\hyperlink{ref-chiffard2020anbs}{2020})).
+
+Recently, considerable headway has been made in generating statistically
+robust environmental niche models (ENM's) spirited by: recent advances
+in collecting high-resolution environmental data, compute power,
+digitization of natural history museum records and the acquisition of
+citizen science records, and statistical methods especially downsampling
+(Markham \emph{et al.}
+(\protect\hyperlink{ref-markham2023review}{2023}), Feldman \emph{et al.}
+(\protect\hyperlink{ref-feldman2021trends}{2021})).\\
+However, ENM's are rarely ground verified, and even more seldom at
+landscape scales. Hence, most of our knowledge about producing ENM's
+rely on simulated species and data, especially at spatial resolutions
+considered relatively coarse to those desired by many analysts. An
+historic complication with the implementation and interpretation of
+ENM's is a mismatch between the spatial resolution of the independent
+variables available to model the species fundamental niche and the
+factors governing the true distribution of populations - the realized
+niche (Carscadden \emph{et al.}
+(\protect\hyperlink{ref-carscadden2020niche}{2020}), Chauvier \emph{et
+al.} (\protect\hyperlink{ref-chauvier2022resolution}{2022}), Lembrechts
+\emph{et al.}
+(\protect\hyperlink{ref-lembrechts2019incorporating}{2019})). Recent
+papers have had mixed results regarding the effects of imprecisely
+mapped occurrence data on ENM predictions, with indications that models
+generated in more heterogenous environments, and at finer resolutions
+(e.g.~ca. 3 arc-second relate to 10 arc-minutes (\textasciitilde14.5 km)
+at 38*)) suffer minor decreases in model performance (Graham \emph{et
+al.} (\protect\hyperlink{ref-graham2008influence}{2008}), Smith \emph{et
+al.} (\protect\hyperlink{ref-smith2023including}{2023})) with real
+species, while increasing error in mapping has drastic effects on model
+predictions with virtually simulated species (Gábor \emph{et al.}
+(\protect\hyperlink{ref-gabor2022positional}{2022})).\\
+A further mismatch of resolution is the year in which data on geographic
+localities were obtained and current conditions which allow for positive
+population growth (Bracken \emph{et al.}
+(\protect\hyperlink{ref-bracken2022maximizing}{2022})). Historic
+occurrence data may now represent conditions which are inhospitable to
+the maintenance of populations, or may even represent populations which
+even then were simply sinks from more robust populations (Bracken
+\emph{et al.} (\protect\hyperlink{ref-bracken2022maximizing}{2022}));
+using these records may decrease model performance. Collecting data on
+whether areas are favorable to continued recruitment of individuals from
+the soil seed bank, are perhaps more astute than whether long-lived
+individuals persist.
+
+ENM models generally suffer from having few, generally spatially biased,
+occurrence records to serve as dependent variables, which generally fail
+to characterize the ecological breadth of the species (Stolar \& Nielsen
+(\protect\hyperlink{ref-stolar2015accounting}{2015}), Feeley \& Silman
+(\protect\hyperlink{ref-feeley2011keep}{2011})). While many ENM's have
+high-performance metrics while tested on small subsets of hold-out data,
+they are unlikely to detect many new populations during ground
+verification (A. Lee-Yaw \emph{et al.}
+(\protect\hyperlink{ref-a2022species}{2022})). To increase the number of
+presences, and absences in sites which are relatively similar to those
+harboring presences, which can be used for training models iterative
+adaptive-niche based sampling (ANBS) has become increasingly employed
+(Guisan \emph{et al.} (\protect\hyperlink{ref-guisan2006using}{2006})).
+In ANBS cells with high probabilities of occurrence are preferentially
+visited, and after each bout of field visits, a new model is fit
+incorporating the original data, plus the recently collected data.\\
+However, we posit that evaluating the effects of ANBS is complicated as
+the species are oftentimes initially `under surveyed'; in these
+instances the true distribution of the population is generally poorly
+defined - despite it being easy to do so by a naturalist. Here we
+showcase the usage of a robust first-stage expert subjective sampling
+effort to generate a large pool of random variables for elaboration
+after a second modelling bout. Using this process not only allows for
+the acquisition of a larger number of presences and absences, but also
+allows for verifying coordinate placement, that historic points are
+still extent, and for the acquisition of additional data such as census
+estimates and life stages (Stockwell \& Peterson
+(\protect\hyperlink{ref-stockwell2002effects}{2002}), Wisz \emph{et al.}
+(\protect\hyperlink{ref-wisz2008effects}{2008})). For the purposes of
+this paper, we believe that it elevates the challenge of future sampling
+bouts to be more representative of typical rare species, i.e.~that they
+have on occasion been thoroughly surveyed for and hence novel detections
+are rare.
+
+An ENM predicts a single outcome; the probability of suitable habitat
+for the species (taddeo2024grimes). Although generally the truly desired
+insight from an ENM is the species realized distribution.\\
+However, the bridge between an ENM and a plant populations presence is
+related to the dispersal of propagules and the establishment of the
+population, rather than distribution of the fundamental niche alone.\\
+To assist practitioners in detecting new populations, or extending the
+range of currently known populations, we propose modelling plant
+occupancy as a random variable dependent on distance from sites known to
+be occupied, the size and shape of the target site, and it's relation to
+other suitable habitats. In a simple sense these perspectives link
+habitat suitability with the tenets of island biogeography (@).
+`Distance' may be defined as euclidean (or Haversine for large
+distances), or as a least-cost distance reflecting a generalized surface
+which conveys the difficulty for seeds to travel between the nearest
+occupied sites and the site of interest (Etherington
+(\protect\hyperlink{ref-etherington2016least}{2016})).\\
+Landscape metrics postulated to relate to the occupancy at a site
+include the patch metrics Core Area Index, roughly reflecting the
+probability of a propagule arriving to a larger patch, and the class
+metrics proximity and contagion both of which reflect the aggregation
+between occupied sites.
+
+Obtaining reliable estimates of plant population census sizes can be
+time intensive process because it requires two major pieces of
+information 1) measurements of plant density and 2) population extent.
+Generally the former is measured using several to many long and narrow
+(50x2m) transects, which typically require multiple readers and
+recorders, and generate highly spatially auto-correlated data (- ELZINGA
+?).\\
+In addition to these personnel requirements, many plant species are
+endemic to steep, and often loose, slopes, prohibiting the use of these
+transects (). Recently several promising field methods for acquiring
+density measurements have been developed (Krening \emph{et al.}
+(\protect\hyperlink{ref-krening2021sampling}{2021}), Ermakova \emph{et
+al.} (\protect\hyperlink{ref-ermakova2021densities}{2021}), Alfaro-Saiz
+\emph{et al.} (\protect\hyperlink{ref-alfaro2019optimal}{2019}), Schorr
+(\protect\hyperlink{ref-schorr2013using}{2013})) to better estimate
+effective population census size (\emph{N}), as well as progress in the
+application of genomic methods to estimate effective population sizes
+(\emph{N\textsubscript{e}}) (e.g.~linkage disequilibrium) (Waples
+(\protect\hyperlink{ref-waples2024practical}{2024})). However these
+methods are focused on descriptive, rather than predictive processes,
+where they focus on estimating the uncertainty in measurements
+\emph{within} a population, rather than across the species range. We
+propose that estimates of plant density are best generated via methods
+which allow for the fitting of statistical models, which can incorporate
+spatial covariates and predict estimates and measurements of uncertainty
+across gridded surfaces (Oliver \emph{et al.}
+(\protect\hyperlink{ref-oliver2012population}{2012}), Doser \emph{et
+al.} (\protect\hyperlink{ref-doser2022spabundance}{2024})).
+
+Precisely mapping the boundaries of a population is another time
+consuming task, albeit essential for the effective estimates of
+population census size. Currently, population boundaries are delineated
+by practitioners walking distances (e.g.~1km) in several directions
+searching for individuals.\\
+However, as the distance from a central location increases the amount of
+area to survey increases IN A FASHION\ldots{} Further this approach is
+problematic for rare species with many small clusters of inconspicuous
+individuals, which require considerable survey effort to detect.\\
+High resolution spatial data eventually offer an ability to determine
+the extent of individual populations via detection of the edges of
+suitable habitat.
+
+\hypertarget{methods}{%
+\section{2 \textbar{} METHODS}\label{methods}}
+
+\hypertarget{study-species-system}{%
+\subsubsection{Study Species \& System}\label{study-species-system}}
+
+\emph{Eriogonum coloradense} Small (Polygonaceae) is a synoecious mat
+forming perennial herb endemic to the Central Southern Rocky Mountains
+in Colorado, U.S.A. It's known geographic range covers XX
+km\textsuperscript{2}, with 26 formally described populations, and it is
+thought to occur across a range of elevation, slopes, aspects, soil
+types and habitats. It's elevation range spans xx - xx m, and the major
+habitat types it's known from include: high elevation sagebrush steppe,
+sub-alpine grasslands, and alpine slopes. It is considered an S3/G3
+species by NatureServe, and a Tier 2 species by State Wildlife Action
+Plan by the Colorado Parks and Wildlife Service.
+
+\hypertarget{data-acqusition}{%
+\subsubsection{Data Acqusition}\label{data-acqusition}}
+
+Dependent data were gathered from iNaturalist (80 records) and the
+Consortium of Southern Rockies herbaria (131 records) ({`Southern rocky
+mountain herbaria portal'}, INATURALIST). These data were manually
+reviewed and 16 herbarium records which had low geolocation quality, or
+which were georeferenced to localities which did not match their
+herbarium labels were removed.
+
+Digital Elevation Models at 3arc (type), and 1arc (type), and Digital
+Elevation Products at 1/3 arc, and 1m, resolution were acquired from the
+United States Geological Survey and clipped to the domain of analysis (a
+rectangle buffered 16km??? (10 mi). beyond any known population). A 3m
+resolution digital elevation model, which is not available at a native
+resolution from the USGS for this area, was created by bilinear
+resampling of the 1m and 10m data. 1m resolution data were only
+available for roughly XX\% of the domain (which contained \%\% of known
+populations), the remainder of the species domains 3m data was created
+by linear resampling of the 10m DEP, a comparison of these results in
+the overlapping region are present in appendix xx. These elevation
+products were used to create all geomorphology data sets using
+whiteboxTools (Wu \& Brown
+(\protect\hyperlink{ref-wu2022whitebox}{2022})). Vegetation cover data
+were made by combining the raster data into continuous covers: Forested,
+Shrub, and Herbaceous vegetation Tuanmu \& Jetz
+(\protect\hyperlink{ref-tuanmu2014global}{2014}).
+
+ClimateNA was used to create a data set at 3 arc-second resolution which
+then underwent simple bilinear interpolation to generate products at the
+finer resolutions (Wang \emph{et al.}
+(\protect\hyperlink{ref-wang2016locally}{2016})). Gray co-occurrence
+level matrices were produced using the glcm r package using 2023 NAIP
+aerial imagery, which underwent bilinear resampling to each resolution,
+using default setting but with windows of 5 in both directions (Zvoleff
+(\protect\hyperlink{ref-zvoleff2020glcm}{2020})).
+
+\hypertarget{ground-verification}{%
+\subsubsection{Ground Verification}\label{ground-verification}}
+
+The first round of ground verification was carried out from
+June-September 2024. All pre-existing occurrence points were considered
+candidates for revisits and all 24 trails leading to them were marked as
+SAMPLE UNITS. Each trail was manually mapped, and buffered 45m in each
+direction and XXX random points were drawn, thinned to distances
+\textgreater{} XXXm, leaving XXX random plots for assessment. XX trails
+were visited, allowing for the assessment of XX random points and XX
+occurrences. When conducting field work, all presences of \emph{E.
+coloradense} were opportunistically noted, and to better describe the
+spread of the population points were subjectively placed, with
+consdirations of local abudance, ca. 30-50m from the previous one until
+traversing out of the population (n = ). Additionally subjectively
+placed absences were also collected in areas which seemed favorable, or
+were in close proximity, to \emph{E. coloradense} individuals; this
+occurred both in field (n = ) and through use of aerial imagery on a
+computer afterwards (n = ).
+
+Adaptive Niche-Based Sampling was carried out in July of 2025. To
+determine whether adaptive sampling performed better than alternative
+sampling regimes (e.g.~stratified, random), and if it could be improved
+by occupancy modelling 30 points were selected for each of the
+aforementioned sampling schema plus 30 occupancy points.
+
+\hypertarget{comparision-of-different-spatial-resolutions}{%
+\subsubsection{Comparision of Different Spatial
+Resolutions}\label{comparision-of-different-spatial-resolutions}}
+
+Environmental Niche Models were generated at five different spatial
+resolutions, 3 (\textasciitilde72m), 1 (\textasciitilde24m), and 1/3
+(\textasciitilde8m) arc-seconds, and 3 and 1m resolution. The details of
+modelling were similar for each resolution.
+
+Records were thinned to the distance of an hypotenuse of a cell to avoid
+replicates (Aiello-Lammens \emph{et al.}
+(\protect\hyperlink{ref-aeillo2015spthin}{2015})). XXX Absence records
+were generated using the background function with method environmental
+distance from sdm (Naimi \& Araujo
+(\protect\hyperlink{ref-naimi2016sdm}{2016})), these records were then
+manually reviewed and six records which were deemed in areas which may
+be possible presences were removed, after this the records were randomly
+sampled to reduce the data set size to XX records.\\
+After the first iteration of modelling all additional presences and
+absences were thinned via a similar manner and combined with the
+original absence records. `Presences' which had greater coordinate
+uncertainty than the resolution of modelling were removed.
+
+compare the results of each spatial resolution at each of the 3 stages
+(naive, expert, adaptive)
+
+\hypertarget{adaptive-and-occupancy-based-field-sampling}{%
+\subsubsection{Adaptive and Occupancy Based Field
+Sampling}\label{adaptive-and-occupancy-based-field-sampling}}
+
+500 stratified points ranging from 1-100\% probability of suitable
+habitat were generated using sample (terra). Occupancy scores for each
+of these points were then calculated using (whiteboxtools). 200 points
+which maximized the spread of values along both dimensions (habitat,
+occupancy) were then chosen for ground verification.
+
+\hypertarget{plant-density}{%
+\subsubsection{Plant Density}\label{plant-density}}
+
+Plant density was modelled using five methods, a generalized linear
+model (GLM) with a poisson error distribution and spatial
+autocorrelation structures, spAbundance, Random Forest and XgBoost
+regression.
+
+\hypertarget{species-occupancy}{%
+\subsubsection{Species Occupancy}\label{species-occupancy}}
+
+\hypertarget{comparision-of-juvenile-and-mature-plant-models}{%
+\subsection{Comparision of Juvenile and Mature Plant
+Models}\label{comparision-of-juvenile-and-mature-plant-models}}
+
+Using the top performing model resolution () models were refit using
+only either juvenile or mature plant presences, the number of mature
+presences were limited to the number of juvenile occurrences. Models
+were fit at 6 sample sizes (n = 15, 30, 50, 75, 125, 200) 15 times each
+using a randomly sampled 60\%-40\% train-test split of data.
+
+\hypertarget{simulations-of-sample-size}{%
+\subsection{Simulations of Sample
+Size}\label{simulations-of-sample-size}}
+
+The effect of sample size on model performance was simulated at 8 sample
+sizes (n = 15, 30, 50, 75, 125, 200, 300, 400) each 25 times, using a
+randomly sampled 60\%-40\% train-test split of data.
+
+\hypertarget{simulations-of-coordinate-errors}{%
+\subsection{Simulations of Coordinate
+Errors}\label{simulations-of-coordinate-errors}}
+
+The effect of sample size on model performance was simulated at 6 sample
+sizes (n = 15, 30, 50, 75, 125, 200), with three proportions of records
+in error (0\%, 5\%, 10\%, 20\%), and 3 levels of coordinate uncertainty
+(0m, 10m, 100m, 1000m), at each of the 5 resolutions 25 times.
+
+\hypertarget{results}{%
+\subsection{3 \textbar{} RESULTS}\label{results}}
+
+\hypertarget{comparision-of-different-spatial-resolutions-1}{%
+\subsubsection{Comparision of Different Spatial
+Resolutions}\label{comparision-of-different-spatial-resolutions-1}}
+
+\hypertarget{ground-verification-1}{%
+\subsubsection{Ground Verification}\label{ground-verification-1}}
+
+\hypertarget{plant-density-1}{%
+\subsubsection{Plant Density}\label{plant-density-1}}
+
+\hypertarget{species-occupancy-1}{%
+\subsubsection{Species Occupancy}\label{species-occupancy-1}}
+
+\hypertarget{comparision-of-juvenile-and-mature-plant-models-1}{%
+\subsection{Comparision of Juvenile and Mature Plant
+Models}\label{comparision-of-juvenile-and-mature-plant-models-1}}
+
+\hypertarget{simulations-of-sample-size-1}{%
+\subsection{Simulations of Sample
+Size}\label{simulations-of-sample-size-1}}
+
+\hypertarget{simulations-of-coordinate-errors-1}{%
+\subsection{Simulations of Coordinate
+Errors}\label{simulations-of-coordinate-errors-1}}
+
+\hypertarget{discussion}{%
+\subsection{4 \textbar{} DISCUSSION}\label{discussion}}
+
+\hypertarget{conclusions}{%
+\subsection{5 \textbar{} CONCLUSIONS}\label{conclusions}}
+
+\hypertarget{acknowledgments}{%
+\subsection{6 \textbar{} ACKNOWLEDGMENTS}\label{acknowledgments}}
+
+\hypertarget{references}{%
+\subsection*{REFERENCES}\label{references}}
+\addcontentsline{toc}{subsection}{REFERENCES}
+
+\hypertarget{refs}{}
+\begin{CSLReferences}{1}{0}
+\leavevmode\vadjust pre{\hypertarget{ref-a2022species}{}}%
+A. Lee-Yaw, J., L. McCune, J., Pironon, S. \& N. Sheth, S. (2022).
+Species distribution models rarely predict the biology of real
+populations. \emph{Ecography}, \textbf{2022}, e05877.
+
+\leavevmode\vadjust pre{\hypertarget{ref-aeillo2015spthin}{}}%
+Aiello-Lammens, M.E., Boria, R.A., Radosavljevic, A. \& Vilela, B.
+(2015).
+\href{https://onlinelibrary.wiley.com/doi/10.1111/ecog.01132}{{spThin}:
+An {R} package for spatial thinning of species occurrence records for
+use in ecological niche models}. \emph{Ecography}, \textbf{38},
+541--545.
+
+\leavevmode\vadjust pre{\hypertarget{ref-alfaro2019optimal}{}}%
+Alfaro-Saiz, E., Granda, V., Rodrı́guez, A., Alonso-Redondo, R. \&
+Garcı́a-González, M.E. (2019). Optimal census method to estimate
+population sizes of species growing on rock walls: The case of mature
+primula pedemontana. \emph{Global Ecology and Conservation},
+\textbf{17}, e00563.
+
+\leavevmode\vadjust pre{\hypertarget{ref-anderson2023integrating}{}}%
+Anderson, R.P. (2023). Integrating habitat-masked range maps with
+quantifications of prevalence to estimate area of occupancy in IUCN
+assessments. \emph{Conservation Biology}, \textbf{37}, e14019.
+
+\leavevmode\vadjust pre{\hypertarget{ref-bland2015cost}{}}%
+Bland, L.M., Orme, C.D.L., Bielby, J., Collen, B., Nicholson, E. \&
+McCarthy, M.A. (2015). Cost-effective assessment of extinction risk with
+limited information. \emph{Journal of Applied Ecology}, \textbf{52},
+861--870.
+
+\leavevmode\vadjust pre{\hypertarget{ref-bracken2022maximizing}{}}%
+Bracken, J.T., Davis, A.Y., O'Donnell, K.M., Barichivich, W.J., Walls,
+S.C. \& Jezkova, T. (2022). Maximizing species distribution model
+performance when using historical occurrences and variables of varying
+persistency. \emph{Ecosphere}, \textbf{13}, e3951.
+
+\leavevmode\vadjust pre{\hypertarget{ref-brummitt2015green}{}}%
+Brummitt, N.A., Bachman, S.P., Griffiths-Lee, J., Lutz, M., Moat, J.F.,
+Farjon, A., Donaldson, J.S., Hilton-Taylor, C., Meagher, T.R.,
+Albuquerque, S. \& others. (2015). Green plants in the red: A baseline
+global assessment for the IUCN sampled red list index for plants.
+\emph{PloS one}, \textbf{10}, e0135152.
+
+\leavevmode\vadjust pre{\hypertarget{ref-carscadden2020niche}{}}%
+Carscadden, K.A., Emery, N.C., Arnillas, C.A., Cadotte, M.W., Afkhami,
+M.E., Gravel, D., Livingstone, S.W. \& Wiens, J.J. (2020). Niche
+breadth: Causes and consequences for ecology, evolution, and
+conservation. \emph{The Quarterly Review of Biology}, \textbf{95},
+179--214.
+
+\leavevmode\vadjust pre{\hypertarget{ref-chauvier2022resolution}{}}%
+Chauvier, Y., Descombes, P., Guéguen, M., Boulangeat, L., Thuiller, W.
+\& Zimmermann, N.E. (2022). Resolution in species distribution models
+shapes spatial patterns of plant multifaceted diversity.
+\emph{Ecography}, \textbf{2022}, e05973.
+
+\leavevmode\vadjust pre{\hypertarget{ref-chiffard2020anbs}{}}%
+Chiffard, J., Marciau, C., Yoccoz, N.G., Mouillot, F., Duchateau, S.,
+Nadeau, I., Fontanilles, P. \& Besnard, A. (2020).
+\href{https://doi.org/10.1111/2041-210X.13399}{Adaptive niche-based
+sampling to improve ability to find rare and elusive species:
+Simulations and field tests}. \emph{Methods in Ecology and Evolution},
+\textbf{11}, 899--909.
+
+\leavevmode\vadjust pre{\hypertarget{ref-natural2001iucn}{}}%
+Commission, N.Resources.S.S. (2001). \emph{IUCN red list categories and
+criteria}. IUCN.
+
+\leavevmode\vadjust pre{\hypertarget{ref-doser2022spabundance}{}}%
+Doser, J.W., Finley, A.O., Kéry, M. \& Zipkin, E.F. (2024).
+\href{https://doi.org/10.1111/2041-210X.14332}{spAbundance: An r package
+for single-species and multi-species spatially explicit abundance
+models}. \emph{Methods in Ecology and Evolution}, \textbf{15},
+1024--1033.
+
+\leavevmode\vadjust pre{\hypertarget{ref-ermakova2021densities}{}}%
+Ermakova, A., Trout, K., Terry, M.K., Whiting, C.V., Clubbe, C. \&
+Fowler, N. (2021). Densities, plant sizes, and spatial distributions of
+six wild populations of lophophora williamsii (cactaceae) in texas, USA.
+\emph{Journal of the Botanical Research Institute of Texas},
+\textbf{15}, 149--160.
+
+\leavevmode\vadjust pre{\hypertarget{ref-etherington2016least}{}}%
+Etherington, T.R. (2016). Least-cost modelling and landscape ecology:
+Concepts, applications, and opportunities. \emph{Current Landscape
+Ecology Reports}, \textbf{1}, 40--53.
+
+\leavevmode\vadjust pre{\hypertarget{ref-faber2012natureserve}{}}%
+Faber-Langendoen, D., Nichols, J., Master, L., Snow, K., Tomaino, A.,
+Bittman, R., Hammerson, G., Heidel, B., Ramsay, L., Teucher, A. \&
+others. (2012). NatureServe conservation status assessments: Methodology
+for assigning ranks. \emph{NatureServe, Arlington, VA}.
+
+\leavevmode\vadjust pre{\hypertarget{ref-feeley2011keep}{}}%
+Feeley, K.J. \& Silman, M.R. (2011). Keep collecting: Accurate species
+distribution modelling requires more collections than previously
+thought. \emph{Diversity and distributions}, \textbf{17}, 1132--1140.
+
+\leavevmode\vadjust pre{\hypertarget{ref-feldman2021trends}{}}%
+Feldman, M.J., Imbeau, L., Marchand, P., Mazerolle, M.J., Darveau, M. \&
+Fenton, N.J. (2021). Trends and gaps in the use of citizen science
+derived data as input for species distribution models: A quantitative
+review. \emph{PloS one}, \textbf{16}, e0234587.
+
+\leavevmode\vadjust pre{\hypertarget{ref-gabor2022positional}{}}%
+Gábor, L., Jetz, W., Lu, M., Rocchini, D., Cord, A., Malavasi, M.,
+Zarzo-Arias, A., Barták, V. \& Moudrỳ, V. (2022). Positional errors in
+species distribution modelling are not overcome by the coarser grains of
+analysis. \emph{Methods in Ecology and Evolution}, \textbf{13},
+2289--2302.
+
+\leavevmode\vadjust pre{\hypertarget{ref-graham2008influence}{}}%
+Graham, C.H., Elith, J., Hijmans, R.J., Guisan, A., Townsend Peterson,
+A., Loiselle, B.A. \& Group, N.P.S.D.W. (2008). The influence of spatial
+errors in species occurrence data used in distribution models.
+\emph{Journal of Applied Ecology}, \textbf{45}, 239--247.
+
+\leavevmode\vadjust pre{\hypertarget{ref-guisan2006using}{}}%
+Guisan, A., Broennimann, O., Engler, R., Vust, M., Yoccoz, N.G.,
+Lehmann, A. \& Zimmermann, N.E. (2006). Using niche-based models to
+improve the sampling of rare species. \emph{Conservation biology},
+\textbf{20}, 501--511.
+
+\leavevmode\vadjust pre{\hypertarget{ref-guisan2013predicting}{}}%
+Guisan, A., Tingley, R., Baumgartner, J.B., Naujokaitis-Lewis, I.,
+Sutcliffe, P.R., Tulloch, A.I., Regan, T.J., Brotons, L.,
+McDonald-Madden, E., Mantyka-Pringle, C. \& others. (2013). Predicting
+species distributions for conservation decisions. \emph{Ecology
+letters}, \textbf{16}, 1424--1435.
+
+\leavevmode\vadjust pre{\hypertarget{ref-heywood2017plant}{}}%
+Heywood, V.H. (2017). Plant conservation in the anthropocene--challenges
+and future prospects. \emph{Plant diversity}, \textbf{39}, 314--330.
+
+\leavevmode\vadjust pre{\hypertarget{ref-juffe2016assessing}{}}%
+Juffe-Bignoli, D., Brooks, T.M., Butchart, S.H., Jenkins, R.B., Boe, K.,
+Hoffmann, M., Angulo, A., Bachman, S., Böhm, M., Brummitt, N. \& others.
+(2016). Assessing the cost of global biodiversity and conservation
+knowledge. \emph{PLoS One}, \textbf{11}, e0160640.
+
+\leavevmode\vadjust pre{\hypertarget{ref-krening2021sampling}{}}%
+Krening, P.P., Dawson, C.A., Holsinger, K.W. \& Willoughby, J.W. (2021).
+A sampling-based approach to estimating the minimum population size of
+the federally threatened colorado hookless cactus (sclerocactus
+glaucus). \emph{Natural Areas Journal}, \textbf{41}, 4--10.
+
+\leavevmode\vadjust pre{\hypertarget{ref-lembrechts2019incorporating}{}}%
+Lembrechts, J.J., Nijs, I. \& Lenoir, J. (2019). Incorporating
+microclimate into species distribution models. \emph{Ecography},
+\textbf{42}, 1267--1279.
+
+\leavevmode\vadjust pre{\hypertarget{ref-markham2023review}{}}%
+Markham, K., Frazier, A.E., Singh, K.K. \& Madden, M. (2023). A review
+of methods for scaling remotely sensed data for spatial pattern
+analysis. \emph{Landscape Ecology}, \textbf{38}, 619--635.
+
+\leavevmode\vadjust pre{\hypertarget{ref-naimi2016sdm}{}}%
+Naimi, B. \& Araujo, M.B. (2016).
+\href{https://doi.org/10.1111/ecog.01881}{Sdm: A reproducible and
+extensible r platform for species distribution modelling}.
+\emph{Ecography}, \textbf{39}, 368--375.
+
+\leavevmode\vadjust pre{\hypertarget{ref-nic2020extinction}{}}%
+Nic Lughadha, E., Bachman, S.P., Leão, T.C., Forest, F., Halley, J.M.,
+Moat, J., Acedo, C., Bacon, K.L., Brewer, R.F., Gâteblé, G. \& others.
+(2020). Extinction risk and threats to plants and fungi. \emph{Plants,
+People, Planet}, \textbf{2}, 389--408.
+
+\leavevmode\vadjust pre{\hypertarget{ref-oliver2012population}{}}%
+Oliver, T.H., Gillings, S., Girardello, M., Rapacciuolo, G., Brereton,
+T.M., Siriwardena, G.M., Roy, D.B., Pywell, R. \& Fuller, R.J. (2012).
+Population density but not stability can be predicted from species
+distribution models. \emph{Journal of Applied Ecology}, \textbf{49},
+581--590.
+
+\leavevmode\vadjust pre{\hypertarget{ref-pelletier2018predicting}{}}%
+Pelletier, T.A., Carstens, B.C., Tank, D.C., Sullivan, J. \& Espı́ndola,
+A. (2018). Predicting plant conservation priorities on a global scale.
+\emph{Proceedings of the National Academy of Sciences}, \textbf{115},
+13027--13032.
+
+\leavevmode\vadjust pre{\hypertarget{ref-pimm2015many}{}}%
+Pimm, S.L. \& Joppa, L.N. (2015). How many plant species are there,
+where are they, and at what rate are they going extinct? \emph{Annals of
+the Missouri Botanical Garden}, \textbf{100}, 170--176.
+
+\leavevmode\vadjust pre{\hypertarget{ref-schorr2013using}{}}%
+Schorr, R.A. (2013). Using distance sampling to estimate density and
+abundance of saussurea weberi hult{é}n (weber's saw-wort). \emph{The
+Southwestern Naturalist}, \textbf{58}, 378--383.
+
+\leavevmode\vadjust pre{\hypertarget{ref-smith2023including}{}}%
+Smith, A.B., Murphy, S.J., Henderson, D. \& Erickson, K.D. (2023).
+Including imprecisely georeferenced specimens improves accuracy of
+species distribution models and estimates of niche breadth. \emph{Global
+Ecology and Biogeography}, \textbf{32}, 342--355.
+
+\leavevmode\vadjust pre{\hypertarget{ref-soro2024}{}}%
+Southern rocky mountain herbaria portal.
+
+\leavevmode\vadjust pre{\hypertarget{ref-stockwell2002effects}{}}%
+Stockwell, D.R. \& Peterson, A.T. (2002). Effects of sample size on
+accuracy of species distribution models. \emph{Ecological modelling},
+\textbf{148}, 1--13.
+
+\leavevmode\vadjust pre{\hypertarget{ref-stolar2015accounting}{}}%
+Stolar, J. \& Nielsen, S.E. (2015). Accounting for spatially biased
+sampling effort in presence-only species distribution modelling.
+\emph{Diversity and Distributions}, \textbf{21}, 595--608.
+
+\leavevmode\vadjust pre{\hypertarget{ref-tuanmu2014global}{}}%
+Tuanmu, M.-N. \& Jetz, W. (2014). A global 1-km consensus land-cover
+product for biodiversity and ecosystem modelling. \emph{Global Ecology
+and Biogeography}, \textbf{23}, 1031--1045.
+
+\leavevmode\vadjust pre{\hypertarget{ref-usfws2016ssa}{}}%
+\emph{USFWS species status assessment framework: An integrated
+analytical framework for conservation 3.4}. (2016). U.S. Fish; Wildlife
+Service, 5275 VA-7, Falls Church, VA 22041.
+
+\leavevmode\vadjust pre{\hypertarget{ref-wang2016locally}{}}%
+Wang, T., Hamann, A., Spittlehouse, D. \& Carroll, C. (2016). Locally
+downscaled and spatially customizable climate data for historical and
+future periods for north america. \emph{PloS one}, \textbf{11},
+e0156720.
+
+\leavevmode\vadjust pre{\hypertarget{ref-waples2024practical}{}}%
+Waples, R.S. (2024). Practical application of the linkage disequilibrium
+method for estimating contemporary effective population size: A review.
+\emph{Molecular Ecology Resources}, \textbf{24}, e13879.
+
+\leavevmode\vadjust pre{\hypertarget{ref-wisz2008effects}{}}%
+Wisz, M.S., Hijmans, R., Li, J., Peterson, A.T., Graham, C., Guisan, A.
+\& Group, N.P.S.D.W. (2008). Effects of sample size on the performance
+of species distribution models. \emph{Diversity and distributions},
+\textbf{14}, 763--773.
+
+\leavevmode\vadjust pre{\hypertarget{ref-wu2022whitebox}{}}%
+Wu, Q. \& Brown, A. (2022).
+\emph{\href{https://CRAN.R-project.org/package=whitebox}{'Whitebox':
+'WhiteboxTools' r frontend}}.
+
+\leavevmode\vadjust pre{\hypertarget{ref-zvoleff2020glcm}{}}%
+Zvoleff, A. (2020).
+\emph{\href{https://CRAN.R-project.org/package=glcm}{Glcm: Calculate
+textures from grey-level co-occurrence matrices (GLCMs)}}.
+
+\end{CSLReferences}
+
+\end{document}
