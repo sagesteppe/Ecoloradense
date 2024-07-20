@@ -32,6 +32,7 @@ SWcorner <- function(x){
 #' a week onto the prediction at 3m. 
 modeller <- function(x, resolution, iteration, se_prediction){
   
+  if(missing(se_prediction)){se_prediction <- FALSE}
   rast_dat <- rastReader(paste0('dem_', resolution), p2proc) 
   
   df <- dplyr::bind_cols(
@@ -47,6 +48,13 @@ modeller <- function(x, resolution, iteration, se_prediction){
       Latitude  = unlist(purrr::map(.$geometry,2))) |> 
     sf::st_drop_geometry()
 
+  #######################         MODELLING           ##########################
+  # this is the fastest portion of this process. It will take at most a few minutes
+  # at any resolution, the goal of this paper wasn't really focused on comparing
+  # mutliple models of families nor messing with parameters, so we use Random Forest
+  # simply because they work very well with default settings, almost 'controlling' 
+  # for stochasticity in this portion of the work. 
+  
   # first we will perform boruta analysis, this will drop variables which have
   # no relationship to the marks at the resolution under analysis. 
   # RandomForests do an excellent job of this - likely better than Boruta analysis... 
@@ -69,9 +77,10 @@ modeller <- function(x, resolution, iteration, se_prediction){
     df$Occurrence, p = .8, list = FALSE, times = 1)
   Train <- df[ TrainIndex,]; Test <- df[-TrainIndex,]
 
-  # perform the random forest modelling
+  # perform the random forest modelling using default settings. 
   rf_model <- ranger::ranger(
-    Occurrence ~ ., data = Train, probability = T, keep.inbag = TRUE, importance = 'permutation')
+    Occurrence ~ ., data = Train, probability = T, keep.inbag = TRUE, 
+    importance = 'permutation')
   
   # save the model
   saveRDS(rf_model,
@@ -106,6 +115,9 @@ modeller <- function(x, resolution, iteration, se_prediction){
   
   
   ###################      PREDICT ONTO SURFACE        #########################
+  # this prediction is generally straightforward, it doesn't take an obscene
+  # amount of RAM and can happen relatively quickly, just overnight for the 
+  # higher resolution scenarios. 
   pr <- function(...) predict(..., type = 'response', num.threads = 1)$predictions 
   
   if(resolution %in% c('3arc', '1arc', '1-3arc', '3m')){ntile = 1} else
@@ -113,22 +125,23 @@ modeller <- function(x, resolution, iteration, se_prediction){
   
   if(ntile > 1){
     
-    tile_path <- file.path(pout, paste0('tiles', '_', resolution))
-    if(exists(tile_path)){
+    tile_path_4pr <- file.path(pout, paste0('tilesPR', '_', resolution))
+    if(exists(tile_path_4pr)){
       message('Tiles already created for this resolution, skipping to prediction!\n')
     } else {
   
-      dir.create(tile_path, showWarnings = F)
+      dir.create(tile_path_4pr, showWarnings = F)
       template <- rast(nrows = ntile, ncols = ntile, extent = ext(rast_dat), crs = crs(rast_dat))
       message('Making tiles for prediction')
-      terra::makeTiles(rast_dat, template, filename = file.path(tile_path, "tile_.tif"))
+      terra::makeTiles(rast_dat, template, filename = file.path(tile_path_4pr, "tile_.tif"))
       
     }
     
-    tiles <- file.path(pout, 'tiles', list.files(file.path(pout, 'tiles')))
+    tiles <- file.path(pout, 'tilesPR', list.files(file.path(pout, 'tilesPR')))
     pr_tile_path <- file.path(pout, paste0('pr_tiles', '_', resolution, iteration))
     dir.create(pr_tile_path, showWarnings = F)
     
+    message('Writing Predicted Probability to Raster using tiles - this while take some time')
     pb <- txtProgressBar(
       min = 0,  max = length(tiles), style = 3, width = 50, char = "+")
     for (i in seq_along(tiles)){
@@ -148,19 +161,24 @@ modeller <- function(x, resolution, iteration, se_prediction){
       wopt = c(names = 'Probability'),
       filename = file.path(pout, paste0(resolution, '-Iteration', iteration, '-Pr.tif')))
     
-    unlink(file.path(pout, 'pr_tiles')) # remove the tiles we used for the probability surface.
+    unlink(file.path(pout, 'pr_tiles')) # can remove the tiles we used for the probability surface.
+    
   } else { # in these cases, we only need to use a single tile for prediction, we can
     # just use the existing virtual raster to do this. 
+    
+    message('Writing Predicted Probability to Raster')
     terra::predict( # rasters, skip straight to modelling. 
-      cores = 1, f = pr,
-      rast_dat, rf_model,
+      cores = 1, f = pr, 
+      rast_dat, rf_model, cpkgs = "ranger",
       filename = file.path(pout, paste0(resolution, '-IterationCoarse', iteration, '.tif')),
-      wopt = c(names = 'predicted_suitability'), 
+      wopt = c(names = 'predicted_suitability'), na.rm=TRUE,
       overwrite = T)
     
-    writeRaster(
+    writeRaster( # we wrote a raster with both predicted class probabilities onto it. 
+      # we don't want both, we are going to 'rewrite' the raster so only one class remains. 
       rast(file.path(pout, paste0(resolution, '-IterationCoarse', iteration, '.tif')))[[2]],
-      file.path(pout, paste0(resolution, '-Iteration', iteration, '-Pr.tif'))
+      file.path(pout, paste0(resolution, '-Iteration', iteration, '-Pr.tif')), 
+      overwrite = T
     )
     file.remove(file.path(pout, paste0(resolution, '-IterationCoarse', iteration, '.tif')))
   }
@@ -174,21 +192,28 @@ modeller <- function(x, resolution, iteration, se_prediction){
   # predict onto, and then combine them once the predictions are complete
   
   if(se_prediction == TRUE){
+    
+  tile_path_4se <- file.path(pout, paste0(resolution, 'TilesSE'))
+  final_se_path <- file.path(pout, paste0(resolution, 'se_tiles'))
   if(resolution == '3arc'){ntile = 2} else # 4 tiles 
     if(resolution == '1arc'){ntile = 5} else # 25 tiles Needed # earlier iteration with 16 FAILED 
       if(resolution == '1-3arc'){ntile = 9} else # 81 tiles
-        if(resolution == '3m'){ntile = 13} # 169 tiles. 
+        if(resolution == '3m'){ntile = 13} # 169 tiles. # earlier iteration with 144 FAILED. 
   
- # if(exists())
+    
+    # don't create the tiles if they already exist. 
+  if(exists(tile_path_4se)){
+    message('Tiles for SE exist at this resolution, skipping to predict.')} else {
+    
+      message('Making tiles for prediction of standard errors')
+      dir.create(tile_path_4se, showWarnings = F)
+      dir.create(final_se_path, showWarnings = F)
+      
+      template <- rast(nrows = ntile, ncols = ntile, extent = ext(rast_dat), crs = crs(rast_dat))
+      terra::makeTiles(rast_dat, template, filename = file.path(tile_path_4se, "tile_.tif"))
+  }
   
-  
-  dir.create( file.path(pout, 'tiles'), showWarnings = F)
-  dir.create( file.path(pout, 'se_tiles'), showWarnings = F)
-  
-  template <- rast(nrows = ntile, ncols = ntile, extent = ext(rast_dat), crs = crs(rast_dat))
-  message('Making tiles for prediction of standard errors')
-  terra::makeTiles(rast_dat, template, filename = file.path(pout, 'tiles', "tile_.tif"))
-  tiles <- file.path(pout, 'tiles', list.files(file.path(pout, 'tiles')))
+  tiles <- file.path(tile_path_4se, list.files(tile_path_4se))
   
   se <- function(...) predict(..., type = 'se', se.method = 'infjack',
                               predict.all = FALSE,
@@ -196,26 +221,27 @@ modeller <- function(x, resolution, iteration, se_prediction){
   
   # # predict the standard error onto the tiles.
   # create and initialize progress bar
+  message('Predicting SE to tiles; this may take a really long time')
   pb <- txtProgressBar(
     min = 0,  max = length(tiles), style = 3, width = 50, char = "+")
   for (i in seq_along(tiles)){
     terra::predict(
       rast(tiles[i]), rf_model, f = se, 
-      filename = file.path(pout, 'se_tiles', paste0('SE', i, '.tif')),
+      filename = file.path(final_se_path, paste0('SE', i, '.tif')),
       overwrite = T, na.rm=TRUE)
     setTxtProgressBar(pb, i)
   }
   close(pb)
   
   mos <- terra::mosaic(sprc(
-    file.path(pout, 'se_tiles', list.files(file.path(pout, 'se_tiles')))
+    file.path(final_se_path), 
+              list.files(final_se_path)
   ), fun = 'mean')
   writeRaster(
     mos[[2]], 
     wopt = c(names = 'standardError'),
-    filename = file.path(pout, paste0(resolution, '-Iteration', iteration, '-SE.tif')))
-  
-  unlink(file.path(pout, 'tiles')); unlink(file.path(pout, 'se_tiles'))
+    filename = file.path(pout, paste0(resolution, '-Iteration', iteration, '-SE.tif')),
+    overwrite = T)
   gc(verbose = FALSE)
   }
 }
