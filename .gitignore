@@ -50,6 +50,7 @@ rsconnect/
 
 # spatial data
 spatial/
-results/
-citations/
+geodata/
+literature_sdm/
+suitability_maps/
 
