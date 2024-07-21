@@ -4,7 +4,6 @@ author: "steppe"
 output: html_document
 ---
 
-
 ```{r}
 library(sf)
 library(tidyverse)
@@ -31,7 +30,7 @@ p2proc <- '../data/spatial/processed'
 First iteration of modelling. 
 
 ```{r, eval = F}
-modeller(x = occ_data, resolution = '3arc', iteration = 1, se_prediction = TRUE)
+modeller(x = occ_data, resolution = '1-3arc', iteration = 1, se_prediction = TRUE)
 ```
 
 Drawing Field 

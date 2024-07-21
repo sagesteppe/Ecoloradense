@@ -338,3 +338,26 @@ terra::resample(veg, arc13_template, threads = 16, filename = 'dem_1-3arc/Vegeta
 terra::resample(veg, m3_template, threads = 16, filename = 'dem_3m/Vegetation.tif')
 
 rm(forest, shrubs, herbs, veg)
+
+
+
+### Create Latitude and longitude layers for each resolution 
+
+setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/')
+
+coorder <- function(x){
+  template <- terra::rast(x)
+  
+  Longitude <- terra::init(template, 'x') ; names(Longitude) <- 'Longitude'
+  Latitude <- terra::init(template, 'y') ; names(Latitude) <- 'Latitude'
+  
+  coords <- c(Longitude, Latitude)
+  terra::writeRaster(coords, file.path(dirname(x), 'Coordinates.tif'), overwrite = T)
+}
+
+lapply(
+  c('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/dem_3arc/dem.tif',
+  '/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/dem_1arc/dem.tif',
+  '/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/dem_1-3arc/dem.tif',
+  '/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/dem_3m/dem.tif'),
+  coorder)
