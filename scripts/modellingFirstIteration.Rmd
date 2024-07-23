@@ -51,8 +51,8 @@ pts <- st_sample(trails_buf, size = 500, type = 'random') %>%
    mutate(
     Longitude = unlist(map(.$geometry,1)), 
     Latitude = unlist(map(.$geometry,2)), 
-    Species = 'Points'
-  )
+    Species = 'Points' 
+  ) 
 
 thinned <- spThin::thin( # no points found within 90m of each other !
   loc.data = pts, lat.col = 'Latitude', long.col = 'Longitude', spec.col = 'Species',
