@@ -90,7 +90,7 @@ Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_M,Prese
 07.04.2024,GRNA,Gothic Research Natural Area,162,,,0,0,162,
 07.04.2024,GRNA,Gothic Research Natural Area,162,,,0,0,163,
 07.04.2024,GRNA,Gothic Research Natural Area,p-36,,,0,0,,
-07.04.2024,GRNA,Gothic Research Natural Area,8,38.994305,-107.039679,1,0,,
+07.04.2024,GRNA,Gothic Research Natural Area,8,38.994305,-107.039679,1,0,,V
 07.04.2024,GRNA,Gothic Research Natural Area,,38.99399,-107.03821,0,0,,
 07.04.2024,GRNA,Gothic Research Natural Area,,38.99369,-107.03683,0,0,,
 07.04.2024,GRNA,Gothic Research Natural Area,,38.99368,-107.03568,0,0,,
@@ -103,5 +103,102 @@ Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_M,Prese
 07.04.2024,GRNA,Gothic Research Natural Area,,38.99654,-107.03247,0,0,,
 07.04.2024,GRNA,Gothic Research Natural Area,,38.99707,-107.03172,0,0,,
 07.04.2024,GRNA,Gothic Research Natural Area,p-28,,,0,0,,
-07.04.2024,GRNA,Gothic Research Natural Area,,,,,,145,
-07.04.2024,GRNA,Gothic Research Natural Area,,,,,,146,
+07.04.2024,GRNA,Gothic Research Natural Area,,,,0,0,145,
+07.04.2024,GRNA,Gothic Research Natural Area,,,,0,0,146,
+07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,187,
+07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,186,
+07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,189,
+07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,188,
+07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,182,
+07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,183,
+07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,184,
+07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,185,
+07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,191,
+07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,190,
+07.26.2024,XTAL,Crystal Mountain Ridge,,39.01989,-107.099613,0,0,,
+07.26.2024,XTAL,Crystal Mountain Ridge,,39.02342,-107.092759,0,0,,
+07.26.2024,XTAL,Crystal Mountain Ridge,,39.026509,-107.090577,0,0,,
+07.26.2024,XTAL,Crystal Mountain Ridge,1,39.02682,-107.09097,13,4,,F
+07.26.2024,XTAL,Crystal Mountain Ridge,2,39.02678,-107.09076,8,0,,F
+07.26.2024,XTAL,Crystal Mountain Ridge,3,39.0267,-107.09065,8,1,,F
+07.26.2024,XTAL,Crystal Mountain Ridge,4,39.02691,-107.09061,3,0,,F
+07.26.2024,XTAL,Crystal Mountain Ridge,5,39.02712,-107.09064,6,1,,F
+07.26.2024,XTAL,Crystal Mountain Ridge,6,39.02702,-107.09086,7,0,,F
+07.26.2024,XTAL,Crystal Mountain Ridge,p-50,39.027,-107.09097,3,0,,F
+07.26.2024,XTAL,Crystal Mountain Ridge,p-49,39.02734,-107.0909,1,0,,F
+07.26.2024,XTAL,Crystal Mountain Ridge,7,39.02756,-107.091,2,0,,F
+07.26.2024,XTAL,Crystal Mountain Ridge,,39.02793,-107.09073,0,0,,
+07.26.2024,XTAL,Crystal Mountain Ridge,8,39.02774,-107.0907,14,1,,F
+07.26.2024,XTAL,Crystal Mountain Ridge,9,39.02812,-107.09052,1,0,,F
+07.26.2024,XTAL,Crystal Mountain Ridge,10,39.02845,-107.09074,1,0,,F
+07.26.2024,XTAL,Crystal Mountain Ridge,,39.02891,-107.09073,0,0,,
+07.26.2024,XTAL,Crystal Mountain Ridge,11,39.02941,-107.08997,7,1,,F
+07.26.2024,XTAL,Crystal Mountain Ridge,12,39.02952,-107.09011,23,7,,F
+07.26.2024,XTAL,Crystal Mountain Ridge,,39.02977,-107.08994,0,0,,
+07.26.2024,XTAL,Crystal Mountain Ridge,13,39.03034,-107.08959,1,0,,F
+07.26.2024,XTAL,Crystal Mountain Ridge,,39.03081,-107.08941,0,0,,
+07.26.2024,XTAL,Crystal Mountain Ridge,,39.03132,-107.08927,0,0,,
+07.26.2024,XTAL,Crystal Mountain Ridge,,39.03194,-107.08929,0,0,,
+07.26.2024,XTAL,Crystal Mountain Ridge,,39.03061,-107.0898,0,0,,
+07.26.2024,XTAL,Crystal Mountain Ridge,,39.03017,-107.09004,0,0,,
+07.26.2024,XTAL,Crystal Mountain Ridge,,39.02641,-107.09093,0,0,,
+7.27.2024,WMB,West Maroon Bells,,,,0,0,239,
+7.27.2024,WMB,West Maroon Bells,,,,0,0,240,
+7.27.2024,WMB,West Maroon Bells,,,,0,0,241,
+7.27.2024,WMB,West Maroon Bells,,,,0,0,242,
+7.27.2024,WMB,West Maroon Bells,,,,0,0,243,
+7.27.2024,WMB,West Maroon Bells,,,,0,0,244,
+7.27.2024,WMB,West Maroon Bells,,,,0,0,245,
+7.27.2024,WMB,West Maroon Bells,,,,0,0,246,
+7.27.2024,HB,Hasley Basin,,,,0,0,147,
+7.27.2024,HB,Hasley Basin,,,,0,0,148,
+7.27.2024,HB,Hasley Basin,,,,0,0,159,
+7.27.2024,HB,Hasley Basin,,,,0,0,160,
+7.27.2024,HB,Hasley Basin,,,,0,0,161,
+7.27.2024,HB,Hasley Basin,,,,0,0,157,
+7.27.2024,HB,Hasley Basin,,,,0,0,155,
+7.27.2024,HB,Hasley Basin,1,39.04356,-107.03546,10,6,,F
+7.27.2024,HB,Hasley Basin,,39.04463,-107.0363,0,0,,
+7.27.2024,HB,Hasley Basin,,39.02491,-107.09068,0,0,,
+7.27.2024,HB,Hasley Basin,,39.038148,-107.034023,0,0,,
+7.27.2024,HB,Hasley Basin,2,39.03755,-107.03388,19,4,,F
+7.27.2024,HB,Hasley Basin,,39.0374,-107.03419,0,0,,
+7.27.2024,HB,Hasley Basin,3,39.03725,-107.03448,10,4,,F
+7.27.2024,HB,Hasley Basin,,39.03704,-107.03472,0,0,,
+7.27.2024,HB,Hasley Basin,,39.03655,-107.0355,0,0,,
+7.27.2024,HB,Hasley Basin,p-34,,,0,0,,
+7.27.2024,HB,Hasley Basin,p-35,39.03683,-107.03484,4,0,,F
+7.27.2024,HB,Hasley Basin,4,39.03733,-107.03455,5,0,,
+7.27.2024,HB,Hasley Basin,,,,,,17,
+7.27.2024,HB,Hasley Basin,,,,,,16,
+7.27.2024,HB,Hasley Basin,p-32,,,0,0,,
+7.27.2024,HB,Hasley Basin,5,39.0463,-107.03969,7,0,,F
+7.27.2024,HB,Hasley Basin,6,39.04613,-107.0399,8,2,,F
+7.27.2024,HB,Hasley Basin,7,39.04606,-107.04018,14,10,,F
+7.27.2024,HB,Hasley Basin,8,39.04589,-107.04055,2,1,,F
+7.27.2024,HB,Hasley Basin,9,39.04569,-107.041,1,0,,F
+7.27.2024,HB,Hasley Basin,10,39.04496,-107.04146,9,2,,V
+7.27.2024,HB,Hasley Basin,,39.04425,-107.04174,0,0,,
+7.27.2024,HB,Hasley Basin,11,39.04567,-107.04203,5,1,,F
+7.27.2024,HB,Hasley Basin,12,39.04628,-107.04369,9,2,,F
+7.27.2024,HB,Hasley Basin,13,39.04694,-107.04475,8,2,,F
+7.27.2024,HB,Hasley Basin,,39.0472,-107.04536,0,0,,
+7.27.2024,HB,Hasley Basin,,39.04778,-107.04633,0,0,,
+7.27.2024,HB,Hasley Basin,14,39.04889,-107.04739,3,0,,F
+7.27.2024,HB,Hasley Basin,p-29,,,0,0,,
+7.27.2024,HB,Hasley Basin,15,39.0493,-107.04783,4,0,,F
+7.27.2024,HB,Hasley Basin,16,39.04956,-107.04821,7,1,,F
+7.27.2024,HB,Hasley Basin,,39.0498,-107.04861,0,0,,
+7.27.2024,HB,Hasley Basin,p-30,39.05162,-107.05095,6,1,,F
+7.27.2024,HB,Hasley Basin,,,,,,14,
+7.27.2024,HB,Hasley Basin,17,39.05171,-107.05097,2,0,,B
+7.27.2024,HB,Hasley Basin,18,39.05273,-107.05158,11,1,,F
+7.27.2024,HB,Hasley Basin,19,39.05349,-107.05217,9,15,,B
+7.27.2024,HB,Hasley Basin,,39.05388,-107.05217,0,0,,
+7.27.2024,HB,Hasley Basin,20,39.05419,-107.05337,7,0,,F
+7.27.2024,HB,Hasley Basin,21,39.05452,-107.05386,41,24,,F
+7.27.2024,HB,Hasley Basin,,,,,,12,
+7.27.2024,HB,Hasley Basin,22,39.05512,-107.05424,25,8,,F
+7.27.2024,HB,Hasley Basin,23,39.05618,-107.05453,18,2,,F
+7.27.2024,HB,Hasley Basin,24,39.05712,-107.05463,19,4,,F
+7.27.2024,HB,Hasley Basin,,39.05783,-107.05525,0,0,,
