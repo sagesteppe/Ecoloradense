@@ -114,7 +114,7 @@ st_write(trails, '../data/hikingTrails/trails.shp', append = F)
 ggplot(trails) + geom_sf(aes(color = Trail))
 ```
 
-Now group the points by their trails, and number them from the trail heads. 
+Now group these points by their trails, and number them from the trail heads. 
 ```{r}
 
 trails <- st_transform(trails, 32613) 
@@ -125,8 +125,10 @@ occurrence_only <- filter(occ_data, Occurrence == 1) %>%
 
 ob <- OrderRandomPtsIDS(trails, thinned, occurrence_only)
 
-st_write(ob[[1]], '../data/GroundTruthPts/Iteration1.shp', append = F, quiet = T) 
-st_write(ob[[2]], '../data/GroundTruthPts/Revisits.shp', append = F, quiet = T) 
+st_write(ob[[1]], '../data/GroundTruthPts/Iteration1-cp.shp', append = F, quiet = T) 
+st_write(ob[[2]], '../data/GroundTruthPts/Revisits-cp.shp', append = F, quiet = T) 
+
+ob1 <- st_read('../data/GroundTruthPts/Iteration1-cp.shp')
 
 mutate(ob[[1]]) %>% 
   select(-Trail, -TrailID, name = UID) %>% 
