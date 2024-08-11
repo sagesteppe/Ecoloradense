@@ -1,0 +1,63 @@
+---
+title: "Modelling First Iteration of Eriogonum coloradense"
+author: "steppe"
+output: html_document
+---
+
+```{r}
+library(sf)
+library(tidyverse)
+library(terra)
+source('functions.R')
+set.seed(23)
+```
+
+Import the ground verified data from the first set of mapping
+```{r}
+ground_truth <- read.csv('../data/GroundTruthing/Pts.csv') |>
+  mutate(
+    across(c('Dominant_Phen'), ~ na_if(., '')), 
+    across(Presence_M:Presence_J, ~ replace_na(., 0)))
+
+rand_pts_iter1 <- st_read('../data/GroundTruthPts/Iteration1-cp.shp', quiet = T) |>
+  select(UID) %>% 
+  inner_join(., ground_truth, by = c('UID' = 'GlobalRandomID')) |>
+  mutate(Site = paste0('r-', UID)) |>
+  select(-Latitude, -Longitude, -UID) 
+
+ground_truth <- filter(ground_truth, is.na(GlobalRandomID)) # remove these random pts
+
+revisits <- st_read('../data/GroundTruthPts/Revisits-cp.shp', quiet = T) |> 
+  select(UID) |> 
+  mutate(UID = str_replace(UID, 'P', 'p')) %>%  
+  inner_join(., filter(ground_truth, str_detect(Site, 'p')), by = c('UID' = 'Site'))  
+
+ground_truth <- filter(ground_truth, str_detect(Site, 'p', negate= T)) |>
+  select(-GlobalRandomID) |>
+  st_as_sf(coords = c(x = 'Longitude', y = 'Latitude'), crs = 4269) |>
+  st_transform(st_crs(revisits))
+
+```
+
+We'll turn revisits into two data frames, this will be used to compare the accuracy of the coordinates to the occurrences. 
+```{r}
+
+revisits <- filter(revisits, !is.na(Latitude)) |>
+  st_drop_geometry() |>
+  st_as_sf(coords = c(x = 'Longitude', y = 'Latitude'), crs = 4269) |>
+  st_transform(st_crs(revisits)) %>% 
+  bind_rows(., filter(revisits, is.na(Latitude))) |>
+  mutate(Site = UID) |>
+  select(-Latitude, -Longitude, -UID)
+```
+
+
+All data are cleaned now
+```{r}
+ground_truth <- bind_rows(ground_truth, rand_pts_iter1, revisits) |>
+  select(-GlobalRandomID) %>% 
+  mutate(Presence = ifelse(Presence_M > 0 | Presence_J > 0, 1, 0), .after = Presence_J)
+
+rm(rand_pts_iter1, revisits)
+```
+

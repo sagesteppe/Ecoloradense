@@ -4,7 +4,7 @@ Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_M,Prese
 06.28.2024,RAEL,Ridge Above Emerald Lake,2,39.00371,-107.04739,1,,,B
 06.28.2024,RAEL,Ridge Above Emerald Lake,3,39.00378,-107.0474,3,1,,B
 06.28.2024,RAEL,Ridge Above Emerald Lake,,39.00367,-107.04738,0,0,,
-06.28.2024,RAEL,Ridge Above Emerald Lake,,,,,,,
+06.28.2024,RAEL,Ridge Above Emerald Lake,,,,,,174,
 06.28.2024,RAEL,Ridge Above Emerald Lake,4,39.00394,-107.04739,1,,,B
 06.28.2024,RAEL,Ridge Above Emerald Lake,5,39.00412,-107.04752,5,,,B
 06.28.2024,RAEL,Ridge Above Emerald Lake,6,39.0043,-107.04756,7,1,,B
@@ -23,7 +23,7 @@ Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_M,Prese
 06.29.2024,BV,Bellview Mountains,1,39.01523,-107.03076,25,0,,V
 06.29.2024,BV,Bellview Mountains,,39.0155,-107.03079,0,0,,
 06.29.2024,BV,Bellview Mountains,2,39.01541,-107.03056,37,4,,V
-06.29.2024,BV,Bellview Mountains,P-48,,,7,,,
+06.29.2024,BV,Bellview Mountains,p-48,,,7,,,
 06.29.2024,BV,Bellview Mountains,3,39.01479,-107.03012,9,3,,V
 06.29.2024,BV,Bellview Mountains,4,39.01459,-107.02972,2,,,V
 06.29.2024,BV,Bellview Mountains,5,39.01445,-107.0292,7,1,,V
@@ -42,7 +42,7 @@ Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_M,Prese
 06.29.2024,BV,Bellview Mountains,,39.01689,-107.02522,0,0,,
 06.29.2024,BV,Bellview Mountains,11,39.01212,-107.0217,1,,,B
 06.29.2024,BV,Bellview Mountains,12,39.01195,-107.02166,1,,,V
-06.29.2024,BV,Bellview Mountains,P-44,,,0,0,,
+06.29.2024,BV,Bellview Mountains,p-44,,,0,0,,
 06.29.2024,BV,Bellview Mountains,13,39.0117,-107.02206,25,4,,V
 06.29.2024,BV,Bellview Mountains,14,39.1155,-107.02237,14,3,,V
 06.29.2024,BV,Bellview Mountains,15,39.01133,-107.02248,14,,,V
@@ -70,7 +70,7 @@ Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_M,Prese
 06.29.2024,BV,Bellview Mountains,33,39.01025,-107.03072,30,5,,V
 06.29.2024,BV,Bellview Mountains,34,39.01036,-107.03106,32,3,,V
 06.29.2024,BV,Bellview Mountains,35,39.01046,-107.03189,7,,,V
-06.29.2024,BV,Bellview Mountains,P-12,,,0,0,,
+06.29.2024,BV,Bellview Mountains,p-12,,,0,0,,
 06.29.2024,BV,Bellview Mountains,36,39.01013,-107.03207,17,4,,V
 06.29.2024,BV,Bellview Mountains,37,39.01046,-107.03442,5,6,,V
 07.04.2024,GRNA,Gothic Research Natural Area,,38.99952,-107.03661,0,0,,
@@ -87,8 +87,8 @@ Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_M,Prese
 07.04.2024,GRNA,Gothic Research Natural Area,,38.9988,-107.04064,0,0,,
 07.04.2024,GRNA,Gothic Research Natural Area,,38.99834,-107.04203,0,0,,
 07.04.2024,GRNA,Gothic Research Natural Area,,38.99821,-107.04318,0,0,,
-07.04.2024,GRNA,Gothic Research Natural Area,162,,,0,0,162,
-07.04.2024,GRNA,Gothic Research Natural Area,162,,,0,0,163,
+07.04.2024,GRNA,Gothic Research Natural Area,,,,0,0,162,
+07.04.2024,GRNA,Gothic Research Natural Area,,,,0,0,163,
 07.04.2024,GRNA,Gothic Research Natural Area,p-36,,,0,0,,
 07.04.2024,GRNA,Gothic Research Natural Area,8,38.994305,-107.039679,1,0,,V
 07.04.2024,GRNA,Gothic Research Natural Area,,38.99399,-107.03821,0,0,,
@@ -105,41 +105,6 @@ Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_M,Prese
 07.04.2024,GRNA,Gothic Research Natural Area,p-28,,,0,0,,
 07.04.2024,GRNA,Gothic Research Natural Area,,,,,,145,
 07.04.2024,GRNA,Gothic Research Natural Area,,,,,,146,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.25.2024,XTAL,Crystal Mountain,,,,,,,
-07.04.2024,GRNA,Gothic Research Natural Area,,,,0,0,145,
-07.04.2024,GRNA,Gothic Research Natural Area,,,,0,0,146,
 07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,187,
 07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,186,
 07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,189,
@@ -220,7 +185,7 @@ Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_M,Prese
 7.27.2024,HB,Hasley Basin,,39.0472,-107.04536,0,0,,
 7.27.2024,HB,Hasley Basin,,39.04778,-107.04633,0,0,,
 7.27.2024,HB,Hasley Basin,14,39.04889,-107.04739,3,0,,F
-7.27.2024,HB,Hasley Basin,p-29,,,0,0,,
+7.27.2024,HB,Hasley Basin,p-29,,,0,0,,F
 7.27.2024,HB,Hasley Basin,15,39.0493,-107.04783,4,0,,F
 7.27.2024,HB,Hasley Basin,16,39.04956,-107.04821,7,1,,F
 7.27.2024,HB,Hasley Basin,,39.0498,-107.04861,0,0,,
@@ -237,11 +202,11 @@ Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_M,Prese
 7.27.2024,HB,Hasley Basin,23,39.05618,-107.05453,18,2,,F
 7.27.2024,HB,Hasley Basin,24,39.05712,-107.05463,19,4,,F
 7.27.2024,HB,Hasley Basin,,39.05783,-107.05525,0,0,,
-8.02.2024,,West Maroon Bells,,,,,,,
-8.02.2024,,West Maroon Bells,,,,,,,
-8.02.2024,,West Maroon Bells,,,,,,,
-8.02.2024,,West Maroon Bells,,,,,,,
-8.02.2024,,West Maroon Bells,,,,,,,
+8.02.2024,,West Maroon Bells,,,,,,247,
+8.02.2024,,West Maroon Bells,,,,,,248,
+8.02.2024,,West Maroon Bells,,,,,,249,
+8.02.2024,,West Maroon Bells,,,,,,250,
+8.02.2024,,West Maroon Bells,,,,,,235,
 8.02.2024,Frigid,Frigid Air Pass,,39.041798,-107.00037,0,0,,
 8.02.2024,Frigid,Frigid Air Pass,,39.041495,-107.0003865,0,0,,
 8.02.2024,Frigid,Frigid Air Pass,,39.042573,-107.006912,0,0,,
@@ -274,27 +239,27 @@ Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_M,Prese
 8.02.2024,Frigid,Frigid Air Pass,20,39.05565,-107.02361,10,2,,F
 8.02.2024,Frigid,Frigid Air Pass,21,39.05586,-107.02419,7,13,,F
 8.02.2024,Frigid,Frigid Air Pass,22,39.05591,-107.02451,9,0,,F
-8.02.2024,Frigid,Frigid Air Pass,P-22,39.05591,-107.02489,4,0,,F
-8.02.2024,Frigid,Frigid Air Pass,P-23,39.05591,-107.02489,4,0,,F
+8.02.2024,Frigid,Frigid Air Pass,p-22,39.05591,-107.02489,4,0,,F
+8.02.2024,Frigid,Frigid Air Pass,p-23,39.05591,-107.02489,4,0,,F
 8.02.2024,Frigid,Frigid Air Pass,,39.05601,-107.02496,0,0,,
 8.02.2024,Frigid,Frigid Air Pass,23,39.05753,-107.02543,9,1,,F
 8.02.2024,Frigid,Frigid Air Pass,24,39.05841,-107.02582,4,1,,F
 8.02.2024,Frigid,Frigid Air Pass,,39.05957,-107.02586,0,0,,
 8.02.2024,Frigid,Frigid Air Pass,25,39.06107,-107.02723,6,0,,F
 8.02.2024,Frigid,Frigid Air Pass,26,39.06151,-107.02744,3,0,,F
-8.02.2024,Frigid,Frigid Air Pass,P-24,39.06174,-107.0275,8,0,,F
+8.02.2024,Frigid,Frigid Air Pass,p-24,39.06174,-107.0275,8,0,,F
 8.02.2024,Frigid,Frigid Air Pass,,39.06229,-107.02785,0,0,,
-8.02.2024,Frigid,Frigid Air Pass,P-25,39.06288,-107.02812,2,1,,F
+8.02.2024,Frigid,Frigid Air Pass,p-25,39.06288,-107.02812,2,1,,F
 8.02.2024,Frigid,Frigid Air Pass,,,,0,0,141,
 8.02.2024,Frigid,Frigid Air Pass,,,,0,0,142,
-8.02.2024,Frigid,Frigid Air Pass,P-26,39.06348,-107.02838,6,1,,F
-8.02.2024,Frigid,Frigid Air Pass,P-27,39.06404,-107.02856,14,5,,F
+8.02.2024,Frigid,Frigid Air Pass,p-26,39.06348,-107.02838,6,1,,F
+8.02.2024,Frigid,Frigid Air Pass,p-27,39.06404,-107.02856,14,5,,F
 8.02.2024,Frigid,Frigid Air Pass,,,,8,0,143,
 8.02.2024,Frigid,Frigid Air Pass,,,,0,0,144,
-8.02.2024,Frigid,Frigid Air Pass,P-28,39.06804,-107.02818,10,4,,F
-8.02.2024,Frigid,Frigid Air Pass,P-29,39.0696572,-107.028359,35,19,,
-8.02.2024,Frigid,Frigid Air Pass,P-30,39.06701,-107.02818,6,0,,F
-8.02.2024,Frigid,Frigid Air Pass,P-31,39.04674,-107.02833,6,1,,F
+8.02.2024,Frigid,Frigid Air Pass,p-28,39.06804,-107.02818,10,4,,F
+8.02.2024,Frigid,Frigid Air Pass,p-29,39.0696572,-107.028359,35,19,,
+8.02.2024,Frigid,Frigid Air Pass,p-30,39.06701,-107.02818,6,0,,F
+8.02.2024,Frigid,Frigid Air Pass,p-31,39.04674,-107.02833,6,1,,F
 8.03.2024,Baldy,Baldy,,,,0,0,168,
 8.03.2024,Baldy,Baldy,,,,1,1,169,
 8.03.2024,Baldy,Baldy,,,,2,2,170,
@@ -342,13 +307,26 @@ Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_M,Prese
 8.03.2024,Baldy,Baldy,,38.98227,-107.05244,0,0,,
 8.03.2024,Baldy,Baldy,,38.9829,-107.05318,0,0,,
 8.03.2024,Baldy,Baldy,,38.98469,-107.05516,0,0,,
+08.04.2024,RG,Rustlers Gulch,,,,,,72,
+08.04.2024,RG,Rustlers Gulch,,,,,,73,
+08.04.2024,RG,Rustlers Gulch,,,,,,216,
+08.04.2024,RG,Rustlers Gulch,,,,,,215,
+08.04.2024,RG,Rustlers Gulch,,,,,,214,
+08.04.2024,RG,Rustlers Gulch,,,,,,213,
+08.04.2024,RG,Rustlers Gulch,,,,,,212,
+08.04.2024,RG,Rustlers Gulch,,,,,,211,
+08.04.2024,RG,Rustlers Gulch,,,,,,210,
+08.04.2024,RG,Rustlers Gulch,,,,,,209,
+08.04.2024,RG,Rustlers Gulch,,,,,,208,
+08.04.2024,RG,Rustlers Gulch,,,,,,207,
+08.04.2024,RG,Rustlers Gulch,,,,,,206,
 08.04.2024,RG,Rustlers Gulch,1,39.02048,-107.00124,22,2,,F
 08.04.2025,RG,Rustlers Gulch,2,39.02053,-107.0015,2,0,,F
 08.04.2026,RG,Rustlers Gulch,p-58,,,0,0,,
 08.04.2027,RG,Rustlers Gulch,,39.01081,-106.97674,0,0,,
 08.04.2028,RG,Rustlers Gulch,3,39.01113,-106.97718,1,0,,F
 08.04.2029,RG,Rustlers Gulch,,39.01146,-106.97773,0,0,,
-08.04.2030,RG,Rustlers Gulch,,,,0,0,,
+08.04.2030,RG,Rustlers Gulch,,,,0,0,35,
 08.04.2031,RG,Rustlers Gulch,4,39.01228,-106.98031,8,1,,F
 08.04.2032,RG,Rustlers Gulch,5,39.0125,-106.98045,13,4,,F
 08.04.2033,RG,Rustlers Gulch,6,39.01247,-106.98061,7,4,,F
@@ -375,3 +353,5 @@ Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_M,Prese
 08.04.2054,RG,Rustlers Gulch,20,39.0141,-106.98711,1,0,,F
 08.04.2055,RG,Rustlers Gulch,,39.0135,-106.98724,0,0,,
 08.04.2056,RG,Rustlers Gulch,,39.01167,-106.98887,0,0,,
+08.04.2056,RG,Rustlers Gulch,,,,,,32,
+08.04.2056,RG,Rustlers Gulch,,,,,,31,
