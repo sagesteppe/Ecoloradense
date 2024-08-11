@@ -51,13 +51,32 @@ revisits <- filter(revisits, !is.na(Latitude)) |>
   select(-Latitude, -Longitude, -UID)
 ```
 
-
 All data are cleaned now
 ```{r}
 ground_truth <- bind_rows(ground_truth, rand_pts_iter1, revisits) |>
   select(-GlobalRandomID) %>% 
   mutate(Presence = ifelse(Presence_M > 0 | Presence_J > 0, 1, 0), .after = Presence_J)
 
+st_write(ground_truth, '../data/GroundTruthing/QC.shp', append = F)
 rm(rand_pts_iter1, revisits)
+```
+
+We will add some randoms based on my scouting efforts. 
+These should hopefully help reduce the effects of spatial auto-correlation. 
+
+```{r}
+comp_abs <- read.csv('../data/GroundTruthing/ComputerAbs.csv') |>
+  mutate(Presence_M = 0, Presence_J = 0, Presence = 0) |>
+  st_as_sf(coords = c(x = 'Longitude', y = 'Latitude'), crs = 4326) |>
+  st_transform(st_crs(ground_truth))
+
+ab <- bind_rows(ground_truth, comp_abs) |>
+  st_write('../data/GroundTruthing/Iteration1Pts.shp', append = F)
+
+library(spdep)
+nn5 = knn2nb(knearneigh(ab, 8))
+w = nb2listw(nn5, style="B")
+joincount.test( as.factor(ab$Presence), w)
+
 ```
 
