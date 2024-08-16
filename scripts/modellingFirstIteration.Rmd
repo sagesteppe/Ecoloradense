@@ -120,15 +120,15 @@ Now group these points by their trails, and number them from the trail heads.
 trails <- st_transform(trails, 32613) 
 
 occurrence_only <- filter(occ_data, Occurrence == 1) %>% 
-  drop_na(eventDate) %>% 
-  select(-ID, -Occurrence)
+  drop_na(eventDate) %>%  
+  select(-ID, -Occurrence) 
 
-ob <- OrderRandomPtsIDS(trails, thinned, occurrence_only)
+ob <- OrderRandomPtsIDS(trails, thinned, occurrence_only) 
 
 st_write(ob[[1]], '../data/GroundTruthPts/Iteration1-cp.shp', append = F, quiet = T) 
 st_write(ob[[2]], '../data/GroundTruthPts/Revisits-cp.shp', append = F, quiet = T) 
 
-ob1 <- st_read('../data/GroundTruthPts/Iteration1-cp.shp')
+ob1 <- st_read('../data/GroundTruthPts/Iteration1-cp.shp') 
 
 mutate(ob[[1]]) %>% 
   select(-Trail, -TrailID, name = UID) %>% 
@@ -139,6 +139,70 @@ mutate(ob[[2]]) %>%
   select(-eventDate, -Trail, -TrailID, name = UID) %>% 
   st_transform(4326)  %>% 
   st_write(., dsn = "../data/GroundTruthPts/Presences.gpx", driver = "GPX")
+```
+
+We will also write out a variety of points for the Cocheotopa area
+```{r, eval = F}
+
+bb <- c(-106.4, 38.0, -106.8, 38.4)
+names(bb) <- c('xmin', 'ymin', 'xmax', 'ymax')
+
+coche_revisits <- occurrence_only |>
+  st_transform(4326) |>
+  st_crop(bb) 
+
+bb <- coche_revisits |> 
+  st_transform(32613) |>
+  st_buffer(5000) |>
+  st_bbox()
+
+pub <- st_read('../data/spatial/PADUS4_0_State_CO_GDB/PADUS4_0_StateCO.gdb',
+               layer = 'PADUS4_0Fee_State_CO', quiet = T) |>
+  ensure_multipolygons() |> 
+  st_make_valid() |> 
+  st_transform(32613) |>
+  select(Own_Name) |>
+  st_crop(bb)
+
+st_write(pub, '../data/spatial/PADUS_Cocheotopa_sub/public.shp', append = F)
+
+sampleable <- coche_revisits |>
+  st_transform(32613) |>
+  st_buffer(1000) |>
+  st_intersection(pub) |>
+  st_union()
+
+pts <- st_sample(sampleable, size = 50, type = 'hexagonal')
+
+pts <- pts %>%
+  st_as_sf() %>% 
+  dplyr::mutate(lon = sf::st_coordinates(.)[,1],
+                lat = sf::st_coordinates(.)[,2], 
+                .before = x) |>
+  arrange(lon, lat) |> 
+  mutate(ID = 1:n(), .before = 1)
+
+ggplot() + 
+  geom_sf(data = pub) + 
+  geom_sf(data = sampleable) + 
+  geom_sf(data = pts, aes(color = ID))
+  geom_sf(data = coche_revisits) 
+
+coche_revisits <- coche_revisits |>
+  mutate(ID = 1:n())
+
+st_write(coche_revisits, '../data/GroundTruthPts/Cocheotopa_revisits.shp', append = F, quiet = T)
+st_write(pts, '../data/GroundTruthPts/Iteration1-Coechotopa.shp', append = F, quiet = T) 
+
+coche_revisits |>
+  select(name = ID) %>% 
+  st_transform(4326)  %>% 
+  st_write(., dsn = "../data/GroundTruthPts/Cocheotopa_revisits.gpx", driver = "GPX")
+
+pts %>% 
+  select(name = ID) %>% 
+  st_transform(4326)  %>% 
+  st_write(., dsn = "../data/GroundTruthPts/Iteration1_GroundTruth-Cocheotopa.gpx", driver = "GPX")
 ```
 
 

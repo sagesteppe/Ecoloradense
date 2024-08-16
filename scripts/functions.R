@@ -24,6 +24,16 @@ SWcorner <- function(x){
 }
 
 
+ensure_multipolygons <- function(X) {
+  tmp1 <- tempfile(fileext = ".gpkg")
+  tmp2 <- tempfile(fileext = ".gpkg")
+  st_write(X, tmp1)
+  gdalUtilities::ogr2ogr(tmp1, tmp2, f = "GPKG", nlt = "MULTIPOLYGON")
+  Y <- st_read(tmp2)
+  st_sf(st_drop_geometry(X), geom = st_geometry(Y))
+}
+
+
 
 #' @param x input occurrence data
 #' @param resolution list of paths to geodata at different resolutions. 

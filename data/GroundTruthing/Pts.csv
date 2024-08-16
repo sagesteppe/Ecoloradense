@@ -249,7 +249,7 @@ OBJECT,Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_
 248,8.02.2024,Frigid,Frigid Air Pass,26,39.06151,-107.02744,3,0,,F
 249,8.02.2024,Frigid,Frigid Air Pass,p-24,39.06174,-107.0275,8,0,,F
 250,8.02.2024,Frigid,Frigid Air Pass,,39.06229,-107.02785,0,0,,
-251,8.02.2024,Frigid,Frigid Air Pass,p-25,39.06288,-107.02812,2,1,,F
+251,8.02.2024,Frigid,Frigid Air Pass,s-25,39.06288,-107.02812,2,1,,F
 252,8.02.2024,Frigid,Frigid Air Pass,,,,0,0,141,
 253,8.02.2024,Frigid,Frigid Air Pass,,,,0,0,142,
 254,8.02.2024,Frigid,Frigid Air Pass,p-26,39.06348,-107.02838,6,1,,F
@@ -257,9 +257,9 @@ OBJECT,Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_
 256,8.02.2024,Frigid,Frigid Air Pass,,,,8,0,143,
 257,8.02.2024,Frigid,Frigid Air Pass,,,,0,0,144,
 258,8.02.2024,Frigid,Frigid Air Pass,p-28,39.06804,-107.02818,10,4,,F
-259,8.02.2024,Frigid,Frigid Air Pass,p-29,39.0696572,-107.028359,35,19,,
-260,8.02.2024,Frigid,Frigid Air Pass,p-30,39.06701,-107.02818,6,0,,F
-261,8.02.2024,Frigid,Frigid Air Pass,p-31,39.04674,-107.02833,6,1,,F
+259,8.02.2024,Frigid,Frigid Air Pass,s-29,39.0696572,-107.028359,35,19,,
+260,8.02.2024,Frigid,Frigid Air Pass,s-30,39.06701,-107.02818,6,0,,F
+261,8.02.2024,Frigid,Frigid Air Pass,s-31,39.04674,-107.02833,6,1,,F
 262,8.03.2024,Baldy,Baldy,,,,0,0,168,
 263,8.03.2024,Baldy,Baldy,,,,0,0,169,
 264,8.03.2024,Baldy,Baldy,,,,0,0,170,
