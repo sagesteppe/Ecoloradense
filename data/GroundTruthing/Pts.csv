@@ -1,357 +1,503 @@
-OBJECT,Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_M,Presence_J,GlobalRandomID,Dominant_Phen
-1,06.28.2024,PABA,Paradise Basin,,,,0,0,130,
-2,06.28.2024,RAEL,Ridge Above Emerald Lake,1,39.00382,-107.04743,3,,,B
-3,06.28.2024,RAEL,Ridge Above Emerald Lake,2,39.00371,-107.04739,1,,,B
-4,06.28.2024,RAEL,Ridge Above Emerald Lake,3,39.00378,-107.0474,3,1,,B
-5,06.28.2024,RAEL,Ridge Above Emerald Lake,,39.00367,-107.04738,0,0,,
-6,06.28.2024,RAEL,Ridge Above Emerald Lake,,,,,,174,
-7,06.28.2024,RAEL,Ridge Above Emerald Lake,4,39.00394,-107.04739,1,,,B
-8,06.28.2024,RAEL,Ridge Above Emerald Lake,5,39.00412,-107.04752,5,,,B
-9,06.28.2024,RAEL,Ridge Above Emerald Lake,6,39.0043,-107.04756,7,1,,B
-10,06.28.2024,RAEL,Ridge Above Emerald Lake,7,39.00467,-107.04765,7,,,B
-11,06.28.2024,RAEL,Ridge Above Emerald Lake,8,39.00486,-107.04762,7,,,B
-12,06.28.2024,RAEL,Ridge Above Emerald Lake,9,39.00486,-107.04803,4,1,,B
-13,06.28.2024,RAEL,Ridge Above Emerald Lake,10,39.0052,-107.04793,3,,,B
-14,06.28.2024,RAEL,Ridge Above Emerald Lake,11,39.00543,-107.04797,8,,,B
-15,06.28.2024,RAEL,Ridge Above Emerald Lake,,39.00571,-107.04786,0,0,,
-16,06.28.2024,RAEL,Ridge Above Emerald Lake,,39.00642,-107.04798,0,0,,
-17,06.28.2024,RAEL,Ridge Above Emerald Lake,12,39.00655,-107.04784,10,4,,B
-18,06.28.2024,RAEL,Ridge Above Emerald Lake,13,39.00639,-107.04761,7,0,,B
-19,06.28.2024,RAEL,Ridge Above Emerald Lake,,39.00683,-107.04807,0,0,,
-20,06.28.2024,RAEL,Ridge Above Emerald Lake,,,,0,0,173,
-21,06.28.2024,RAEL,Ridge Above Emerald Lake,,,,0,0,174,
-22,06.29.2024,BV,Bellview Mountains,1,39.01523,-107.03076,25,0,,V
-23,06.29.2024,BV,Bellview Mountains,,39.0155,-107.03079,0,0,,
-24,06.29.2024,BV,Bellview Mountains,2,39.01541,-107.03056,37,4,,V
-25,06.29.2024,BV,Bellview Mountains,p-48,,,7,,,
-26,06.29.2024,BV,Bellview Mountains,3,39.01479,-107.03012,9,3,,V
-27,06.29.2024,BV,Bellview Mountains,4,39.01459,-107.02972,2,,,V
-28,06.29.2024,BV,Bellview Mountains,5,39.01445,-107.0292,7,1,,V
-29,06.29.2024,BV,Bellview Mountains,6,39.01461,-107.02858,1,,,BB
-30,06.29.2024,BV,Bellview Mountains,7,39.01479,-107.02851,2,,,V
-31,06.29.2024,BV,Bellview Mountains,,39.01498,-107.02889,0,,,
-32,06.29.2024,BV,Bellview Mountains,,39.01537,-107.02936,0,,,
-33,06.29.2024,BV,Bellview Mountains,8,39.01537,-107.02952,6,,,V
-34,06.29.2024,BV,Bellview Mountains,,39.01564,-107.02928,0,,,
-35,06.29.2024,BV,Bellview Mountains,,39.01576,-107.02908,0,,,
-36,06.29.2024,BV,Bellview Mountains,,39.0159,-107.0283,0,,,
-37,06.29.2024,BV,Bellview Mountains,,,,0,0,181,
-38,06.29.2024,BV,Bellview Mountains,9,39.01624,-107.02657,23,5,,V
-39,06.29.2024,BV,Bellview Mountains,10,39.01634,-107.02627,13,4,,V
-40,06.29.2024,BV,Bellview Mountains,,39.01661,-107.02599,0,0,,
-41,06.29.2024,BV,Bellview Mountains,,39.01689,-107.02522,0,0,,
-42,06.29.2024,BV,Bellview Mountains,11,39.01212,-107.0217,1,,,B
-43,06.29.2024,BV,Bellview Mountains,12,39.01195,-107.02166,1,,,V
-44,06.29.2024,BV,Bellview Mountains,p-44,,,0,0,,
-45,06.29.2024,BV,Bellview Mountains,13,39.0117,-107.02206,25,4,,V
-46,06.29.2024,BV,Bellview Mountains,14,39.01155,-107.02237,14,3,,V
-47,06.29.2024,BV,Bellview Mountains,15,39.01133,-107.02248,14,,,V
-48,06.29.2024,BV,Bellview Mountains,16,39.01105,-107.02229,10,,,V
-49,06.29.2024,BV,Bellview Mountains,,39.01089,-107.02244,0,0,,
-50,06.29.2024,BV,Bellview Mountains,,,,0,0,179,
-51,06.29.2024,BV,Bellview Mountains,17,39.01522,-107.01846,2,,,V
-52,06.29.2024,BV,Bellview Mountains,18,39.01541,-107.0182,8,,,V
-53,06.29.2024,BV,Bellview Mountains,19,39.01571,-107.01769,4,,,V
-54,06.29.2024,BV,Bellview Mountains,,39.0159,-107.01725,0,0,,
-55,06.29.2024,BV,Bellview Mountains,20,39.0159,-107.0299,2,1,,V
-56,06.29.2024,BV,Bellview Mountains,21,39.01458,-107.02988,7,,,V
-57,06.29.2024,BV,Bellview Mountains,22,39.01444,-107.0303,7,,,V
-58,06.29.2024,BV,Bellview Mountains,23,39.01422,-107.03055,3,,,V
-59,06.29.2024,BV,Bellview Mountains,,39.01398,-107.03088,0,0,,
-60,06.29.2024,BV,Bellview Mountains,24,39.01341,-107.03036,1,,,V
-61,06.29.2024,BV,Bellview Mountains,25,39.01274,-107.03099,30,6,,V
-62,06.29.2024,BV,Bellview Mountains,26,39.01255,-107.03113,10,,,V
-63,06.29.2024,BV,Bellview Mountains,27,39.01232,-107.03125,11,1,,V
-64,06.29.2024,BV,Bellview Mountains,28,39.01216,-107.03093,13,2,,V
-65,06.29.2024,BV,Bellview Mountains,29,39.01193,-107.0313,3,,,V
-66,06.29.2024,BV,Bellview Mountains,30,39.01185,-107.03156,26,1,,V
-67,06.29.2024,BV,Bellview Mountains,31,39.01185,-107.03141,34,5,,V
-68,06.29.2024,BV,Bellview Mountains,32,39.01084,-107.03085,13,,,V
-69,06.29.2024,BV,Bellview Mountains,33,39.01025,-107.03072,30,5,,V
-70,06.29.2024,BV,Bellview Mountains,34,39.01036,-107.03106,32,3,,V
-71,06.29.2024,BV,Bellview Mountains,35,39.01046,-107.03189,7,,,V
-72,06.29.2024,BV,Bellview Mountains,p-12,,,0,0,,
-73,06.29.2024,BV,Bellview Mountains,36,39.01013,-107.03207,17,4,,V
-74,06.29.2024,BV,Bellview Mountains,37,39.01046,-107.03442,5,6,,V
-75,07.04.2024,GRNA,Gothic Research Natural Area,,38.99952,-107.03661,0,0,,
-76,07.04.2024,GRNA,Gothic Research Natural Area,,38.99897,-107.03677,0,0,,
-77,07.04.2024,GRNA,Gothic Research Natural Area,1,38.99879,-107.03734,4,2,,V
-78,07.04.2024,GRNA,Gothic Research Natural Area,2,38.99898,-107.0377,2,2,,V
-79,07.04.2024,GRNA,Gothic Research Natural Area,,38.99921,-107.03797,,,,
-80,07.04.2024,GRNA,Gothic Research Natural Area,3,38.99897,-107.03819,6,1,,V
-81,07.04.2024,GRNA,Gothic Research Natural Area,4,38.99897,-107.03857,5,0,,V
-82,07.04.2024,GRNA,Gothic Research Natural Area,5,38.99905,-107.03882,2,0,,V
-83,07.04.2024,GRNA,Gothic Research Natural Area,6,38.99927,-107.03863,11,3,,V
-84,07.04.2024,GRNA,Gothic Research Natural Area,7,38.9991,-107.03963,1,3,,B
-85,07.04.2024,GRNA,Gothic Research Natural Area,p-39,,,2,0,,B
-86,07.04.2024,GRNA,Gothic Research Natural Area,,38.9988,-107.04064,0,0,,
-87,07.04.2024,GRNA,Gothic Research Natural Area,,38.99834,-107.04203,0,0,,
-88,07.04.2024,GRNA,Gothic Research Natural Area,,38.99821,-107.04318,0,0,,
-89,07.04.2024,GRNA,Gothic Research Natural Area,,,,0,0,162,
-90,07.04.2024,GRNA,Gothic Research Natural Area,,,,0,0,163,
-91,07.04.2024,GRNA,Gothic Research Natural Area,p-36,,,0,0,,
-92,07.04.2024,GRNA,Gothic Research Natural Area,8,38.994305,-107.039679,1,0,,V
-93,07.04.2024,GRNA,Gothic Research Natural Area,,38.99399,-107.03821,0,0,,
-94,07.04.2024,GRNA,Gothic Research Natural Area,,38.99369,-107.03683,0,0,,
-95,07.04.2024,GRNA,Gothic Research Natural Area,,38.99368,-107.03568,0,0,,
-96,07.04.2024,GRNA,Gothic Research Natural Area,,38.99368,-107.03568,0,0,,
-97,07.04.2024,GRNA,Gothic Research Natural Area,,38.99448,-107.03682,0,0,,
-98,07.04.2024,GRNA,Gothic Research Natural Area,,38.99492,-107.0368,0,0,,
-99,07.04.2024,GRNA,Gothic Research Natural Area,,38.99623,-107.03172,0,0,,
-100,07.04.2024,GRNA,Gothic Research Natural Area,,38.99637,-107.0343,0,0,,
-101,07.04.2024,GRNA,Gothic Research Natural Area,,38.99717,-107.03294,0,0,,
-102,07.04.2024,GRNA,Gothic Research Natural Area,,38.99654,-107.03247,0,0,,
-103,07.04.2024,GRNA,Gothic Research Natural Area,,38.99707,-107.03172,0,0,,
-104,07.04.2024,GRNA,Gothic Research Natural Area,p-28,,,0,0,,
-105,07.04.2024,GRNA,Gothic Research Natural Area,,,,,,145,
-106,07.04.2024,GRNA,Gothic Research Natural Area,,,,,,146,
-107,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,187,
-108,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,186,
-109,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,189,
-110,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,188,
-111,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,182,
-112,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,183,
-113,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,184,
-114,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,185,
-115,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,191,
-116,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,190,
-117,07.26.2024,XTAL,Crystal Mountain Ridge,,39.01989,-107.099613,0,0,,
-118,07.26.2024,XTAL,Crystal Mountain Ridge,,39.02342,-107.092759,0,0,,
-119,07.26.2024,XTAL,Crystal Mountain Ridge,,39.026509,-107.090577,0,0,,
-120,07.26.2024,XTAL,Crystal Mountain Ridge,1,39.02682,-107.09097,13,4,,F
-121,07.26.2024,XTAL,Crystal Mountain Ridge,2,39.02678,-107.09076,8,0,,F
-122,07.26.2024,XTAL,Crystal Mountain Ridge,3,39.0267,-107.09065,8,1,,F
-123,07.26.2024,XTAL,Crystal Mountain Ridge,4,39.02691,-107.09061,3,0,,F
-124,07.26.2024,XTAL,Crystal Mountain Ridge,5,39.02712,-107.09064,6,1,,F
-125,07.26.2024,XTAL,Crystal Mountain Ridge,6,39.02702,-107.09086,7,0,,F
-126,07.26.2024,XTAL,Crystal Mountain Ridge,p-50,39.027,-107.09097,3,0,,F
-127,07.26.2024,XTAL,Crystal Mountain Ridge,p-49,39.02734,-107.0909,1,0,,F
-128,07.26.2024,XTAL,Crystal Mountain Ridge,7,39.02756,-107.091,2,0,,F
-129,07.26.2024,XTAL,Crystal Mountain Ridge,,39.02793,-107.09073,0,0,,
-130,07.26.2024,XTAL,Crystal Mountain Ridge,8,39.02774,-107.0907,14,1,,F
-131,07.26.2024,XTAL,Crystal Mountain Ridge,9,39.02812,-107.09052,1,0,,F
-132,07.26.2024,XTAL,Crystal Mountain Ridge,10,39.02845,-107.09074,1,0,,F
-133,07.26.2024,XTAL,Crystal Mountain Ridge,,39.02891,-107.09073,0,0,,
-134,07.26.2024,XTAL,Crystal Mountain Ridge,11,39.02941,-107.08997,7,1,,F
-135,07.26.2024,XTAL,Crystal Mountain Ridge,12,39.02952,-107.09011,23,7,,F
-136,07.26.2024,XTAL,Crystal Mountain Ridge,,39.02977,-107.08994,0,0,,
-137,07.26.2024,XTAL,Crystal Mountain Ridge,13,39.03034,-107.08959,1,0,,F
-138,07.26.2024,XTAL,Crystal Mountain Ridge,,39.03081,-107.08941,0,0,,
-139,07.26.2024,XTAL,Crystal Mountain Ridge,,39.03132,-107.08927,0,0,,
-140,07.26.2024,XTAL,Crystal Mountain Ridge,,39.03194,-107.08929,0,0,,
-141,07.26.2024,XTAL,Crystal Mountain Ridge,,39.03061,-107.0898,0,0,,
-142,07.26.2024,XTAL,Crystal Mountain Ridge,,39.03017,-107.09004,0,0,,
-143,07.26.2024,XTAL,Crystal Mountain Ridge,,39.02641,-107.09093,0,0,,
-144,7.27.2024,WMB,West Maroon Bells,,,,0,0,239,
-145,7.27.2024,WMB,West Maroon Bells,,,,0,0,240,
-146,7.27.2024,WMB,West Maroon Bells,,,,0,0,241,
-147,7.27.2024,WMB,West Maroon Bells,,,,0,0,242,
-148,7.27.2024,WMB,West Maroon Bells,,,,0,0,243,
-149,7.27.2024,WMB,West Maroon Bells,,,,0,0,244,
-150,7.27.2024,WMB,West Maroon Bells,,,,0,0,245,
-151,7.27.2024,WMB,West Maroon Bells,,,,0,0,246,
-152,7.27.2024,HB,Hasley Basin,,,,0,0,147,
-153,7.27.2024,HB,Hasley Basin,,,,0,0,148,
-154,7.27.2024,HB,Hasley Basin,,,,0,0,159,
-155,7.27.2024,HB,Hasley Basin,,,,0,0,160,
-156,7.27.2024,HB,Hasley Basin,,,,0,0,161,
-157,7.27.2024,HB,Hasley Basin,,,,0,0,157,
-158,7.27.2024,HB,Hasley Basin,,,,0,0,155,
-159,7.27.2024,HB,Hasley Basin,1,39.04356,-107.03546,10,6,,F
-160,7.27.2024,HB,Hasley Basin,,39.04463,-107.0363,0,0,,
-161,7.27.2024,HB,Hasley Basin,,39.02491,-107.09068,0,0,,
-162,7.27.2024,HB,Hasley Basin,,39.038148,-107.034023,0,0,,
-163,7.27.2024,HB,Hasley Basin,2,39.03755,-107.03388,19,4,,F
-164,7.27.2024,HB,Hasley Basin,,39.0374,-107.03419,0,0,,
-165,7.27.2024,HB,Hasley Basin,3,39.03725,-107.03448,10,4,,F
-166,7.27.2024,HB,Hasley Basin,,39.03704,-107.03472,0,0,,
-167,7.27.2024,HB,Hasley Basin,,39.03655,-107.0355,0,0,,
-168,7.27.2024,HB,Hasley Basin,p-34,,,0,0,,
-169,7.27.2024,HB,Hasley Basin,p-35,39.03683,-107.03484,4,0,,F
-170,7.27.2024,HB,Hasley Basin,4,39.03733,-107.03455,5,0,,
-171,7.27.2024,HB,Hasley Basin,,,,,,17,
-172,7.27.2024,HB,Hasley Basin,,,,,,16,
-173,7.27.2024,HB,Hasley Basin,p-32,,,0,0,,
-174,7.27.2024,HB,Hasley Basin,5,39.0463,-107.03969,7,0,,F
-175,7.27.2024,HB,Hasley Basin,6,39.04613,-107.0399,8,2,,F
-176,7.27.2024,HB,Hasley Basin,7,39.04606,-107.04018,14,10,,F
-177,7.27.2024,HB,Hasley Basin,8,39.04589,-107.04055,2,1,,F
-178,7.27.2024,HB,Hasley Basin,9,39.04569,-107.041,1,0,,F
-179,7.27.2024,HB,Hasley Basin,10,39.04496,-107.04146,9,2,,V
-180,7.27.2024,HB,Hasley Basin,,39.04425,-107.04174,0,0,,
-181,7.27.2024,HB,Hasley Basin,11,39.04567,-107.04203,5,1,,F
-182,7.27.2024,HB,Hasley Basin,12,39.04628,-107.04369,9,2,,F
-183,7.27.2024,HB,Hasley Basin,13,39.04694,-107.04475,8,2,,F
-184,7.27.2024,HB,Hasley Basin,,39.0472,-107.04536,0,0,,
-185,7.27.2024,HB,Hasley Basin,,39.04778,-107.04633,0,0,,
-186,7.27.2024,HB,Hasley Basin,14,39.04889,-107.04739,3,0,,F
-187,7.27.2024,HB,Hasley Basin,p-29,,,0,0,,F
-188,7.27.2024,HB,Hasley Basin,15,39.0493,-107.04783,4,0,,F
-189,7.27.2024,HB,Hasley Basin,16,39.04956,-107.04821,7,1,,F
-190,7.27.2024,HB,Hasley Basin,,39.0498,-107.04861,0,0,,
-191,7.27.2024,HB,Hasley Basin,p-30,39.05162,-107.05095,6,1,,F
-192,7.27.2024,HB,Hasley Basin,,,,,,157,
-193,7.27.2024,HB,Hasley Basin,17,39.05171,-107.05097,2,0,,B
-194,7.27.2024,HB,Hasley Basin,18,39.05273,-107.05158,11,1,,F
-195,7.27.2024,HB,Hasley Basin,19,39.05349,-107.05217,9,15,,B
-196,7.27.2024,HB,Hasley Basin,,39.05388,-107.05217,0,0,,
-197,7.27.2024,HB,Hasley Basin,20,39.05419,-107.05337,7,0,,F
-198,7.27.2024,HB,Hasley Basin,21,39.05452,-107.05386,41,24,,F
-199,7.27.2024,HB,Hasley Basin,,,,,,155,
-200,7.27.2024,HB,Hasley Basin,22,39.05512,-107.05424,25,8,,F
-201,7.27.2024,HB,Hasley Basin,23,39.05618,-107.05453,18,2,,F
-202,7.27.2024,HB,Hasley Basin,24,39.05712,-107.05463,19,4,,F
-203,7.27.2024,HB,Hasley Basin,,39.05783,-107.05525,0,0,,
-204,8.02.2024,,West Maroon Bells,,,,,,247,
-205,8.02.2024,,West Maroon Bells,,,,,,248,
-206,8.02.2024,,West Maroon Bells,,,,,,249,
-207,8.02.2024,,West Maroon Bells,,,,,,250,
-208,8.02.2024,,West Maroon Bells,,,,,,235,
-209,8.02.2024,Frigid,Frigid Air Pass,,39.041798,-107.00037,0,0,,
-210,8.02.2024,Frigid,Frigid Air Pass,,39.041495,-107.0003865,0,0,,
-211,8.02.2024,Frigid,Frigid Air Pass,,39.042573,-107.006912,0,0,,
-212,8.02.2024,Frigid,Frigid Air Pass,,39.044597,-107.006912,0,0,,
-213,8.02.2024,Frigid,Frigid Air Pass,1,39.04646,-107.00962,1,0,,F
-214,8.02.2024,Frigid,Frigid Air Pass,2,39.04665,-107.00999,8,0,,F
-215,8.02.2024,Frigid,Frigid Air Pass,3,39.04688,-107.01034,8,0,,F
-216,8.02.2024,Frigid,Frigid Air Pass,4,39.04733,-107.01092,12,6,,F
-217,8.02.2024,Frigid,Frigid Air Pass,,39.04792,-107.0117,0,0,,
-218,8.02.2024,Frigid,Frigid Air Pass,5,39.04833,-107.01233,7,1,,F
-219,8.02.2024,Frigid,Frigid Air Pass,6,39.0487,-107.0131,5,0,,F
-220,8.02.2024,Frigid,Frigid Air Pass,,39.04894,-107.0137,0,0,,
-221,8.02.2024,Frigid,Frigid Air Pass,,39.04923,-107.0144,0,0,,
-222,8.02.2024,Frigid,Frigid Air Pass,7,39.04953,-107.01503,7,0,,F
-223,8.02.2024,Frigid,Frigid Air Pass,8,39.04992,-107.01546,4,0,,F
-224,8.02.2024,Frigid,Frigid Air Pass,9,39.05015,-107.01583,4,0,,F
-225,8.02.2024,Frigid,Frigid Air Pass,,39.05027,-107.01682,0,0,,
-226,8.02.2024,Frigid,Frigid Air Pass,10,39.05027,-107.01701,7,4,,F
-227,8.02.2024,Frigid,Frigid Air Pass,11,39.05117,-107.0172,2,0,,F
-228,8.02.2024,Frigid,Frigid Air Pass,12,39.05173,-107.01783,9,1,,F
-229,8.02.2024,Frigid,Frigid Air Pass,13,39.0521,-107.0182,5,0,,F
-230,8.02.2024,Frigid,Frigid Air Pass,,39.0525,-107.01842,5,0,,F
-231,8.02.2024,Frigid,Frigid Air Pass,14,39.05273,-107.01868,0,3,,F
-232,8.02.2024,Frigid,Frigid Air Pass,15,39.05342,-107.02001,8,0,,F
-233,8.02.2024,Frigid,Frigid Air Pass,,39.05397,-107.02089,0,0,,
-234,8.02.2024,Frigid,Frigid Air Pass,16,39.05405,-107.0213,7,1,,F
-235,8.02.2024,Frigid,Frigid Air Pass,17,39.05462,-107.02172,12,2,,F
-236,8.02.2024,Frigid,Frigid Air Pass,18,39.05508,-107.02246,6,3,,F
-237,8.02.2024,Frigid,Frigid Air Pass,19,39.0555,-107.02307,5,2,,F
-238,8.02.2024,Frigid,Frigid Air Pass,20,39.05565,-107.02361,10,2,,F
-239,8.02.2024,Frigid,Frigid Air Pass,21,39.05586,-107.02419,7,13,,F
-240,8.02.2024,Frigid,Frigid Air Pass,22,39.05591,-107.02451,9,0,,F
-241,8.02.2024,Frigid,Frigid Air Pass,p-22,39.05591,-107.02489,4,0,,F
-242,8.02.2024,Frigid,Frigid Air Pass,p-23,39.05591,-107.02489,4,0,,F
-243,8.02.2024,Frigid,Frigid Air Pass,,39.05601,-107.02496,0,0,,
-244,8.02.2024,Frigid,Frigid Air Pass,23,39.05753,-107.02543,9,1,,F
-245,8.02.2024,Frigid,Frigid Air Pass,24,39.05841,-107.02582,4,1,,F
-246,8.02.2024,Frigid,Frigid Air Pass,,39.05957,-107.02586,0,0,,
-247,8.02.2024,Frigid,Frigid Air Pass,25,39.06107,-107.02723,6,0,,F
-248,8.02.2024,Frigid,Frigid Air Pass,26,39.06151,-107.02744,3,0,,F
-249,8.02.2024,Frigid,Frigid Air Pass,p-24,39.06174,-107.0275,8,0,,F
-250,8.02.2024,Frigid,Frigid Air Pass,,39.06229,-107.02785,0,0,,
-251,8.02.2024,Frigid,Frigid Air Pass,s-25,39.06288,-107.02812,2,1,,F
-252,8.02.2024,Frigid,Frigid Air Pass,,,,0,0,141,
-253,8.02.2024,Frigid,Frigid Air Pass,,,,0,0,142,
-254,8.02.2024,Frigid,Frigid Air Pass,p-26,39.06348,-107.02838,6,1,,F
-255,8.02.2024,Frigid,Frigid Air Pass,p-27,39.06404,-107.02856,14,5,,F
-256,8.02.2024,Frigid,Frigid Air Pass,,,,8,0,143,
-257,8.02.2024,Frigid,Frigid Air Pass,,,,0,0,144,
-258,8.02.2024,Frigid,Frigid Air Pass,p-28,39.06804,-107.02818,10,4,,F
-259,8.02.2024,Frigid,Frigid Air Pass,s-29,39.0696572,-107.028359,35,19,,
-260,8.02.2024,Frigid,Frigid Air Pass,s-30,39.06701,-107.02818,6,0,,F
-261,8.02.2024,Frigid,Frigid Air Pass,s-31,39.04674,-107.02833,6,1,,F
-262,8.03.2024,Baldy,Baldy,,,,0,0,168,
-263,8.03.2024,Baldy,Baldy,,,,0,0,169,
-264,8.03.2024,Baldy,Baldy,,,,0,0,170,
-265,8.03.2024,Baldy,Baldy,,,,0,0,171,
-266,8.03.2024,Baldy,Baldy,,,,0,0,172,
-267,8.03.2024,Baldy,Baldy,1,38.98557,-107.03984,3,0,,F
-268,8.03.2024,Baldy,Baldy,2,38.98555,-107.03955,10,0,,F
-269,8.03.2024,Baldy,Baldy,3,38.98538,-107.03935,2,0,,F
-270,8.03.2024,Baldy,Baldy,4,38.98543,-107.03908,4,0,,F
-271,8.03.2024,Baldy,Baldy,,38.98537,-107.03861,0,0,,
-272,8.03.2024,Baldy,Baldy,5,38.985,-107.03666,5,1,,F
-273,8.03.2024,Baldy,Baldy,,38.98487,-107.03635,0,,,
-274,8.03.2024,Baldy,Baldy,6,38.98491,-107.03613,7,0,,F
-275,8.03.2024,Baldy,Baldy,7,38.98509,-107.03589,3,0,,F
-276,8.03.2024,Baldy,Baldy,,38.98458,-107.0368,0,0,,
-277,8.03.2024,Baldy,Baldy,8,38.9845,-107.035,12,0,,F
-278,8.03.2024,Baldy,Baldy,9,38.98429,-107.03455,1,0,,F
-279,8.03.2024,Baldy,Baldy,10,38.9845,-107.0342,9,0,,F
-280,8.03.2024,Baldy,Baldy,p-41,38.98403,-107.03381,11,0,,F
-281,8.03.2024,Baldy,Baldy,,,,0,0,167,
-282,8.03.2024,Baldy,Baldy,p-42,,,16,2,,F
-283,8.03.2024,Baldy,Baldy,11,38.98403,-107.03275,18,0,,F
-284,8.03.2024,Baldy,Baldy,,38.98384,-107.03262,0,0,,
-285,8.03.2024,Baldy,Baldy,12,38.98357,-107.03265,31,0,,F
-286,8.03.2024,Baldy,Baldy,13,38.98347,-107.0322,15,0,,F
-287,8.03.2024,Baldy,Baldy,14,38.98362,-107.03173,25,0,,F
-288,8.03.2024,Baldy,Baldy,,38.98374,-107.03131,2,1,,F
-289,8.03.2024,Baldy,Baldy,,,,0,0,178,
-290,8.03.2024,Baldy,Baldy,15,38.98368,-107.03131,7,0,,F
-291,8.03.2024,Baldy,Baldy,16,38.98338,-107.03084,25,0,,F
-292,8.03.2024,Baldy,Baldy,17,38.98313,-107.03182,3,0,,F
-293,8.03.2024,Baldy,Baldy,,38.98336,-107.03223,0,0,,
-294,8.03.2024,Baldy,Baldy,,38.98319,-107.03371,0,0,,
-295,8.03.2024,Baldy,Baldy,,38.983286,-107.03435,0,0,,
-296,8.03.2024,Baldy,Baldy,,38.98267,-107.03479,0,0,,
-297,8.03.2024,Baldy,Baldy,,38.98249,-107.03556,0,0,,
-298,8.03.2024,Baldy,Baldy,,38.98223,-107.0369,0,0,,
-299,8.03.2024,Baldy,Baldy,,38.98101,-107.03886,0,0,,
-300,8.03.2024,Baldy,Baldy,,38.97924,-107.04106,0,0,,
-301,8.03.2024,Baldy,Baldy,,38.97845,-107.0411,0,0,,
-302,8.03.2024,Baldy,Baldy,,38.97866,-107.0419,0,0,,
-303,8.03.2024,Baldy,Baldy,,38.98137,-107.0443,0,0,,
-304,8.03.2024,Baldy,Baldy,,38.98225,-107.0448,0,0,,
-305,8.03.2024,Baldy,Baldy,,38.98288,-107.04861,0,0,,
-306,8.03.2024,Baldy,Baldy,,38.98227,-107.05244,0,0,,
-307,8.03.2024,Baldy,Baldy,,38.9829,-107.05318,0,0,,
-308,8.03.2024,Baldy,Baldy,,38.98469,-107.05516,0,0,,
-309,08.04.2024,RG,Rustlers Gulch,,,,,,72,
-310,08.04.2024,RG,Rustlers Gulch,,,,,,73,
-311,08.04.2024,RG,Rustlers Gulch,,,,,,216,
-312,08.04.2024,RG,Rustlers Gulch,,,,,,215,
-313,08.04.2024,RG,Rustlers Gulch,,,,,,214,
-314,08.04.2024,RG,Rustlers Gulch,,,,,,213,
-315,08.04.2024,RG,Rustlers Gulch,,,,,,212,
-316,08.04.2024,RG,Rustlers Gulch,,,,,,211,
-317,08.04.2024,RG,Rustlers Gulch,,,,,,210,
-318,08.04.2024,RG,Rustlers Gulch,,,,,,209,
-319,08.04.2024,RG,Rustlers Gulch,,,,,,208,
-320,08.04.2024,RG,Rustlers Gulch,,,,,,207,
-321,08.04.2024,RG,Rustlers Gulch,,,,,,206,
-322,08.04.2024,RG,Rustlers Gulch,1,39.02048,-107.00124,22,2,,F
-323,08.04.2025,RG,Rustlers Gulch,2,39.02053,-107.0015,2,0,,F
-324,08.04.2026,RG,Rustlers Gulch,p-58,,,0,0,,
-325,08.04.2027,RG,Rustlers Gulch,,39.01081,-106.97674,0,0,,
-326,08.04.2028,RG,Rustlers Gulch,3,39.01113,-106.97718,1,0,,F
-327,08.04.2029,RG,Rustlers Gulch,,39.01146,-106.97773,0,0,,
-328,08.04.2030,RG,Rustlers Gulch,,,,0,0,35,
-329,08.04.2031,RG,Rustlers Gulch,4,39.01228,-106.98031,8,1,,F
-330,08.04.2032,RG,Rustlers Gulch,5,39.0125,-106.98045,13,4,,F
-331,08.04.2033,RG,Rustlers Gulch,6,39.01247,-106.98061,7,4,,F
-332,08.04.2034,RG,Rustlers Gulch,7,39.01258,-106.98071,18,3,,F
-333,08.04.2035,RG,Rustlers Gulch,,39.01276,-106.98108,0,0,,
-334,08.04.2036,RG,Rustlers Gulch,8,39.01278,-106.98138,7,1,,F
-335,08.04.2037,RG,Rustlers Gulch,p-14,39.0129,-106.98133,6,0,,F
-336,08.04.2038,RG,Rustlers Gulch,9,39.01307,-106.98178,5,1,,F
-337,08.04.2039,RG,Rustlers Gulch,10,39.01326,-106.98209,9,4,,F
-338,08.04.2040,RG,Rustlers Gulch,,39.0134,-106.98224,0,0,,
-339,08.04.2041,RG,Rustlers Gulch,11,39.01374,-106.98251,13,0,,F
-340,08.04.2042,RG,Rustlers Gulch,,39.01395,-106.983,0,0,,
-341,08.04.2043,RG,Rustlers Gulch,p-15,,,4,3,,F
-342,08.04.2044,RG,Rustlers Gulch,12,39.01398,-106.98518,6,1,,F
-343,08.04.2045,RG,Rustlers Gulch,13,39.01411,-106.98556,12,0,,F
-344,08.04.2046,RG,Rustlers Gulch,,39.01446,-106.98519,0,0,,
-345,08.04.2047,RG,Rustlers Gulch,14,39.0149,-106.98514,9,5,,F
-346,08.04.2048,RG,Rustlers Gulch,,39.01502,-106.98465,0,0,,
-347,08.04.2049,RG,Rustlers Gulch,15,39.0156,-106.98537,5,3,,F
-348,08.04.2050,RG,Rustlers Gulch,16,39.01579,-106.986573,4,0,,F
-349,08.04.2051,RG,Rustlers Gulch,17,39.01553,-106.98607,14,6,,F
-350,08.04.2052,RG,Rustlers Gulch,18,39.01573,-106.9863,1,0,,F
-351,08.04.2053,RG,Rustlers Gulch,19,39.01551,-106.98655,6,2,,F
-352,08.04.2054,RG,Rustlers Gulch,20,39.0141,-106.98711,1,0,,F
-353,08.04.2055,RG,Rustlers Gulch,,39.0135,-106.98724,0,0,,
-354,08.04.2056,RG,Rustlers Gulch,,39.01167,-106.98887,0,0,,
-355,08.04.2056,RG,Rustlers Gulch,,,,,,32,
-356,08.04.2056,RG,Rustlers Gulch,,,,,,31,
+OBJECT,Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_M,Presence_J,Presence_S,GlobalRandomID,Dominant_Phen
+1,06.28.2024,PABA,Paradise Basin,,,,0,0,,130,
+2,06.28.2024,RAEL,Ridge Above Emerald Lake,1,39.00382,-107.04743,3,,,,B
+3,06.28.2024,RAEL,Ridge Above Emerald Lake,2,39.00371,-107.04739,1,,,,B
+4,06.28.2024,RAEL,Ridge Above Emerald Lake,3,39.00378,-107.0474,3,1,,,B
+5,06.28.2024,RAEL,Ridge Above Emerald Lake,,39.00367,-107.04738,0,0,,,
+6,06.28.2024,RAEL,Ridge Above Emerald Lake,,,,,,,174,
+7,06.28.2024,RAEL,Ridge Above Emerald Lake,4,39.00394,-107.04739,1,,,,B
+8,06.28.2024,RAEL,Ridge Above Emerald Lake,5,39.00412,-107.04752,5,,,,B
+9,06.28.2024,RAEL,Ridge Above Emerald Lake,6,39.0043,-107.04756,7,1,,,B
+10,06.28.2024,RAEL,Ridge Above Emerald Lake,7,39.00467,-107.04765,7,,,,B
+11,06.28.2024,RAEL,Ridge Above Emerald Lake,8,39.00486,-107.04762,7,,,,B
+12,06.28.2024,RAEL,Ridge Above Emerald Lake,9,39.00486,-107.04803,4,1,,,B
+13,06.28.2024,RAEL,Ridge Above Emerald Lake,10,39.0052,-107.04793,3,,,,B
+14,06.28.2024,RAEL,Ridge Above Emerald Lake,11,39.00543,-107.04797,8,,,,B
+15,06.28.2024,RAEL,Ridge Above Emerald Lake,,39.00571,-107.04786,0,0,,,
+16,06.28.2024,RAEL,Ridge Above Emerald Lake,,39.00642,-107.04798,0,0,,,
+17,06.28.2024,RAEL,Ridge Above Emerald Lake,12,39.00655,-107.04784,10,4,,,B
+18,06.28.2024,RAEL,Ridge Above Emerald Lake,13,39.00639,-107.04761,7,0,,,B
+19,06.28.2024,RAEL,Ridge Above Emerald Lake,,39.00683,-107.04807,0,0,,,
+20,06.28.2024,RAEL,Ridge Above Emerald Lake,,,,0,0,,173,
+21,06.28.2024,RAEL,Ridge Above Emerald Lake,,,,0,0,,174,
+22,06.29.2024,BV,Bellview Mountains,1,39.01523,-107.03076,25,0,,,V
+23,06.29.2024,BV,Bellview Mountains,,39.0155,-107.03079,0,0,,,
+24,06.29.2024,BV,Bellview Mountains,2,39.01541,-107.03056,37,4,,,V
+25,06.29.2024,BV,Bellview Mountains,p-48,,,7,,,,
+26,06.29.2024,BV,Bellview Mountains,3,39.01479,-107.03012,9,3,,,V
+27,06.29.2024,BV,Bellview Mountains,4,39.01459,-107.02972,2,,,,V
+28,06.29.2024,BV,Bellview Mountains,5,39.01445,-107.0292,7,1,,,V
+29,06.29.2024,BV,Bellview Mountains,6,39.01461,-107.02858,1,,,,BB
+30,06.29.2024,BV,Bellview Mountains,7,39.01479,-107.02851,2,,,,V
+31,06.29.2024,BV,Bellview Mountains,,39.01498,-107.02889,0,,,,
+32,06.29.2024,BV,Bellview Mountains,,39.01537,-107.02936,0,,,,
+33,06.29.2024,BV,Bellview Mountains,8,39.01537,-107.02952,6,,,,V
+34,06.29.2024,BV,Bellview Mountains,,39.01564,-107.02928,0,,,,
+35,06.29.2024,BV,Bellview Mountains,,39.01576,-107.02908,0,,,,
+36,06.29.2024,BV,Bellview Mountains,,39.0159,-107.0283,0,,,,
+37,06.29.2024,BV,Bellview Mountains,,,,0,0,,181,
+38,06.29.2024,BV,Bellview Mountains,9,39.01624,-107.02657,23,5,,,V
+39,06.29.2024,BV,Bellview Mountains,10,39.01634,-107.02627,13,4,,,V
+40,06.29.2024,BV,Bellview Mountains,,39.01661,-107.02599,0,0,,,
+41,06.29.2024,BV,Bellview Mountains,,39.01689,-107.02522,0,0,,,
+42,06.29.2024,BV,Bellview Mountains,11,39.01212,-107.0217,1,,,,B
+43,06.29.2024,BV,Bellview Mountains,12,39.01195,-107.02166,1,,,,V
+44,06.29.2024,BV,Bellview Mountains,p-44,,,0,0,,,
+45,06.29.2024,BV,Bellview Mountains,13,39.0117,-107.02206,25,4,,,V
+46,06.29.2024,BV,Bellview Mountains,14,39.01155,-107.02237,14,3,,,V
+47,06.29.2024,BV,Bellview Mountains,15,39.01133,-107.02248,14,,,,V
+48,06.29.2024,BV,Bellview Mountains,16,39.01105,-107.02229,10,,,,V
+49,06.29.2024,BV,Bellview Mountains,,39.01089,-107.02244,0,0,,,
+50,06.29.2024,BV,Bellview Mountains,,,,0,0,,179,
+51,06.29.2024,BV,Bellview Mountains,17,39.01522,-107.01846,2,,,,V
+52,06.29.2024,BV,Bellview Mountains,18,39.01541,-107.0182,8,,,,V
+53,06.29.2024,BV,Bellview Mountains,19,39.01571,-107.01769,4,,,,V
+54,06.29.2024,BV,Bellview Mountains,,39.0159,-107.01725,0,0,,,
+55,06.29.2024,BV,Bellview Mountains,20,39.0159,-107.0299,2,1,,,V
+56,06.29.2024,BV,Bellview Mountains,21,39.01458,-107.02988,7,,,,V
+57,06.29.2024,BV,Bellview Mountains,22,39.01444,-107.0303,7,,,,V
+58,06.29.2024,BV,Bellview Mountains,23,39.01422,-107.03055,3,,,,V
+59,06.29.2024,BV,Bellview Mountains,,39.01398,-107.03088,0,0,,,
+60,06.29.2024,BV,Bellview Mountains,24,39.01341,-107.03036,1,,,,V
+61,06.29.2024,BV,Bellview Mountains,25,39.01274,-107.03099,30,6,,,V
+62,06.29.2024,BV,Bellview Mountains,26,39.01255,-107.03113,10,,,,V
+63,06.29.2024,BV,Bellview Mountains,27,39.01232,-107.03125,11,1,,,V
+64,06.29.2024,BV,Bellview Mountains,28,39.01216,-107.03093,13,2,,,V
+65,06.29.2024,BV,Bellview Mountains,29,39.01193,-107.0313,3,,,,V
+66,06.29.2024,BV,Bellview Mountains,30,39.01185,-107.03156,26,1,,,V
+67,06.29.2024,BV,Bellview Mountains,31,39.01185,-107.03141,34,5,,,V
+68,06.29.2024,BV,Bellview Mountains,32,39.01084,-107.03085,13,,,,V
+69,06.29.2024,BV,Bellview Mountains,33,39.01025,-107.03072,30,5,,,V
+70,06.29.2024,BV,Bellview Mountains,34,39.01036,-107.03106,32,3,,,V
+71,06.29.2024,BV,Bellview Mountains,35,39.01046,-107.03189,7,,,,V
+72,06.29.2024,BV,Bellview Mountains,p-12,,,0,0,,,
+73,06.29.2024,BV,Bellview Mountains,36,39.01013,-107.03207,17,4,,,V
+74,06.29.2024,BV,Bellview Mountains,37,39.01046,-107.03442,5,6,,,V
+75,07.04.2024,GRNA,Gothic Research Natural Area,,38.99952,-107.03661,0,0,,,
+76,07.04.2024,GRNA,Gothic Research Natural Area,,38.99897,-107.03677,0,0,,,
+77,07.04.2024,GRNA,Gothic Research Natural Area,1,38.99879,-107.03734,4,2,,,V
+78,07.04.2024,GRNA,Gothic Research Natural Area,2,38.99898,-107.0377,2,2,,,V
+79,07.04.2024,GRNA,Gothic Research Natural Area,,38.99921,-107.03797,,,,,
+80,07.04.2024,GRNA,Gothic Research Natural Area,3,38.99897,-107.03819,6,1,,,V
+81,07.04.2024,GRNA,Gothic Research Natural Area,4,38.99897,-107.03857,5,0,,,V
+82,07.04.2024,GRNA,Gothic Research Natural Area,5,38.99905,-107.03882,2,0,,,V
+83,07.04.2024,GRNA,Gothic Research Natural Area,6,38.99927,-107.03863,11,3,,,V
+84,07.04.2024,GRNA,Gothic Research Natural Area,7,38.9991,-107.03963,1,3,,,B
+85,07.04.2024,GRNA,Gothic Research Natural Area,p-39,,,2,0,,,B
+86,07.04.2024,GRNA,Gothic Research Natural Area,,38.9988,-107.04064,0,0,,,
+87,07.04.2024,GRNA,Gothic Research Natural Area,,38.99834,-107.04203,0,0,,,
+88,07.04.2024,GRNA,Gothic Research Natural Area,,38.99821,-107.04318,0,0,,,
+89,07.04.2024,GRNA,Gothic Research Natural Area,,,,0,0,,162,
+90,07.04.2024,GRNA,Gothic Research Natural Area,,,,0,0,,163,
+91,07.04.2024,GRNA,Gothic Research Natural Area,p-36,,,0,0,,,
+92,07.04.2024,GRNA,Gothic Research Natural Area,8,38.994305,-107.039679,1,0,,,V
+93,07.04.2024,GRNA,Gothic Research Natural Area,,38.99399,-107.03821,0,0,,,
+94,07.04.2024,GRNA,Gothic Research Natural Area,,38.99369,-107.03683,0,0,,,
+95,07.04.2024,GRNA,Gothic Research Natural Area,,38.99368,-107.03568,0,0,,,
+96,07.04.2024,GRNA,Gothic Research Natural Area,,38.99368,-107.03568,0,0,,,
+97,07.04.2024,GRNA,Gothic Research Natural Area,,38.99448,-107.03682,0,0,,,
+98,07.04.2024,GRNA,Gothic Research Natural Area,,38.99492,-107.0368,0,0,,,
+99,07.04.2024,GRNA,Gothic Research Natural Area,,38.99623,-107.03172,0,0,,,
+100,07.04.2024,GRNA,Gothic Research Natural Area,,38.99637,-107.0343,0,0,,,
+101,07.04.2024,GRNA,Gothic Research Natural Area,,38.99717,-107.03294,0,0,,,
+102,07.04.2024,GRNA,Gothic Research Natural Area,,38.99654,-107.03247,0,0,,,
+103,07.04.2024,GRNA,Gothic Research Natural Area,,38.99707,-107.03172,0,0,,,
+104,07.04.2024,GRNA,Gothic Research Natural Area,p-28,,,0,0,,,
+105,07.04.2024,GRNA,Gothic Research Natural Area,,,,,,,145,
+106,07.04.2024,GRNA,Gothic Research Natural Area,,,,,,,146,
+107,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,,187,
+108,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,,186,
+109,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,,189,
+110,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,,188,
+111,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,,182,
+112,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,,183,
+113,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,,184,
+114,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,,185,
+115,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,,191,
+116,07.26.2024,XTAL,Crystal Mountain Ridge,,,,0,0,,190,
+117,07.26.2024,XTAL,Crystal Mountain Ridge,,39.01989,-107.099613,0,0,,,
+118,07.26.2024,XTAL,Crystal Mountain Ridge,,39.02342,-107.092759,0,0,,,
+119,07.26.2024,XTAL,Crystal Mountain Ridge,,39.026509,-107.090577,0,0,,,
+120,07.26.2024,XTAL,Crystal Mountain Ridge,1,39.02682,-107.09097,13,4,,,F
+121,07.26.2024,XTAL,Crystal Mountain Ridge,2,39.02678,-107.09076,8,0,,,F
+122,07.26.2024,XTAL,Crystal Mountain Ridge,3,39.0267,-107.09065,8,1,,,F
+123,07.26.2024,XTAL,Crystal Mountain Ridge,4,39.02691,-107.09061,3,0,,,F
+124,07.26.2024,XTAL,Crystal Mountain Ridge,5,39.02712,-107.09064,6,1,,,F
+125,07.26.2024,XTAL,Crystal Mountain Ridge,6,39.02702,-107.09086,7,0,,,F
+126,07.26.2024,XTAL,Crystal Mountain Ridge,p-50,39.027,-107.09097,3,0,,,F
+127,07.26.2024,XTAL,Crystal Mountain Ridge,p-49,39.02734,-107.0909,1,0,,,F
+128,07.26.2024,XTAL,Crystal Mountain Ridge,7,39.02756,-107.091,2,0,,,F
+129,07.26.2024,XTAL,Crystal Mountain Ridge,,39.02793,-107.09073,0,0,,,
+130,07.26.2024,XTAL,Crystal Mountain Ridge,8,39.02774,-107.0907,14,1,,,F
+131,07.26.2024,XTAL,Crystal Mountain Ridge,9,39.02812,-107.09052,1,0,,,F
+132,07.26.2024,XTAL,Crystal Mountain Ridge,10,39.02845,-107.09074,1,0,,,F
+133,07.26.2024,XTAL,Crystal Mountain Ridge,,39.02891,-107.09073,0,0,,,
+134,07.26.2024,XTAL,Crystal Mountain Ridge,11,39.02941,-107.08997,7,1,,,F
+135,07.26.2024,XTAL,Crystal Mountain Ridge,12,39.02952,-107.09011,23,7,,,F
+136,07.26.2024,XTAL,Crystal Mountain Ridge,,39.02977,-107.08994,0,0,,,
+137,07.26.2024,XTAL,Crystal Mountain Ridge,13,39.03034,-107.08959,1,0,,,F
+138,07.26.2024,XTAL,Crystal Mountain Ridge,,39.03081,-107.08941,0,0,,,
+139,07.26.2024,XTAL,Crystal Mountain Ridge,,39.03132,-107.08927,0,0,,,
+140,07.26.2024,XTAL,Crystal Mountain Ridge,,39.03194,-107.08929,0,0,,,
+141,07.26.2024,XTAL,Crystal Mountain Ridge,,39.03061,-107.0898,0,0,,,
+142,07.26.2024,XTAL,Crystal Mountain Ridge,,39.03017,-107.09004,0,0,,,
+143,07.26.2024,XTAL,Crystal Mountain Ridge,,39.02641,-107.09093,0,0,,,
+144,7.27.2024,WMB,West Maroon Bells,,,,0,0,,239,
+145,7.27.2024,WMB,West Maroon Bells,,,,0,0,,240,
+146,7.27.2024,WMB,West Maroon Bells,,,,0,0,,241,
+147,7.27.2024,WMB,West Maroon Bells,,,,0,0,,242,
+148,7.27.2024,WMB,West Maroon Bells,,,,0,0,,243,
+149,7.27.2024,WMB,West Maroon Bells,,,,0,0,,244,
+150,7.27.2024,WMB,West Maroon Bells,,,,0,0,,245,
+151,7.27.2024,WMB,West Maroon Bells,,,,0,0,,246,
+152,7.27.2024,HB,Hasley Basin,,,,0,0,,147,
+153,7.27.2024,HB,Hasley Basin,,,,0,0,,148,
+154,7.27.2024,HB,Hasley Basin,,,,0,0,,159,
+155,7.27.2024,HB,Hasley Basin,,,,0,0,,160,
+156,7.27.2024,HB,Hasley Basin,,,,0,0,,161,
+157,7.27.2024,HB,Hasley Basin,,,,0,0,,157,
+158,7.27.2024,HB,Hasley Basin,,,,0,0,,155,
+159,7.27.2024,HB,Hasley Basin,1,39.04356,-107.03546,10,6,,,F
+160,7.27.2024,HB,Hasley Basin,,39.04463,-107.0363,0,0,,,
+161,7.27.2024,HB,Hasley Basin,,39.02491,-107.09068,0,0,,,
+162,7.27.2024,HB,Hasley Basin,,39.038148,-107.034023,0,0,,,
+163,7.27.2024,HB,Hasley Basin,2,39.03755,-107.03388,19,4,,,F
+164,7.27.2024,HB,Hasley Basin,,39.0374,-107.03419,0,0,,,
+165,7.27.2024,HB,Hasley Basin,3,39.03725,-107.03448,10,4,,,F
+166,7.27.2024,HB,Hasley Basin,,39.03704,-107.03472,0,0,,,
+167,7.27.2024,HB,Hasley Basin,,39.03655,-107.0355,0,0,,,
+168,7.27.2024,HB,Hasley Basin,p-34,,,0,0,,,
+169,7.27.2024,HB,Hasley Basin,p-35,39.03683,-107.03484,4,0,,,F
+170,7.27.2024,HB,Hasley Basin,4,39.03733,-107.03455,5,0,,,
+171,7.27.2024,HB,Hasley Basin,,,,,,,17,
+172,7.27.2024,HB,Hasley Basin,,,,,,,16,
+173,7.27.2024,HB,Hasley Basin,p-32,,,0,0,,,
+174,7.27.2024,HB,Hasley Basin,5,39.0463,-107.03969,7,0,,,F
+175,7.27.2024,HB,Hasley Basin,6,39.04613,-107.0399,8,2,,,F
+176,7.27.2024,HB,Hasley Basin,7,39.04606,-107.04018,14,10,,,F
+177,7.27.2024,HB,Hasley Basin,8,39.04589,-107.04055,2,1,,,F
+178,7.27.2024,HB,Hasley Basin,9,39.04569,-107.041,1,0,,,F
+179,7.27.2024,HB,Hasley Basin,10,39.04496,-107.04146,9,2,,,V
+180,7.27.2024,HB,Hasley Basin,,39.04425,-107.04174,0,0,,,
+181,7.27.2024,HB,Hasley Basin,11,39.04567,-107.04203,5,1,,,F
+182,7.27.2024,HB,Hasley Basin,12,39.04628,-107.04369,9,2,,,F
+183,7.27.2024,HB,Hasley Basin,13,39.04694,-107.04475,8,2,,,F
+184,7.27.2024,HB,Hasley Basin,,39.0472,-107.04536,0,0,,,
+185,7.27.2024,HB,Hasley Basin,,39.04778,-107.04633,0,0,,,
+186,7.27.2024,HB,Hasley Basin,14,39.04889,-107.04739,3,0,,,F
+187,7.27.2024,HB,Hasley Basin,p-29,,,0,0,,,F
+188,7.27.2024,HB,Hasley Basin,15,39.0493,-107.04783,4,0,,,F
+189,7.27.2024,HB,Hasley Basin,16,39.04956,-107.04821,7,1,,,F
+190,7.27.2024,HB,Hasley Basin,,39.0498,-107.04861,0,0,,,
+191,7.27.2024,HB,Hasley Basin,p-30,39.05162,-107.05095,6,1,,,F
+192,7.27.2024,HB,Hasley Basin,,,,,,,157,
+193,7.27.2024,HB,Hasley Basin,17,39.05171,-107.05097,2,0,,,B
+194,7.27.2024,HB,Hasley Basin,18,39.05273,-107.05158,11,1,,,F
+195,7.27.2024,HB,Hasley Basin,19,39.05349,-107.05217,9,15,,,B
+196,7.27.2024,HB,Hasley Basin,,39.05388,-107.05217,0,0,,,
+197,7.27.2024,HB,Hasley Basin,20,39.05419,-107.05337,7,0,,,F
+198,7.27.2024,HB,Hasley Basin,21,39.05452,-107.05386,41,24,,,F
+199,7.27.2024,HB,Hasley Basin,,,,,,,155,
+200,7.27.2024,HB,Hasley Basin,22,39.05512,-107.05424,25,8,,,F
+201,7.27.2024,HB,Hasley Basin,23,39.05618,-107.05453,18,2,,,F
+202,7.27.2024,HB,Hasley Basin,24,39.05712,-107.05463,19,4,,,F
+203,7.27.2024,HB,Hasley Basin,,39.05783,-107.05525,0,0,,,
+204,8.02.2024,,West Maroon Bells,,,,,,,247,
+205,8.02.2024,,West Maroon Bells,,,,,,,248,
+206,8.02.2024,,West Maroon Bells,,,,,,,249,
+207,8.02.2024,,West Maroon Bells,,,,,,,250,
+208,8.02.2024,,West Maroon Bells,,,,,,,235,
+209,8.02.2024,Frigid,Frigid Air Pass,,39.041798,-107.00037,0,0,,,
+210,8.02.2024,Frigid,Frigid Air Pass,,39.041495,-107.0003865,0,0,,,
+211,8.02.2024,Frigid,Frigid Air Pass,,39.042573,-107.006912,0,0,,,
+212,8.02.2024,Frigid,Frigid Air Pass,,39.044597,-107.006912,0,0,,,
+213,8.02.2024,Frigid,Frigid Air Pass,1,39.04646,-107.00962,1,0,,,F
+214,8.02.2024,Frigid,Frigid Air Pass,2,39.04665,-107.00999,8,0,,,F
+215,8.02.2024,Frigid,Frigid Air Pass,3,39.04688,-107.01034,8,0,,,F
+216,8.02.2024,Frigid,Frigid Air Pass,4,39.04733,-107.01092,12,6,,,F
+217,8.02.2024,Frigid,Frigid Air Pass,,39.04792,-107.0117,0,0,,,
+218,8.02.2024,Frigid,Frigid Air Pass,5,39.04833,-107.01233,7,1,,,F
+219,8.02.2024,Frigid,Frigid Air Pass,6,39.0487,-107.0131,5,0,,,F
+220,8.02.2024,Frigid,Frigid Air Pass,,39.04894,-107.0137,0,0,,,
+221,8.02.2024,Frigid,Frigid Air Pass,,39.04923,-107.0144,0,0,,,
+222,8.02.2024,Frigid,Frigid Air Pass,7,39.04953,-107.01503,7,0,,,F
+223,8.02.2024,Frigid,Frigid Air Pass,8,39.04992,-107.01546,4,0,,,F
+224,8.02.2024,Frigid,Frigid Air Pass,9,39.05015,-107.01583,4,0,,,F
+225,8.02.2024,Frigid,Frigid Air Pass,,39.05027,-107.01682,0,0,,,
+226,8.02.2024,Frigid,Frigid Air Pass,10,39.05027,-107.01701,7,4,,,F
+227,8.02.2024,Frigid,Frigid Air Pass,11,39.05117,-107.0172,2,0,,,F
+228,8.02.2024,Frigid,Frigid Air Pass,12,39.05173,-107.01783,9,1,,,F
+229,8.02.2024,Frigid,Frigid Air Pass,13,39.0521,-107.0182,5,0,,,F
+230,8.02.2024,Frigid,Frigid Air Pass,,39.0525,-107.01842,5,0,,,F
+231,8.02.2024,Frigid,Frigid Air Pass,14,39.05273,-107.01868,0,3,,,F
+232,8.02.2024,Frigid,Frigid Air Pass,15,39.05342,-107.02001,8,0,,,F
+233,8.02.2024,Frigid,Frigid Air Pass,,39.05397,-107.02089,0,0,,,
+234,8.02.2024,Frigid,Frigid Air Pass,16,39.05405,-107.0213,7,1,,,F
+235,8.02.2024,Frigid,Frigid Air Pass,17,39.05462,-107.02172,12,2,,,F
+236,8.02.2024,Frigid,Frigid Air Pass,18,39.05508,-107.02246,6,3,,,F
+237,8.02.2024,Frigid,Frigid Air Pass,19,39.0555,-107.02307,5,2,,,F
+238,8.02.2024,Frigid,Frigid Air Pass,20,39.05565,-107.02361,10,2,,,F
+239,8.02.2024,Frigid,Frigid Air Pass,21,39.05586,-107.02419,7,13,,,F
+240,8.02.2024,Frigid,Frigid Air Pass,22,39.05591,-107.02451,9,0,,,F
+241,8.02.2024,Frigid,Frigid Air Pass,p-22,39.05591,-107.02489,4,0,,,F
+242,8.02.2024,Frigid,Frigid Air Pass,p-23,39.05591,-107.02489,4,0,,,F
+243,8.02.2024,Frigid,Frigid Air Pass,,39.05601,-107.02496,0,0,,,
+244,8.02.2024,Frigid,Frigid Air Pass,23,39.05753,-107.02543,9,1,,,F
+245,8.02.2024,Frigid,Frigid Air Pass,24,39.05841,-107.02582,4,1,,,F
+246,8.02.2024,Frigid,Frigid Air Pass,,39.05957,-107.02586,0,0,,,
+247,8.02.2024,Frigid,Frigid Air Pass,25,39.06107,-107.02723,6,0,,,F
+248,8.02.2024,Frigid,Frigid Air Pass,26,39.06151,-107.02744,3,0,,,F
+249,8.02.2024,Frigid,Frigid Air Pass,p-24,39.06174,-107.0275,8,0,,,F
+250,8.02.2024,Frigid,Frigid Air Pass,,39.06229,-107.02785,0,0,,,
+251,8.02.2024,Frigid,Frigid Air Pass,s-25,39.06288,-107.02812,2,1,,,F
+252,8.02.2024,Frigid,Frigid Air Pass,,,,0,0,,141,
+253,8.02.2024,Frigid,Frigid Air Pass,,,,0,0,,142,
+254,8.02.2024,Frigid,Frigid Air Pass,p-26,39.06348,-107.02838,6,1,,,F
+255,8.02.2024,Frigid,Frigid Air Pass,p-27,39.06404,-107.02856,14,5,,,F
+256,8.02.2024,Frigid,Frigid Air Pass,,,,8,0,,143,
+257,8.02.2024,Frigid,Frigid Air Pass,,,,0,0,,144,
+258,8.02.2024,Frigid,Frigid Air Pass,p-28,39.06804,-107.02818,10,4,,,F
+259,8.02.2024,Frigid,Frigid Air Pass,s-29,39.0696572,-107.028359,35,19,,,
+260,8.02.2024,Frigid,Frigid Air Pass,s-30,39.06701,-107.02818,6,0,,,F
+261,8.02.2024,Frigid,Frigid Air Pass,s-31,39.04674,-107.02833,6,1,,,F
+262,8.03.2024,Baldy,Baldy,,,,0,0,,168,
+263,8.03.2024,Baldy,Baldy,,,,0,0,,169,
+264,8.03.2024,Baldy,Baldy,,,,0,0,,170,
+265,8.03.2024,Baldy,Baldy,,,,0,0,,171,
+266,8.03.2024,Baldy,Baldy,,,,0,0,,172,
+267,8.03.2024,Baldy,Baldy,1,38.98557,-107.03984,3,0,,,F
+268,8.03.2024,Baldy,Baldy,2,38.98555,-107.03955,10,0,,,F
+269,8.03.2024,Baldy,Baldy,3,38.98538,-107.03935,2,0,,,F
+270,8.03.2024,Baldy,Baldy,4,38.98543,-107.03908,4,0,,,F
+271,8.03.2024,Baldy,Baldy,,38.98537,-107.03861,0,0,,,
+272,8.03.2024,Baldy,Baldy,5,38.985,-107.03666,5,1,,,F
+273,8.03.2024,Baldy,Baldy,,38.98487,-107.03635,0,,,,
+274,8.03.2024,Baldy,Baldy,6,38.98491,-107.03613,7,0,,,F
+275,8.03.2024,Baldy,Baldy,7,38.98509,-107.03589,3,0,,,F
+276,8.03.2024,Baldy,Baldy,,38.98458,-107.0368,0,0,,,
+277,8.03.2024,Baldy,Baldy,8,38.9845,-107.035,12,0,,,F
+278,8.03.2024,Baldy,Baldy,9,38.98429,-107.03455,1,0,,,F
+279,8.03.2024,Baldy,Baldy,10,38.9845,-107.0342,9,0,,,F
+280,8.03.2024,Baldy,Baldy,p-41,38.98403,-107.03381,11,0,,,F
+281,8.03.2024,Baldy,Baldy,,,,0,0,,167,
+282,8.03.2024,Baldy,Baldy,p-42,,,16,2,,,F
+283,8.03.2024,Baldy,Baldy,11,38.98403,-107.03275,18,0,,,F
+284,8.03.2024,Baldy,Baldy,,38.98384,-107.03262,0,0,,,
+285,8.03.2024,Baldy,Baldy,12,38.98357,-107.03265,31,0,,,F
+286,8.03.2024,Baldy,Baldy,13,38.98347,-107.0322,15,0,,,F
+287,8.03.2024,Baldy,Baldy,14,38.98362,-107.03173,25,0,,,F
+288,8.03.2024,Baldy,Baldy,,38.98374,-107.03131,2,1,,,F
+289,8.03.2024,Baldy,Baldy,,,,0,0,,178,
+290,8.03.2024,Baldy,Baldy,15,38.98368,-107.03131,7,0,,,F
+291,8.03.2024,Baldy,Baldy,16,38.98338,-107.03084,25,0,,,F
+292,8.03.2024,Baldy,Baldy,17,38.98313,-107.03182,3,0,,,F
+293,8.03.2024,Baldy,Baldy,,38.98336,-107.03223,0,0,,,
+294,8.03.2024,Baldy,Baldy,,38.98319,-107.03371,0,0,,,
+295,8.03.2024,Baldy,Baldy,,38.983286,-107.03435,0,0,,,
+296,8.03.2024,Baldy,Baldy,,38.98267,-107.03479,0,0,,,
+297,8.03.2024,Baldy,Baldy,,38.98249,-107.03556,0,0,,,
+298,8.03.2024,Baldy,Baldy,,38.98223,-107.0369,0,0,,,
+299,8.03.2024,Baldy,Baldy,,38.98101,-107.03886,0,0,,,
+300,8.03.2024,Baldy,Baldy,,38.97924,-107.04106,0,0,,,
+301,8.03.2024,Baldy,Baldy,,38.97845,-107.0411,0,0,,,
+302,8.03.2024,Baldy,Baldy,,38.97866,-107.0419,0,0,,,
+303,8.03.2024,Baldy,Baldy,,38.98137,-107.0443,0,0,,,
+304,8.03.2024,Baldy,Baldy,,38.98225,-107.0448,0,0,,,
+305,8.03.2024,Baldy,Baldy,,38.98288,-107.04861,0,0,,,
+306,8.03.2024,Baldy,Baldy,,38.98227,-107.05244,0,0,,,
+307,8.03.2024,Baldy,Baldy,,38.9829,-107.05318,0,0,,,
+308,8.03.2024,Baldy,Baldy,,38.98469,-107.05516,0,0,,,
+309,08.04.2024,RG,Rustlers Gulch,,,,,,,72,
+310,08.04.2024,RG,Rustlers Gulch,,,,,,,73,
+311,08.04.2024,RG,Rustlers Gulch,,,,,,,216,
+312,08.04.2024,RG,Rustlers Gulch,,,,,,,215,
+313,08.04.2024,RG,Rustlers Gulch,,,,,,,214,
+314,08.04.2024,RG,Rustlers Gulch,,,,,,,213,
+315,08.04.2024,RG,Rustlers Gulch,,,,,,,212,
+316,08.04.2024,RG,Rustlers Gulch,,,,,,,211,
+317,08.04.2024,RG,Rustlers Gulch,,,,,,,210,
+318,08.04.2024,RG,Rustlers Gulch,,,,,,,209,
+319,08.04.2024,RG,Rustlers Gulch,,,,,,,208,
+320,08.04.2024,RG,Rustlers Gulch,,,,,,,207,
+321,08.04.2024,RG,Rustlers Gulch,,,,,,,206,
+322,08.04.2024,RG,Rustlers Gulch,1,39.02048,-107.00124,22,2,,,F
+323,08.04.2024,RG,Rustlers Gulch,2,39.02053,-107.0015,2,0,,,F
+324,08.04.2024,RG,Rustlers Gulch,p-58,,,0,0,,,
+325,08.04.2024,RG,Rustlers Gulch,,39.01081,-106.97674,0,0,,,
+326,08.04.2024,RG,Rustlers Gulch,3,39.01113,-106.97718,1,0,,,F
+327,08.04.2024,RG,Rustlers Gulch,,39.01146,-106.97773,0,0,,,
+328,08.04.2024,RG,Rustlers Gulch,,,,0,0,,35,
+329,08.04.2024,RG,Rustlers Gulch,4,39.01228,-106.98031,8,1,,,F
+330,08.04.2024,RG,Rustlers Gulch,5,39.0125,-106.98045,13,4,,,F
+331,08.04.2024,RG,Rustlers Gulch,6,39.01247,-106.98061,7,4,,,F
+332,08.04.2024,RG,Rustlers Gulch,7,39.01258,-106.98071,18,3,,,F
+333,08.04.2024,RG,Rustlers Gulch,,39.01276,-106.98108,0,0,,,
+334,08.04.2024,RG,Rustlers Gulch,8,39.01278,-106.98138,7,1,,,F
+335,08.04.2024,RG,Rustlers Gulch,p-14,39.0129,-106.98133,6,0,,,F
+336,08.04.2024,RG,Rustlers Gulch,9,39.01307,-106.98178,5,1,,,F
+337,08.04.2024,RG,Rustlers Gulch,10,39.01326,-106.98209,9,4,,,F
+338,08.04.2024,RG,Rustlers Gulch,,39.0134,-106.98224,0,0,,,
+339,08.04.2024,RG,Rustlers Gulch,11,39.01374,-106.98251,13,0,,,F
+340,08.04.2024,RG,Rustlers Gulch,,39.01395,-106.983,0,0,,,
+341,08.04.2024,RG,Rustlers Gulch,p-15,,,4,3,,,F
+342,08.04.2024,RG,Rustlers Gulch,12,39.01398,-106.98518,6,1,,,F
+343,08.04.2024,RG,Rustlers Gulch,13,39.01411,-106.98556,12,0,,,F
+344,08.04.2024,RG,Rustlers Gulch,,39.01446,-106.98519,0,0,,,
+345,08.04.2024,RG,Rustlers Gulch,14,39.0149,-106.98514,9,5,,,F
+346,08.04.2024,RG,Rustlers Gulch,,39.01502,-106.98465,0,0,,,
+347,08.04.2024,RG,Rustlers Gulch,15,39.0156,-106.98537,5,3,,,F
+348,08.04.2024,RG,Rustlers Gulch,16,39.01579,-106.986573,4,0,,,F
+349,08.04.2024,RG,Rustlers Gulch,17,39.01553,-106.98607,14,6,,,F
+350,08.04.2024,RG,Rustlers Gulch,18,39.01573,-106.9863,1,0,,,F
+351,08.04.2024,RG,Rustlers Gulch,19,39.01551,-106.98655,6,2,,,F
+352,08.04.2024,RG,Rustlers Gulch,20,39.0141,-106.98711,1,0,,,F
+353,08.04.2024,RG,Rustlers Gulch,,39.0135,-106.98724,0,0,,,
+354,08.04.2024,RG,Rustlers Gulch,,39.01167,-106.98887,0,0,,,
+355,08.04.2024,RG,Rustlers Gulch,,,,,,,32,
+356,08.04.2024,RG,Rustlers Gulch,,,,,,,31,
+357,08.16.2024,CD,Cochetopa Dome,1,38.18847,-106.67022,18,15,,,
+358,08.16.2024,CD,Cochetopa Dome,2,38.18983,-106.66929,30,40,,,
+359,08.16.2024,CD,Cochetopa Dome,3,38.18991,-106.66776,27,19,,,
+360,08.16.2024,CD,Cochetopa Dome,,38.18997,-106.66562,0,0,,,
+361,08.16.2024,CD,Cochetopa Dome,4,38.19144,-106.66296,21,44,,,
+362,08.16.2024,CD,Cochetopa Dome,,38.1926,-106.66174,0,0,,,
+363,08.16.2024,CD,Cochetopa Dome,5,39.19266,-106.65989,20,5,,,
+364,08.16.2024,CD,Cochetopa Dome,,38.193587,-106.658778,,,,,
+365,08.16.2024,CD,Cochetopa Dome,6,38.1895,-106.66302,50,15,,,
+366,08.16.2024,CD,Cochetopa Dome,,,,0,0,,32,
+367,08.17.2024,CD,Cochetopa Dome,7,38.18827,-106.66991,30,40,,,
+368,08.17.2024,CD,Cochetopa Dome,8,38.18791,-106.66912,25,45,,,
+369,08.17.2024,CD,Cochetopa Dome,9,38.18719,-106.66808,12,35,,,
+370,08.17.2024,CD,Cochetopa Dome,10,38.18694,-106.66663,4,45,,,
+371,08.17.2024,CD,Cochetopa Dome,11,38.18632,-106.6656,100,50,,,
+372,08.17.2024,CD,Cochetopa Dome,12,38.18577,-106.66447,0,30,,,
+373,08.17.2024,CD,Cochetopa Dome,13,38.18444,-106.66357,45,35,,,
+374,08.17.2024,CD,Cochetopa Dome,,38.18382,-106.66302,0,0,,,
+375,08.17.2024,CD,Cochetopa Dome,p-9,,,15,80,,,
+376,08.17.2024,CD,Cochetopa Dome,14,38.18194,-106.66132,1,1,,,
+377,08.17.2024,CD,Cochetopa Dome,15,38.18281,-106.66241,13,50,,,
+378,08.17.2024,CD,Cochetopa Dome,16,38.18902,-106.67142,40,35,,,
+379,08.17.2024,CD,Cochetopa Dome,17,38.18932,-106.67204,4,8,,,
+380,08.17.2024,CD,Cochetopa Dome,18,38.18941,-106.67355,13,31,,,
+381,08.17.2024,CD,Cochetopa Dome,19,38.18974,-106.67458,8,30,,,
+382,08.17.2024,CD,Cochetopa Dome,20,38.19044,-106.67545,4,15,,,
+383,08.17.2024,CD,Cochetopa Dome,21,38.19162,-106.67577,6,21,,,
+384,08.17.2024,CD,Cochetopa Dome,22,38.19207,-106.67625,35,17,,,
+385,08.17.2024,CD,Cochetopa Dome,,38.19255,-106.6785,0,0,,,
+386,08.17.2024,CD,Cochetopa Dome,22-DUPE,38.19286,-106.67928,15,30,,,
+387,08.17.2024,CD,Cochetopa Dome,,38.19289,-106.68155,0,0,,,
+388,08.17.2024,CD,Cochetopa Dome,,38.19427,-106.68165,0,0,,,
+389,08.17.2024,CD,Cochetopa Dome,23,38.19545,-106.68097,0,25,,,
+390,08.17.2024,CD,Cochetopa Dome,24,38.19578,-106.68126,27,40,,,
+391,08.17.2024,CD,Cochetopa Dome,,38.19727,-106.68435,0,0,,,
+392,08.17.2024,CD,Cochetopa Dome,,38.19785,-106.68521,0,0,,,
+393,08.17.2024,CD,Cochetopa Dome,,38.19815,-106.68438,0,0,,,
+394,08.17.2024,CD,Cochetopa Dome,,38.19898,-106.68146,0,0,,,
+395,08.17.2024,CD,Cochetopa Dome,,38.20044,-106.6782,0,0,,,
+396,08.17.2024,CD,Cochetopa Dome,,38.20063,-106.67709,0,0,,,
+397,08.17.2024,CD,Cochetopa Dome,25,38.20007,-106.67554,6,27,,,
+398,08.17.2024,CD,Cochetopa Dome,26,38.19958,-106.67532,1,12,,,
+399,08.17.2024,CD,Cochetopa Dome,27,38.19505,-106.6742,3,8,,,
+400,08.17.2024,CD,Cochetopa Dome,,,,0,0,,2,
+401,08.17.2024,CD,Cochetopa Dome,,,,0,0,,29,
+402,08.17.2024,CD,Cochetopa Dome,,,,0,0,,19,
+403,08.17.2024,CD,Cochetopa Dome,,,,0,0,,26,
+404,08.17.2024,CD,Cochetopa Dome,,,,0,0,,23,
+405,08.17.2024,CD,Cochetopa Dome,,,,0,0,,14,
+406,08.17.2024,CD,Cochetopa Dome,,,,0,0,,22,
+407,08.17.2024,CD,Cochetopa Dome,,,,0,0,,27,
+408,08.17.2024,CD,Cochetopa Dome,,38.17521,-106.67057,0,0,,,
+409,08.17.2024,CD,Cochetopa Dome,,38.17456,-106.6693,0,0,,,
+410,08.17.2024,CD,Cochetopa Dome,28,38.17436,-106.66933,20,80,,,
+411,08.17.2024,CD,Cochetopa Dome,29,38.16788,-106.667789,30,100,,,
+412,08.17.2024,CD,Cochetopa Dome,p-1,,,,,,,
+413,08.17.2024,CD,Cochetopa Dome,,38.1716,-106.67883,,,,,
+414,08.17.2024,CD,Cochetopa Dome,p-2,,,,,,,
+415,08.17.2024,CD,Cochetopa Dome,,38.17582,-106.69167,,,,,
+416,08.17.2024,CD,Cochetopa Dome,30,38.17545,-106.6916,0,21,,,
+417,08.17.2024,CD,Cochetopa Dome,p-4,,,0,0,,,
+418,08.17.2024,CD,Cochetopa Dome,31,38.17208,-106.708,20,30,,,
+419,08.17.2024,CD,Cochetopa Dome,32,38.17191,-106.70689,6,80,,,
+420,08.17.2024,CD,Cochetopa Dome,,,,0,0,,3,
+421,08.17.2024,CD,Cochetopa Dome,33,38.17365,-106.70572,15,51,,,
+422,08.17.2024,CD,Cochetopa Dome,34,38.17457,-106.70502,19,60,,,
+423,08.17.2024,CD,Cochetopa Dome,35,38.1747,-106.70419,13,85,,,
+424,08.17.2024,CD,Cochetopa Dome,36,38.17409,-106.70419,23,100,,,
+425,08.17.2024,CD,Cochetopa Dome,37,38.17299,-106.70317,20,95,,,
+426,08.17.2024,CD,Cochetopa Dome,,38.17384,-106.70156,0,0,,,
+427,08.17.2024,CD,Cochetopa Dome,38,38.1746,-106.70192,9,25,,,
+428,08.17.2024,CD,Cochetopa Dome,39,38.17595,-106.70207,,,,,
+429,08.17.2024,CD,Cochetopa Dome,40,38.17757,-106.70293,,,,,
+430,08.17.2024,CD,Cochetopa Dome,41,38.1768,-106.70478,,,,,
+431,08.17.2024,CD,Cochetopa Dome,42,38.17567,-106.70804,,,,,
+432,08.17.2024,CD,Cochetopa Dome,43,,,,,,,
+433,08.17.2024,CD,Cochetopa Dome,p-7,,,,,,,
+434,08.17.2024,CD,Cochetopa Dome,,,,,,,4,
+435,08.17.2024,CD,Cochetopa Dome,p-6,,,,,,,
+436,08.18.2024,CD,Cochetopa Dome,44,38.18183,-106.69911,1,2,,,
+437,08.18.2024,CD,Cochetopa Dome,45,38.18209,-106.69966,2,53,,,
+438,08.18.2024,CD,Cochetopa Dome,,,,,,,9,
+439,08.18.2024,CD,Cochetopa Dome,,,,,,,15,
+440,08.18.2024,CD,Cochetopa Dome,46,38.18419,-106.6927,6,76,,,
+441,08.18.2024,CD,Cochetopa Dome,,,,,,,,
+442,08.18.2024,CD,Cochetopa Dome,47,38.18507,-106.68809,15,41,,,
+443,08.18.2024,CD,Cochetopa Dome,,,,,,,,
+444,08.18.2024,CD,Cochetopa Dome,48,38.18156,-106.69191,5,11,,,
+445,08.18.2024,CD,Cochetopa Dome,49,38.18106,-106.69334,5,16,,,
+446,08.18.2024,CD,Cochetopa Dome,,,,,,,,
+447,08.18.2024,CD,Cochetopa Dome,50,38.17642,-106.69648,1,30,,,
+448,08.18.2024,CD,Cochetopa Dome,,,,,,,,
+449,08.18.2024,CD,Cochetopa Dome,51,38.17707,-106.69854,0,81,,,
+450,08.18.2024,CD,Cochetopa Dome,52,38.17786,-106.70021,52,12,,,
+451,08.18.2024,CD,Cochetopa Dome,,,,,,,5,
+452,08.18.2024,CD,Cochetopa Dome,,,,,,,36,
+453,08.18.2024,CD,Cochetopa Dome,,38.219637,-106.660332,0,0,,,
+454,08.18.2024,CD,Cochetopa Dome,p-3,,,0,0,,,
+455,09.02.2024,AVP,Avalanche Pass,1,39.11318,-107.149,10,0,,,
+456,09.02.2024,AVP,Avalanche Pass,2,39.11345,-106.14574,9,1,,,
+457,09.02.2024,AVP,Avalanche Pass,3,39.11356,-106.14599,19,2,,,
+458,09.02.2024,AVP,Avalanche Pass,,39.11373,-106.14633,0,0,,,
+459,09.02.2024,AVP,Avalanche Pass,p-21,39.11345,-106.14678,7,2,,,
+460,09.02.2024,AVP,Avalanche Pass,,39.11372,-106.14781,0,0,,,
+461,09.07.2024,AP,Avery Picnic,,38.975,-106.99664,6,1,,,
+462,09.07.2024,AP,Avery Picnic,,38.97494,-106.99629,15,7,,,
+463,09.07.2024,AP,Avery Picnic,,38.97504,-106.99648,21,4,,,
+464,09.07.2024,AP,Avery Picnic,,38.97513,-106.99669,7,0,,,
+465,09.07.2024,AP,Avery Picnic,,38.97525,-106.99654,0,0,,,
+466,09.07.2024,RV,River,,38.99972,-107.02288,11,1,,,
+467,09.07.2024,RV,River,,38.99956,-107.0226,9,0,,,
+468,09.07.2024,RV,River,,38.99962,-107.02245,8,0,,,
+469,09.07.2024,RV,River,,38.99965,-107.02227,14,0,,,
+470,09.07.2024,RV,River,,38.9994,-107.02227,8,0,,,
+471,09.07.2024,RV,River,,38.9994,-107.022209,4,2,,,
+472,09.08.2024,YP,Yule Pass,1,38.99103,-107.07207,2,0,,,
+473,09.08.2024,YP,Yule Pass,,38.99129,-107.07265,0,0,,,
+474,09.08.2024,YP,Yule Pass,2,38.99242,-107.07402,1,0,,,
+475,09.08.2024,YP,Yule Pass,3,38.99323,-107.07507,6,0,,,
+476,09.08.2024,YP,Yule Pass,4,38.99372,-107.07529,5,0,,,
+477,09.08.2024,YP,Yule Pass,,38.99427,-107.07548,0,0,,,
+478,09.08.2024,YP,Yule Pass,5,38.99681,-107.0806,2,0,,,
+479,09.08.2024,YP,Yule Pass,6,38.99622,-107.08079,3,0,,,
+480,09.08.2024,YP,Yule Pass,7,38.99571,-107.08072,5,0,,,
+481,09.08.2024,YP,Yule Pass,8,38.99656,-107.08038,,,,,
+482,09.08.2024,YP,Yule Pass,,,,0,0,,254,
+483,09.08.2024,YP,Yule Pass,9,38.99734,-107.08496,1,0,,,
+484,09.08.2024,YP,Yule Pass,,38.99796,-107.08602,0,0,,,
+485,09.08.2024,YP,Yule Pass,10,38.99957,-107.0893,1,7,,,
+486,09.08.2024,YP,Yule Pass,,,,0,0,,255,
+487,09.08.2024,YP,Yule Pass,11,39.00016,-107.09153,6,3,,,
+488,09.08.2024,YP,Yule Pass,12,38.99989,-107.09196,6,0,,,
+489,09.08.2024,YP,Yule Pass,p-101,39.00033,-107.09239,2,0,,,
+490,09.08.2024,YP,Yule Pass,13,39.00052,-107.09342,2,0,,,
+491,09.08.2024,YP,Yule Pass,,,,0,0,,257,
+492,09.08.2024,YP,Yule Pass,p-100,,,0,0,,,
+493,09.08.2024,YP,Yule Pass,,,,0,0,,258,
+494,09.08.2024,YP,Yule Pass,,39.00019,-107.1012,0,0,,,
+495,09.08.2024,YP,Yule Pass,14,39.00039,-107.0919,4,2,1,,
+496,09.08.2024,YP,Yule Pass,15,39.00068,-107.09926,3,0,,,
+497,09.08.2024,YP,Yule Pass,16,39.00082,-107.09142,1,2,,,
+498,09.08.2024,YP,Yule Pass,,,,0,0,,251,
+499,09.08.2024,YP,Yule Pass,17,38.99092,-107.07089,8,2,,,
+500,09.08.2024,YP,Yule Pass,,38.99108,-107.06982,0,0,,,
+501,09.08.2024,YP,Yule Pass,,,,0,0,,,
+502,09.08.2024,YP,Yule Pass,p-17,,,0,0,,,
