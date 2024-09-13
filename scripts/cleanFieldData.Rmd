@@ -61,6 +61,18 @@ st_write(ground_truth, '../data/GroundTruthing/QC.shp', append = F)
 rm(rand_pts_iter1, revisits)
 ```
 
+```{r}
+gt_pres <- filter(ground_truth, Presence == 1) |>
+    dplyr::select(NAME = OBJECT) |>
+    sf::st_write(dsn = '../data/GroundTruthing/Presences.kml', driver = 'kml',
+                 quiet = T, append = F)
+
+gt_abs <- filter(ground_truth, Presence == 0) |>
+    dplyr::select(NAME = OBJECT) |>
+    sf::st_write(dsn = '../data/GroundTruthing/Absences.kml', driver = 'kml',
+                 quiet = T, append = F)
+```
+
 We will add some randoms based on my scouting efforts. 
 These should hopefully help reduce the effects of spatial auto-correlation. 
 
