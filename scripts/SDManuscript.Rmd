@@ -6,18 +6,19 @@ author: |
     |  $^2$ Plant Biology and Conservation, Northwestern University, Evanston, Illinois 60208, USA  
     |  $^3$ Department of Environmental and Ocean Sciences, University of San Diego, San Diego, California 92110, USA  
 abstract: |
-  1) 
-  2) 
-  3) 
-  4) 
-keywords: | 
-  species distribution model, occupancy, census size estimates, 
+  \noindent  
+  1)  
+  2)  
+  3)  
+  4)  
+keywords: species distribution model, occupancy, census size estimates, 
 orcid: |
  Reed Benkendorf https://orcid.org/0000-0003-3110-6687  
  Jeremie Fant https://orcid.org/0000-0001-9276-1111  
  Sophie Taddeo https://orcid.org/0000-0002-7789-1417  
 output:
-  pdf_document: default
+  pdf_document: 
+    latex_engine: xelatex
   toc: no
   word_document: default
 csl: "../citations/methods-in-ecology-and-evolution.csl"
@@ -59,26 +60,26 @@ While these parameters are relatively simple, characterizing them can be time co
 Environmental niche models (ENMs or Species Distribution Models SDMs) have made enormous and respectable headway, respectively, in resolving the former two problems (extent, and occupancy) (@syfert2014using, @anderson2023integrating, @kass2021improving), however the historic mismatch between the resolution of variables governing species distributions and the data available to serve as predictors of environmental conditions have restricted the interpretation and implementation of these models in highly heterogeneous environments (@guisan2013predicting). 
 Recent advances in remote-sensing technologies have allowed for the generation of useful models in these generally biodiverse systems, further these data offer promise to model additional population parameters (e.g. census size, population extents), however the utility and usage of high resolution have rarely been ground verified or ostensibly reported upon (@chiffard2020anbs). 
 
-Recently, considerable headway has been made in generating statistically robust environmental niche models (ENM's) spirited by: recent advances in collecting high-resolution environmental data, compute power, digitization of natural history museum records and the acquisition of citizen science records, and statistical methods especially downsampling (@markham2023review, @feldman2021trends).  
-However, ENM's are rarely ground verified, and even more seldom at landscape scales (@a2022species).
+Recently, considerable headway has been made in generating statistically robust environmental niche models (ENM's) spirited by: recent advances in collecting high-resolution environmental data, compute power, digitization of natural history museum records and the acquisition of citizen science records, and statistical methods especially downsampling [@markham2023review; @feldman2021trends]. 
+However, ENM's are rarely ground verified, and even more seldom at landscape scales [@a2022species].
 Hence, most of our knowledge about producing ENM's rely on simulated species and data, especially at spatial resolutions considered relatively coarse to practitioners.  
-An historic complication with the implementation and interpretation of ENM's is a mismatch between the spatial resolution of the independent variables available to model the species fundamental niche and the factors governing the true distribution of populations - the realized niche (@carscadden2020niche, @chauvier2022resolution, @lembrechts2019incorporating). 
-Recent papers have had mixed results regarding the effects of imprecisely mapped occurrence data on ENM predictions, with indications that models generated in more heterogenous environments, and at finer resolutions (e.g. ca. 3 arc-second relate to 10 arc-minutes (~14.5 km) at 38*)) suffer minor decreases in model performance (@graham2008influence, @smith2023including) with real species, while increasing error in mapping has drastic effects on model predictions with virtually simulated species (@gabor2022positional).  
-A further mismatch of resolution is the year in which data on geographic localities were obtained and current conditions which allow for positive population growth (@bracken2022maximizing). 
-Historic occurrence data may now represent conditions which are inhospitable to the maintenance of populations, or may even represent populations which even then were simply sinks from more robust populations (@bracken2022maximizing); using these records may decrease model performance. 
+An historic complication with the implementation and interpretation of ENM's is a mismatch between the spatial resolution of the independent variables available to model the species fundamental niche and the factors governing the true distribution of populations - the realized niche [@carscadden2020niche; @chauvier2022resolution; @lembrechts2019incorporating]. 
+Recent papers have had mixed results regarding the effects of imprecisely mapped occurrence data on ENM predictions, with indications that models generated in more heterogenous environments, and at finer resolutions (e.g. ca. 3 arc-second relate to 10 arc-minutes (~14.5 km) at 38*)) suffer minor decreases in model performance [@graham2008influence; @smith2023including] with real species, while increasing error in mapping has drastic effects on model predictions with virtually simulated species [@gabor2022positional].  
+A further mismatch of resolution is the year in which data on geographic localities were obtained and current conditions which allow for positive population growth [@bracken2022maximizing]. 
+Historic occurrence data may now represent conditions which are inhospitable to the maintenance of populations, or may even represent populations which even then were simply sinks from more robust populations [@bracken2022maximizing]; using these records may decrease model performance. 
 Collecting data on whether areas are favorable to continued recruitment of individuals from the soil seed bank, are perhaps more astute than whether long-lived individuals persist.  
 
-ENM models generally suffer from having few, generally spatially biased, occurrence records to serve as dependent variables, which generally fail to characterize the ecological breadth of the species (@stolar2015accounting, @feeley2011keep). 
+ENM models generally suffer from having few, generally spatially biased, occurrence records to serve as dependent variables, which generally fail to characterize the ecological breadth of the species [@stolar2015accounting; @feeley2011keep]. 
 While many ENM's have high-performance metrics while tested on small subsets of hold-out data, they are unlikely to detect many new populations during ground verification (@a2022species). 
-To increase the number of presences, and absences in sites which are relatively similar to those harboring presences, which can be used for training models iterative adaptive-niche based sampling (ANBS) has become increasingly employed (@guisan2006using). 
-In ANBS cells predicted to have high probabilities of occurrence, or where models have higher prediction uncertainty, are preferentially visited, and after each bout of field visits, a new model is fit incorporating the original data, plus the recently collected data (@mondain2024adaptive).  
-Using this process not only allows for the acquisition of a larger number of presences and absences, but also allows for verifying coordinate placement, that historic points are still extent, reducing model uncertainty, and for the acquisition of additional data such as census estimates and life stages (@stockwell2002effects, @wisz2008effects, @jansen2022stop). 
-However, few studies have reported field verified ANBS sampling efforts of plant species (@johnson2023field, @borokini2023iterative, @zimmer2023field).  
+To increase the number of presences, and absences in sites which are relatively similar to those harboring presences, which can be used for training models iterative adaptive-niche based sampling (ANBS) has become increasingly employed [@guisan2006using]. 
+In ANBS cells predicted to have high probabilities of occurrence, or where models have higher prediction uncertainty, are preferentially visited, and after each bout of field visits, a new model is fit incorporating the original data, plus the recently collected data (@mondain2024adaptive). 
+Using this process not only allows for the acquisition of a larger number of presences and absences, but also allows for verifying coordinate placement, that historic points are still extent, reducing model uncertainty, and for the acquisition of additional data such as census estimates and life stages [@stockwell2002effects; @wisz2008effects; @jansen2022stop]. 
+However, few studies have reported field verified ANBS sampling efforts of plant species [@johnson2023field;; @borokini2023iterative; @zimmer2023field].  
 
 An ENM predicts a single variable; the probability of suitable habitat for the taxon (taddeo2024grimes). 
-Although, in most conservation applications, the insight desired from an ENM is the species realized distribution (@cite).  
-The bridge between an ENM and a plant populations presence is related to the dispersal of propagules and the establishment of the population, rather than distribution of the fundamental niche alone (@engler2009migclim).   
-Calls - and significant progress, have been made for better integration of SDM predictions with models of dispersal  since the rise in popularity of ENM's (@guisan2005predicting, @franklin2010moving). 
+Although, in most conservation applications, the insight desired from an ENM is the species realized distribution (cite). 
+The bridge between an ENM and a plant populations presence is related to the dispersal of propagules and the establishment of the population, rather than distribution of the fundamental niche alone [@engler2009migclim]. 
+Calls - and significant progress, have been made for better integration of SDM predictions with models of dispersal since the rise in popularity of ENM's (@guisan2005predicting, @franklin2010moving). 
 Most of this progress focuses on the goal of 'connecting' currently suitable to habitat predicted to be suitable under climate change scenarios (@engler2009migclim, @bocedi2014range). 
 Accordingly, ground verification has not been made for them, nor has as much effort seemingly been made in attempting to simply improve ground-verification for rare species... 
 To assist practitioners in detecting new populations, or extending the range of currently known populations, we propose modelling plant occupancy as a random variable dependent on distance from sites known to be occupied, the size and shape of the target site, and it's relation to other suitable habitats.  
@@ -87,9 +88,9 @@ Landscape metrics postulated to relate to the occupancy at a site include the pa
 
 Obtaining reliable estimates of plant population census sizes can be time intensive process because it requires two major pieces of information 1) measurements of plant density and 2) population extent. 
 In lieu of directly determining either the populations boundaries, or density, observers estimate population sizes, however these estimates are often unreliable (@ReischChristoph2018Acom). 
-Several promising field methods for acquiring density measurements have recently been developed (@rominger2019application, @krening2021sampling, @ermakova2021densities, @alfaro2019optimal, @schorr2013using) to better estimate effective population census size (*N*), as well as progress in the application of genomic methods to estimate effective population sizes (*N~e~*) (e.g. linkage disequilibrium) (@waples2024practical). 
+Several promising field methods for acquiring density measurements have recently been developed [@rominger2019application; @krening2021sampling; @ermakova2021densities; @alfaro2019optimal; @schorr2013using] to better estimate effective population census size (*N*), as well as progress in the application of genomic methods to estimate effective population sizes (*N~e~*) (e.g. linkage disequilibrium) [@waples2024practical]. 
 However these methods are focused on descriptive, rather than predictive processes, where they focus on estimating the uncertainty in measurements *within* a population, rather than across the species range. 
-We propose that estimates of plant density are best generated via methods which allow for the fitting of statistical models, which can incorporate spatial covariates and predict estimates and measurements of uncertainty across gridded surfaces (@oliver2012population, @doser2022spabundance, @a2022species). 
+We propose that estimates of plant density are best generated via methods which allow for the fitting of statistical models, which can incorporate spatial covariates and predict estimates and measurements of uncertainty across gridded surfaces [@oliver2012population; @doser2022spabundance; @a2022species]. 
 
 ```{r}
 knitr::include_graphics('../results/ConceptualFigure.png')
