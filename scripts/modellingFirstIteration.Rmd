@@ -30,7 +30,7 @@ p2proc <- '../data/spatial/processed'
 First iteration of modelling. 
 
 ```{r, eval = F}
-modeller(x = occ_data, resolution = '1-3arc', iteration = 1, se_prediction = TRUE)
+modeller(x = occ_data, resolution = '3m', iteration = 1, se_prediction = TRUE)
 ```
 
 Drawing Field 

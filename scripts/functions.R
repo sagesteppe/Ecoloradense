@@ -24,7 +24,7 @@ SWcorner <- function(x){
 }
 
 
-ensure_multipolygons <- function(X) {
+ensure_multipolygons <- function(X) { # @ stackoverflow
   tmp1 <- tempfile(fileext = ".gpkg")
   tmp2 <- tempfile(fileext = ".gpkg")
   st_write(X, tmp1)
@@ -72,21 +72,6 @@ modeller <- function(x, resolution, iteration, se_prediction){
     message('An exising model for this resolution and iteration already exists; reloading it now for projection')
   } else {
   
-  # first we will perform boruta analysis, this will drop variables which have
-  # no relationship to the marks at the resolution under analysis. 
-  # RandomForests do an excellent job of this - likely better than Boruta analysis... 
-  # However what ends up happening is that many vars with very minor contributions to the
-  # model are kept. When it comes time to predict these models onto gridded surfaces
-  # these added terms (oftentimes requiring the re-reading of the rasters in a virtual context)
-  # make the prediction take AGES. 
-  # We want to avoid everything taking ages. 
-  BorutaRes <- Boruta::Boruta(Occurrence ~ ., data = df, num.threads = cores, doTrace = 0)
-  importance <- Boruta::attStats(BorutaRes)
-  rn <- rownames(importance[importance$decision %in% c('Confirmed'),])
-  important_vars <- Boruta::getSelectedAttributes(BorutaRes, withTentative = F)
-  
-  df <- dplyr::select(df, dplyr::all_of(c('Occurrence', 'Longitude', 'Latitude', important_vars)))
-  rm(BorutaRes, importance, rn, important_vars)
   
   # split the input data into both an explicit train and test data set. 
   TrainIndex <- caret::createDataPartition(
@@ -103,7 +88,7 @@ modeller <- function(x, resolution, iteration, se_prediction){
           file = paste0('../results/models/', resolution, '-Iteration', iteration, '.rds'))
   
   # save the confusion matrix
-  predictions <- predict(rf_model, Test, type = 'se', se.method = 'infjack', probability=TRUE)
+  predictions <- predict(rf_model, Test, type = 'se', se.method = 'infjack', probability=TRUE, importance = TRUE)
   predictions$binary <- as.factor(if_else(predictions$predictions[,2] <= 0.49, 0, 1))
   
   cmRestrat <- caret::confusionMatrix(predictions$binary, Test$Occurrence, 
