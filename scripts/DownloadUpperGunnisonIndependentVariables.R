@@ -358,3 +358,79 @@ lapply(
   '/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/dem_1-3arc/dem.tif',
   '/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/dem_3m/dem.tif'),
   coorder)
+
+
+
+### Create snow free days product from Sentinel 2 imagery ###
+
+library(CDSE)
+library(terra)
+OAuthClient <- GetOAuthClient(
+  id = Sys.getenv("CopernicusOAuthID"),
+  secret = Sys.getenv("CopernicusOAuthSecret")
+)
+
+
+dsn <- system.file("extdata", "centralpark.geojson", package = "CDSE")
+aoi <- sf::read_sf(dsn, as_tibble = FALSE)
+script_file <- system.file("scripts", "RawBands.js", package = "CDSE")
+day <- "2023-07-11"
+ras <- GetImage(
+  aoi = aoi, 
+  time_range = day, 
+  script = script_file,
+  collection = "sentinel-2-l2a", format = "image/tiff",
+  mosaicking_order = "leastCC", resolution = 10, client = OAuthClient)
+
+aoi <- st_as_sfc(st_bbox(template))
+
+catalog_results <- SearchCatalog(
+  aoi = aoi, 
+  from = as.Date('2017-04-01'), to = as.Date('2024-10-01'),
+  # first relevant flights are in 2017, a was flying in 2016, but we'll just skip that year to make writing methods easier
+  collection = "sentinel-2-l2a",
+  client = OAuthClient
+)
+
+cr <- catalog_results |>
+  mutate(Month = as.numeric(str_remove_all( str_extract(acquisitionDate, '-[0-9]{2}-'), '-'))) |>
+  filter(Month >= 5, Month <= 7) |> # we want to detect late laying snow packs
+  group_by(acquisitionDate) |> # only bother with tiles which have good coverage on that day! No need for random tiles. 
+  mutate(
+    totalArea = sum(areaCoverage), 
+    n = n()) |>
+  filter(n > 4 & totalArea >= 100) |> 
+  # NDSI cannot see through clouds, we will drop dates with
+  # very high cloud cover 
+  group_by(acquisitionDate) |>
+  mutate(
+    meanCloud = mean(tileCloudCover)
+  ) |>
+  filter(meanCloud <= 35) |>
+
+  # for visualizing whether we have AN OK cloud drop off time
+  mutate(
+    year = str_extract(acquisitionDate, '[0-9]{4}'), 
+    doy = yday(acquisitionDate)
+  )
+
+ggplot() + 
+  geom_point(data = cr, aes(x = doy, y = n)) +
+  facet_wrap(~year)
+
+'/media/steppe/hdd/Geospatial_data/Sentinel2EriogonumColoradense'         
+
+
+ras <- GetImage(
+  aoi = aoi, 
+  time_range = day, 
+  script = script_file,
+  mask = TRUE, 
+  collection = "sentinel-2-l2a", format = "image/tiff",
+  mosaicking_order = "leastCC", resolution = 10, client = OAuthClient
+  )
+
+
+head(cr$sourceId)
+
+download.file('S2B_MSIL2A_20240729T174909_N0511_R141_T13SBC_20240729T214511.SAFE')
