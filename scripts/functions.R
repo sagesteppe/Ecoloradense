@@ -62,7 +62,7 @@ modeller <- function(x, resolution, iteration, se_prediction){
   #######################         MODELLING           ##########################
   # this is the fastest portion of this process. It will take at most a few minutes
   # at any resolution, the goal of this paper wasn't really focused on comparing
-  # mutliple models of families nor messing with parameters, so we use Random Forest
+  # multiple models of families nor messing with parameters, so we use Random Forest
   # simply because they work very well with default settings, almost 'controlling' 
   # for stochasticity in this portion of the work. 
   
@@ -71,7 +71,6 @@ modeller <- function(x, resolution, iteration, se_prediction){
     rf_model <- readRDS(paste0('../results/models/', resolution, '-Iteration', iteration, '.rds'))
     message('An exising model for this resolution and iteration already exists; reloading it now for projection')
   } else {
-  
   
   # split the input data into both an explicit train and test data set. 
   TrainIndex <- caret::createDataPartition(
@@ -88,7 +87,7 @@ modeller <- function(x, resolution, iteration, se_prediction){
           file = paste0('../results/models/', resolution, '-Iteration', iteration, '.rds'))
   
   # save the confusion matrix
-  predictions <- predict(rf_model, Test, type = 'se', se.method = 'infjack', probability=TRUE, importance = TRUE)
+  predictions <- predict(rf_model, Test, type = 'se', se.method = 'infjack', probability=TRUE)
   predictions$binary <- as.factor(if_else(predictions$predictions[,2] <= 0.49, 0, 1))
   
   cmRestrat <- caret::confusionMatrix(predictions$binary, Test$Occurrence, 
@@ -413,3 +412,28 @@ newliner <- function(x, width){
   
 }
 
+
+
+
+library(CDSE)
+library(terra)
+OAuthClient <- GetOAuthClient(
+  id = Sys.getenv("CopernicusOAuthID"),
+  secret = Sys.getenv("CopernicusOAuthSecret")
+  )
+
+
+dsn <- system.file("extdata", "centralpark.geojson", package = "CDSE")
+aoi <- sf::read_sf(dsn, as_tibble = FALSE)
+script_file <- system.file("scripts", "RawBands.js", package = "CDSE")
+day <- "2023-07-11"
+ras <- GetImage(aoi = aoi, time_range = day, script = script_file,
+                collection = "sentinel-2-l2a", format = "image/tiff",
+                mosaicking_order = "leastCC", resolution = 10, client = OAuthClient)
+
+catalog_results <- SearchCatalog(
+  aoi = , 
+  from = as.Date('2015-04-01'), to = as.Date('2024-10-01'),
+  collection = "sentinel-2-l2a",
+  client = OAuthClient
+  )
