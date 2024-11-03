@@ -412,28 +412,3 @@ newliner <- function(x, width){
   
 }
 
-
-
-
-library(CDSE)
-library(terra)
-OAuthClient <- GetOAuthClient(
-  id = Sys.getenv("CopernicusOAuthID"),
-  secret = Sys.getenv("CopernicusOAuthSecret")
-  )
-
-
-dsn <- system.file("extdata", "centralpark.geojson", package = "CDSE")
-aoi <- sf::read_sf(dsn, as_tibble = FALSE)
-script_file <- system.file("scripts", "RawBands.js", package = "CDSE")
-day <- "2023-07-11"
-ras <- GetImage(aoi = aoi, time_range = day, script = script_file,
-                collection = "sentinel-2-l2a", format = "image/tiff",
-                mosaicking_order = "leastCC", resolution = 10, client = OAuthClient)
-
-catalog_results <- SearchCatalog(
-  aoi = , 
-  from = as.Date('2015-04-01'), to = as.Date('2024-10-01'),
-  collection = "sentinel-2-l2a",
-  client = OAuthClient
-  )

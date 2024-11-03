@@ -365,37 +365,30 @@ lapply(
 
 library(CDSE)
 library(terra)
+library(sf)
+
 OAuthClient <- GetOAuthClient(
   id = Sys.getenv("CopernicusOAuthID"),
   secret = Sys.getenv("CopernicusOAuthSecret")
 )
 
-
-dsn <- system.file("extdata", "centralpark.geojson", package = "CDSE")
-aoi <- sf::read_sf(dsn, as_tibble = FALSE)
-script_file <- system.file("scripts", "RawBands.js", package = "CDSE")
-day <- "2023-07-11"
-ras <- GetImage(
-  aoi = aoi, 
-  time_range = day, 
-  script = script_file,
-  collection = "sentinel-2-l2a", format = "image/tiff",
-  mosaicking_order = "leastCC", resolution = 10, client = OAuthClient)
-
+script_file <- '/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts/NDSI_download.js'
 aoi <- st_as_sfc(st_bbox(template))
 
 catalog_results <- SearchCatalog(
   aoi = aoi, 
-  from = as.Date('2017-04-01'), to = as.Date('2024-10-01'),
-  # first relevant flights are in 2017, a was flying in 2016, but we'll just skip that year to make writing methods easier
+  from = as.Date('2017-05-01'), to = as.Date('2024-08-01'),
+  # first relevant flights are in 2017, a was flying in 2016,
+  # but we'll just skip that year to make writing methods easier
   collection = "sentinel-2-l2a",
   client = OAuthClient
 )
 
 cr <- catalog_results |>
-  mutate(Month = as.numeric(str_remove_all( str_extract(acquisitionDate, '-[0-9]{2}-'), '-'))) |>
+  mutate(Month = as.numeric(str_remove_all(str_extract(acquisitionDate, '-[0-9]{2}-'), '-'))) |>
   filter(Month >= 5, Month <= 7) |> # we want to detect late laying snow packs
-  group_by(acquisitionDate) |> # only bother with tiles which have good coverage on that day! No need for random tiles. 
+  group_by(acquisitionDate) |> 
+  # only bother with tiles which have good coverage on that day! No need for random tiles. 
   mutate(
     totalArea = sum(areaCoverage), 
     n = n()) |>
@@ -406,31 +399,62 @@ cr <- catalog_results |>
   mutate(
     meanCloud = mean(tileCloudCover)
   ) |>
-  filter(meanCloud <= 35) |>
+  filter(meanCloud <= 40) |>
 
-  # for visualizing whether we have AN OK cloud drop off time
+  # for visualizing whether we have an OK cloud drop off time
   mutate(
     year = str_extract(acquisitionDate, '[0-9]{4}'), 
     doy = yday(acquisitionDate)
   )
 
 ggplot() + 
-  geom_point(data = cr, aes(x = doy, y = n)) +
-  facet_wrap(~year)
+  geom_point(data = cr, aes(x = doy, y = year)) 
 
-'/media/steppe/hdd/Geospatial_data/Sentinel2EriogonumColoradense'         
+## what if we work on modelling the high snow years.... ##
 
+cr_high <- cr |>
+  filter(year %in% c(2017, 2019, 2023))
 
-ras <- GetImage(
-  aoi = aoi, 
-  time_range = day, 
-  script = script_file,
-  mask = TRUE, 
-  collection = "sentinel-2-l2a", format = "image/tiff",
-  mosaicking_order = "leastCC", resolution = 10, client = OAuthClient
-  )
+ggplot(cr_high) + 
+  geom_point(aes(x = doy, y = year))
 
 
-head(cr$sourceId)
+dates <- unique(cr_high$acquisitionDate)
+p <- '/media/steppe/hdd/Geospatial_data/Sentinel2EriogonumColoradense/'         
 
-download.file('S2B_MSIL2A_20240729T174909_N0511_R141_T13SBC_20240729T214511.SAFE')
+# we can only download 2500x2500 of cells per time. Use tiles to accomplish this. 
+fname <- paste0(p, 'rawTiles', '_.tif')
+# template <- setValues(template, 1)
+# template <- disagg(template, fact = 1000)
+# template <- disagg(template, fact = 4)
+
+setwd(paste0(p, 'template'))
+terra::makeTiles(template, c(2500, 2500), filename = ".tif")
+
+setwd(paste0(p, 'rawTiles'))
+f <- paste0('../template/', list.files('../template/'))
+
+aoImporter <- function(x){
+  
+  aoi <- sf::st_as_sfc(sf::st_bbox(terra::rast(x)))
+  tileNO <- gsub('.tif', '', basename(x))
+  for (i in seq_along(dates)){
+    
+    message('Downloading: ', dates[i])
+    
+    CDSE::GetImageByAOI(
+      aoi = aoi, 
+      time_range = dates[i], 
+      script = script_file,
+      mask = TRUE, 
+      collection = "sentinel-2-l2a", 
+      format = "image/tiff",
+      file = paste0(tileNO, '_', dates[i], '.tif'),
+      mosaicking_order = "leastCC", # LEAST CLOUD COVER. 
+      resolution = 10, 
+      client = OAuthClient
+    )
+  }
+}
+
+lapply(f, aoImporter)
