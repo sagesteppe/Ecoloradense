@@ -372,6 +372,11 @@ OAuthClient <- GetOAuthClient(
   secret = Sys.getenv("CopernicusOAuthSecret")
 )
 
+OAuthClient <- GetOAuthClient(
+  id = Sys.getenv("CopernicusOAuthIDNORTHWESTERN"),
+  secret = Sys.getenv("CopernicusOAuthSecretNORTHWESTERN")
+)
+
 script_file <- '/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts/NDSI_download.js'
 aoi <- st_as_sfc(st_bbox(template))
 
@@ -428,10 +433,10 @@ fname <- paste0(p, 'rawTiles', '_.tif')
 # template <- disagg(template, fact = 1000)
 # template <- disagg(template, fact = 4)
 
-setwd(paste0(p, 'template'))
+setwd(paste0(p, 'NDSI_template'))
 terra::makeTiles(template, c(2500, 2500), filename = ".tif")
 
-setwd(paste0(p, 'rawTiles'))
+setwd(paste0(p, 'NDSI_raw'))
 f <- paste0('../template/', list.files('../template/'))
 
 aoImporter <- function(x){
@@ -440,7 +445,8 @@ aoImporter <- function(x){
   tileNO <- gsub('.tif', '', basename(x))
   for (i in seq_along(dates)){
     
-    message('Downloading: ', dates[i])
+    if(!file.exists(paste0(tileNO, '_', dates[i], '.tif'))) {
+      message('Downloading: ', tileNO, '_', dates[i])
     
     CDSE::GetImageByAOI(
       aoi = aoi, 
@@ -454,7 +460,63 @@ aoImporter <- function(x){
       resolution = 10, 
       client = OAuthClient
     )
+    }
   }
 }
 
 lapply(f, aoImporter)
+
+
+
+################### NOW SELECT BANDS FOR NDVI CALCULATION #####################
+
+# We want to calculate this during ~ July 10 - July 22
+# DOY 192-204
+# It will need to be in our high moisture years: 2017, 2019, 2023
+# let's aim for the data set within those years with the absolute lowest amount of
+# cloud cover. 
+
+cr_high <- cr |>
+  filter(year %in% c(2017, 2019, 2023, 2024))
+
+# those years were no good... However, 2024 was an OK-GOOD year for precip, and
+# a flight on the 4th of July had no clouds! (trust me.. i was there ;-))
+
+filter(cr_high) %>%  
+  ggplot() + 
+  geom_point(aes(x = doy, y = year, size = meanCloud))
+
+independence_day <- filter(cr_high, acquisitionDate == '2024-07-04')
+dates <- unique(independence_day$acquisitionDate)
+
+setwd(paste0(p, 'NDVI_raw'))
+f <- paste0('../template/', list.files('../template/'))
+script_file <- '/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts/NDVI_download.js'
+
+aoImporter <- function(x){
+  
+  aoi <- sf::st_as_sfc(sf::st_bbox(terra::rast(x)))
+  tileNO <- gsub('.tif', '', basename(x))
+  for (i in seq_along(dates)){
+    
+    if(!file.exists(paste0(tileNO, '_', dates[i], '.tif'))) {
+      message('Downloading: ', tileNO, '_', dates[i])
+      
+      CDSE::GetImageByAOI(
+        aoi = aoi, 
+        time_range = dates[i], 
+        script = script_file,
+        mask = TRUE, 
+        collection = "sentinel-2-l2a", 
+        format = "image/tiff",
+        file = paste0(tileNO, '_', dates[i], '.tif'),
+        mosaicking_order = "leastCC", # LEAST CLOUD COVER. 
+        resolution = 10, 
+        client = OAuthClient
+      )
+    }
+  }
+}
+
+lapply(f, aoImporter)
+
