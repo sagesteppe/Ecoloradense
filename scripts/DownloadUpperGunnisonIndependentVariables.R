@@ -520,3 +520,33 @@ aoImporter <- function(x){
 
 lapply(f, aoImporter)
 
+
+########## Now calculate NDVI for each cell #########
+setwd(paste0(p, 'NDVI_raw'))
+f <- list.files()
+
+ndvi_calc <- function(x){
+  r <- terra::rast(x)
+  names(r) <- c('Red', 'NIR')
+  r2 <- (r$NIR - r$Red) / (r$NIR + r$Red)
+  terra::writeRaster(r2, paste0('../NDVI_Calc/', x))
+}
+
+parallel::mclapply(f, ndvi_calc) # only like 1.1 gb, lets
+# add them all together into a single template, and resample from there. 
+setwd(paste0(p, 'NDVI_Calc'))
+f <- list.files()
+
+lapply(f, function(x){res(rast(x))})
+res(rast(f[5]))
+calced <- terra::vrt(f, '../NDVI_Products/NDVI_vrt')
+r <- rast("../NDVI_Products/NDVI_vrt")
+terra::writeRaster(r, "../NDVI_Products/NDVI.tif")
+r <- terra::rast("../NDVI_Products/NDVI.tif")
+names(r) <- 'NDVI'
+
+setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed')
+terra::resample(r, arc3_template, threads = 16, filename = './dem_3arc/NDVI.tif') 
+terra::resample(r, arc1_template, threads = 16, filename = 'dem_1arc/NDVI.tif') 
+terra::resample(r, arc13_template, threads = 16, filename = 'dem_1-3arc/NDVI.tif')
+terra::resample(r, m3_template, threads = 16, filename = 'dem_3m/NDVI.tif')
