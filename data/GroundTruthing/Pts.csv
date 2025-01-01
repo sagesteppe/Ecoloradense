@@ -202,11 +202,11 @@ OBJECT,Date,Location_abbrevation,Location_full,Site,Latitude,Longitude,Presence_
 201,7.27.2024,HB,Hasley Basin,23,39.05618,-107.05453,18,2,,,F
 202,7.27.2024,HB,Hasley Basin,24,39.05712,-107.05463,19,4,,,F
 203,7.27.2024,HB,Hasley Basin,,39.05783,-107.05525,0,0,,,
-204,8.02.2024,,West Maroon Bells,,,,,,,247,
-205,8.02.2024,,West Maroon Bells,,,,,,,248,
-206,8.02.2024,,West Maroon Bells,,,,,,,249,
-207,8.02.2024,,West Maroon Bells,,,,,,,250,
-208,8.02.2024,,West Maroon Bells,,,,,,,235,
+204,8.02.2024,WMB,West Maroon Bells,,,,,,,247,
+205,8.02.2024,WMB,West Maroon Bells,,,,,,,248,
+206,8.02.2024,WMB,West Maroon Bells,,,,,,,249,
+207,8.02.2024,WMB,West Maroon Bells,,,,,,,250,
+208,8.02.2024,WMB,West Maroon Bells,,,,,,,235,
 209,8.02.2024,Frigid,Frigid Air Pass,,39.041798,-107.00037,0,0,,,
 210,8.02.2024,Frigid,Frigid Air Pass,,39.041495,-107.0003865,0,0,,,
 211,8.02.2024,Frigid,Frigid Air Pass,,39.042573,-107.006912,0,0,,,
