@@ -41,7 +41,6 @@ ground_truth <- filter(ground_truth, str_detect(Site, 'p', negate= T)) |>
 
 We'll turn revisits into two data frames, this will be used to compare the accuracy of the coordinates to the occurrences. 
 ```{r}
-
 revisits <- filter(revisits, !is.na(Latitude)) |>
   st_drop_geometry() |>
   st_as_sf(coords = c(x = 'Longitude', y = 'Latitude'), crs = 4269) |>
@@ -78,7 +77,8 @@ These should hopefully help reduce the effects of spatial auto-correlation.
 
 ```{r}
 comp_abs <- read.csv('../data/GroundTruthing/ComputerAbs.csv') |>
-  mutate(Presence_M = 0, Presence_J = 0, Presence = 0) |>
+  mutate(
+    Presence_M = 0, Presence_J = 0, Presence = 0 ) |>
   st_as_sf(coords = c(x = 'Longitude', y = 'Latitude'), crs = 4326) |>
   st_transform(st_crs(ground_truth))
 

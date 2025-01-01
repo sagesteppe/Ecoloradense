@@ -20,20 +20,20 @@ occ_data <- bind_rows(
     mutate(Occurrence = 1) %>% 
     st_transform(32613),
   st_read('../data/spatial/processed/pseudo-absences/iteration1/absences.shp', quiet = T) 
-)
+) 
 
 res <- c('3arc', '1arc', '1-3arc', '3m')
 p2proc <- '../data/spatial/processed'
 
 ```
 
-First iteration of modelling. 
+First iteration of modelling 
 
 ```{r, eval = F}
 modeller(x = occ_data, resolution = '3m', iteration = 1, se_prediction = TRUE)
 ```
 
-Drawing Field 
+Drawing Field samples 
 
 ```{r}
 
@@ -75,6 +75,7 @@ rm(pts)
 
 We are going to give the points sensible identification numbers based on which trail or area they are located in. 
 First we need to update the 'Trails' data set so that small branches of trails are joined to their main trunk.
+
 ```{r name the trails}
 
 trails <- trails %>% 
@@ -128,6 +129,7 @@ ob <- OrderRandomPtsIDS(trails, thinned, occurrence_only)
 st_write(ob[[1]], '../data/GroundTruthPts/Iteration1-cp.shp', append = F, quiet = T) 
 st_write(ob[[2]], '../data/GroundTruthPts/Revisits-cp.shp', append = F, quiet = T) 
 
+# also write out the points for use on garmin GPS   
 ob1 <- st_read('../data/GroundTruthPts/Iteration1-cp.shp') 
 
 mutate(ob[[1]]) %>% 
@@ -141,7 +143,7 @@ mutate(ob[[2]]) %>%
   st_write(., dsn = "../data/GroundTruthPts/Presences.gpx", driver = "GPX")
 ```
 
-We will also write out a variety of points for the Cocheotopa area
+We will also write out a variety of points for the Cocheotopa area, The area does not really have, nor require trails.  
 ```{r, eval = F}
 
 bb <- c(-106.4, 38.0, -106.8, 38.4)
@@ -206,11 +208,9 @@ pts %>%
 ```
 
 
-
 ```{r}
 readRDS('../results/tables/3m-Iteration1.rds')
 library(ranger)
 model <- readRDS('../results/models/3m-Iteration1.rds')
 importance(model)
 ```
-

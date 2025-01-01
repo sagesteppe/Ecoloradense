@@ -1,0 +1,67 @@
+---
+title: "Evaluate Ground Truthing 2024"
+author: "steppe"
+output: html_document
+---
+
+We are interested in determining the accuracy of the existing geolocation of points. 
+Many of these were revisited in 2024, and plants found as close to possible as them were recorded. 
+If no plants could be founding within 50m or so the point was considered an absence at that time. 
+
+```{r}
+library(sf)
+library(tidyverse)
+library(terra)
+set.seed(23)
+```
+
+```{r}
+occ_data <- bind_rows(
+  st_read('../data/collections/occurrences_coloradense/occurrences.shp', quiet = T) %>% 
+    mutate(Occurrence = 1) %>% 
+    st_transform(32613)
+) 
+```
+
+
+I made a simple mistake when saving the pts to ground truth, I did not write out an ID from the initial process. 
+Hopefully all of the ground verified points can be recovered by a combination of dates the observation was made, and their locations. 
+
+```{r}
+all_hist_pres <- st_read('../data/GroundTruthPts/Revisits-cp.shp') 
+
+iter1gt <- st_read('../data/GroundTruthing/Iteration1Pts.shp', quiet = TRUE) |>
+  filter(str_detect(Site, 'p.*')) |>
+  mutate(
+    Site = str_to_upper(Site)) |>
+  left_join(st_drop_geometry(all_hist_pres), by = c('Site' = 'UID'))
+
+table(sf::st_nearest_feature(occ_data, iter1gt)) 
+# not super informative, because I didn't cover the full range of the species. 
+# i'd wager the highest number point is simply my easternmost point!
+
+table(sf::st_nearest_feature(iter1gt, occ_data)) 
+# whereas this indicates most points I visited are close to a neighbor in the historic data set
+
+table(occ_data$eventDate)[ table(occ_data$eventDate) > 1]
+# yep lot's of repeat dates!!! hopefully from multiple observations... 
+```
+
+Points will need to be joined on both date and coordinates. 
+While most records from the same day seem to be duplicates of a single observation, 
+I am not 100% certain of this. 
+
+```{r join points}
+# neither method would be enough to match on on their own accord. 
+toclean <- left_join(
+  st_drop_geometry(all_hist_pres),
+  filter(occ_data, Occurrence == 1), 
+  by = 'eventDate') |>
+  group_by(UID)
+
+toclean %>% 
+  group_by(UID) |>
+  mutate(n = n()) |>
+  filter(n == 1)
+
+```

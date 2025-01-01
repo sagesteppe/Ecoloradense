@@ -433,7 +433,7 @@ fname <- paste0(p, 'rawTiles', '_.tif')
 # template <- disagg(template, fact = 1000)
 # template <- disagg(template, fact = 4)
 
-setwd(paste0(p, 'NDSI_template'))
+setwd(paste0(p, 'template'))
 terra::makeTiles(template, c(2500, 2500), filename = ".tif")
 
 setwd(paste0(p, 'NDSI_raw'))
@@ -464,9 +464,96 @@ aoImporter <- function(x){
   }
 }
 
-lapply(f, aoImporter)
+# lapply(f, aoImporter)
+
+#### Now determine the last date snow was found in each cell each YEAR. #####
+p <- '/media/steppe/hdd/Geospatial_data/Sentinel2EriogonumColoradense/'   
+setwd(paste0(p, 'NDSI_raw'))
+
+r <- terra::rast('22_2023-07-05.tif')
+plot(r)
+names(r) <- c('B02', 'B03', 'B04', 'B11')
+
+r2 <- (r$B03 - r$B11) / (r$B03 + r$B11)
+msk <- terra::ifel(r2 < 0.42, NA, 1)
+r2 <- terra::mask(r2, msk)
+plot(r2)
+
+# group by TILE NUMBER, THEN YEAR, THEN DATE. 
+# Calculate NDSI for each CELL X TIME INTERVAL 
+
+FILES  <- list.files()
+tiles <- data.frame(
+  FNAME = FILES, 
+  TILE = as.numeric(gsub('_.*', '', FILES)),
+  YEAR = as.numeric(gsub('_|-', '', stringr::str_extract(FILES, '_[0-9]{4}-'))),
+  DOY = lubridate::yday(
+    as.Date(
+      gsub('_|[.]', '', stringr::str_extract(FILES, '_.*[.]')), 
+      format = "%Y-%m-%d"
+      )
+  )
+) |>
+  dplyr::arrange(TILE, YEAR, DOY)
+
+tiles <- split(tiles, f = ~ TILE + YEAR)
+tiles['22.2023']
 
 
+# first we will create a cloud mask - it won't work perfectly but should function OK 
+# for our purposes. 
+
+# these are the terms for the braaten-cohen-yang cloud detection 
+# index https://custom-scripts.sentinel-hub.com/custom-scripts/sentinel-2/cby_cloud_detection/ 
+
+cloud_detection <- function(x){
+
+  NDGR <- vector(mode = 'list', length = nrow(x))
+  bRatio <- vector(mode = 'list', length = nrow(x))
+  cloud <- vector(mode = 'list', length = nrow(x))
+  
+  for (i in 1:nrow(x)){
+    r <- terra::rast(x$FNAME[i]) # read in each file 
+    names(r) <- c('B02', 'B03', 'B04', 'B11') # name layers
+    NDGR[[i]] <- (r$B03 - r$B04) / (r$B03 + r$B04)
+    bRatio[[i]] <- ((r$B03 - 0.175) / (0.39 + 0.175))
+    cloud[[i]] <- terra::ifel(r$B11 > 0.1 & bRatio[[i]] > 0 & NDGR[[i]] > 0, 1, 0)
+  }
+  stack <- terra::rast(cloud)
+  names(stack) <- x$DOY
+  return(stack)
+}
+
+ob <- lapply(tiles['22.2023'], cloud_detection)
+plot(ob[['22.2023']])
+writeRaster(ob[['22.2023']], '../test_tile_22.tif', overwrite = TRUE)
+
+
+
+
+
+NDSI_summary <- function(x){
+  
+  stack <- vector(mode = 'list', length = nrow(x))
+
+  for (i in 1:nrow(x)){
+    r <- terra::rast(x$FNAME[i]) # read in each file 
+    names(r) <- c('B02', 'B03', 'B04', 'B11') # name layers
+    stack[[i]] <- (r$B03 - r$B11) / (r$B03 + r$B11) # calculate NDSI 
+    msk <- terra::ifel(stack[[i]] < 0.42, NA, 1) # mask not snow pixels 
+    stack[[i]] <- terra::mask(stack[[i]], msk) # 
+    stack[[i]] <- terra::ifel(!is.na(stack[[i]]), 1, NA)
+  }
+  stack <- terra::rast(stack)
+  names(stack) <- x$DOY
+  
+  return(stack)
+}
+
+ob <- lapply(tiles['22.2023'], NDSI_summary)
+plot(ob[['22.2023']])
+
+writeRaster(ob[['22.2023']], '../test_tile_22.tif', overwrite = TRUE)
 
 ################### NOW SELECT BANDS FOR NDVI CALCULATION #####################
 

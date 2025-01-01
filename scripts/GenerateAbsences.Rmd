@@ -19,10 +19,9 @@ source('functions.R')
 set.seed(27)
 ```
 
-
-
 First we will reduce the number of Presences in the data set to ensure that we do not have any in the same cells at 90m. 
-Ten we will apply spThin to them, to avoid underestimating suitable habitat in less botanized areas. 
+Then we will apply spThin to them, to avoid underestimating suitable habitat in less botanized areas. 
+
 ```{r}
 
 occ <-  st_read('../data/collections/occurrences_coloradense/occurrences.shp', quiet = T) %>% 
@@ -30,7 +29,7 @@ occ <-  st_read('../data/collections/occurrences_coloradense/occurrences.shp', q
     Longitude = unlist(map(.$geometry,1)),
     Latitude = unlist(map(.$geometry,2)), 
     Species = 'Eriogonum coloradense'
-  ) %>% # do this to explictely drop repeat observations
+  ) %>% # do this to explicitly drop repeat observations
   distinct(Longitude, Latitude, .keep_all = T)
 
 thinned <- spThin::thin(
