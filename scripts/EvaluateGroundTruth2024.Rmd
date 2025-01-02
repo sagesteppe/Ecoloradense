@@ -13,14 +13,35 @@ library(sf)
 library(tidyverse)
 library(terra)
 set.seed(23)
+source('functions.R')
 ```
 
 ```{r}
-occ_data <- bind_rows(
-  st_read('../data/collections/occurrences_coloradense/occurrences.shp', quiet = T) %>% 
-    mutate(Occurrence = 1) %>% 
-    st_transform(32613)
-) 
+occ_data <- st_read('../data/collections/occurrences_coloradense/occurrences.shp', quiet = T) %>% 
+    mutate(
+      Occurrence = 1) %>% 
+    st_transform(32613) %>% 
+  distinct(eventDate, geometry, .keep_all = TRUE)
+
+# we will also create an observation ID, any points within 50m of each other, collected
+# on the same day as each other will be considered duplicates - hence an observation. 
+
+dts <- split(occ_data, f = occ_data$eventDate) 
+dts_l <- Filter(function(x) nrow(x) >= 2, dts)
+dts_l <- lapply(dts_l, HistObsGrps) |>
+  bind_rows()
+
+dts <- bind_rows(Filter(function(x) nrow(x) == 1, dts))
+# now for simplicities sake we make a distinct 'Observation ID' to accompany 
+# all of the points records
+
+occ_dat <- bind_rows(dts, dts_l) |>
+  arrange(eventDate, Obs.grp) |>
+  group_by(eventDate, Obs.grp) |>
+  mutate(Occurrence.grp = cur_group_id(), .after = Occurrence) |>
+  select(-Obs.grp)
+
+rm(dts, dts_l)
 ```
 
 
@@ -36,6 +57,9 @@ iter1gt <- st_read('../data/GroundTruthing/Iteration1Pts.shp', quiet = TRUE) |>
     Site = str_to_upper(Site)) |>
   left_join(st_drop_geometry(all_hist_pres), by = c('Site' = 'UID'))
 
+# now subset the occurrence data to relevent dates
+occ_data <- filter(occ_data, eventDate %in% iter1gt$eventDate)
+
 table(sf::st_nearest_feature(occ_data, iter1gt)) 
 # not super informative, because I didn't cover the full range of the species. 
 # i'd wager the highest number point is simply my easternmost point!
@@ -45,6 +69,8 @@ table(sf::st_nearest_feature(iter1gt, occ_data))
 
 table(occ_data$eventDate)[ table(occ_data$eventDate) > 1]
 # yep lot's of repeat dates!!! hopefully from multiple observations... 
+
+# rm(all_hist_pres)
 ```
 
 Points will need to be joined on both date and coordinates. 
@@ -53,15 +79,12 @@ I am not 100% certain of this.
 
 ```{r join points}
 # neither method would be enough to match on on their own accord. 
-toclean <- left_join(
-  st_drop_geometry(all_hist_pres),
-  filter(occ_data, Occurrence == 1), 
-  by = 'eventDate') |>
-  group_by(UID)
+toclean <- left_join(occ_data, st_drop_geometry(iter1gt), 
+  by = 'eventDate')
 
-toclean %>% 
-  group_by(UID) |>
-  mutate(n = n()) |>
-  filter(n == 1)
+DIRTY <- toclean %>%  
+  group_by(OBJECT) |> 
+  mutate(n = n()) |> 
+  filter(n > 1)
 
 ```

@@ -412,3 +412,35 @@ newliner <- function(x, width){
   
 }
 
+
+#' Classify historic observations records in groups based on event date and geographic proximity
+#' 
+#' @description Simply measure the distance between observations that were made 
+#' on the same day and bin points within 50m of one another. 
+#' @param x a list of sf/tibble/dataframes with more than one record per day. 
+HistObsGrps <- function(x){
+  
+  # calculate distances between all points
+  dists <- st_distance(x)
+  
+  # and converts from a distances object to a simple numeric matrix. which works
+  # the fns below. 
+  dists <- matrix(as.numeric(dists), nrow = nrow(dists), byrow = TRUE)
+  
+  # tag points which we want connected - those within 50m of each other. 
+  adj_matrix <- as.matrix(dists <= 50)
+  graph <- igraph::graph_from_adjacency_matrix(adj_matrix, mode = "undirected") 
+  
+  # we can extract each 'grp' (including unconnected individuals)
+  grps <- split(igraph::V(graph), igraph::components(graph)$membership)
+  grps <- lapply(grps, \(x) setNames(
+    data.frame(as.numeric(x)),
+    nm = 'Indv')
+  ) |>
+    data.table::rbindlist(idcol = 'Obs.Grp') 
+  
+  grps <- grps[order(grps$Indv),]
+  dplyr::mutate(x, 
+                Obs.grp = grps$Obs.Grp, .before = 'geometry'
+  )
+}
