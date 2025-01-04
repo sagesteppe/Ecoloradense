@@ -4,10 +4,6 @@ author: "steppe"
 output: html_document
 ---
 
-We are interested in determining the accuracy of the existing geolocation of points. 
-Many of these were revisited in 2024, and plants found as close to possible as them were recorded. 
-If no plants could be founding within 50m or so the point was considered an absence at that time. 
-
 ```{r}
 library(sf)
 library(tidyverse)
@@ -15,6 +11,33 @@ library(terra)
 set.seed(23)
 source('functions.R')
 ```
+
+# PART 1 clean data for iteration 2 modelling
+
+```{r}
+hist_occ_data <- st_read('../data/collections/occurrences_coloradense/occurrences.shp', quiet = T) %>% 
+    mutate(
+      ID = 1:n(),
+      Occurrence = 1) %>% 
+    st_transform(32613) %>% 
+  distinct(eventDate, geometry, .keep_all = TRUE)
+
+gt_data <- st_read('../data/GroundTruthing/Iteration1Pts.shp', quiet = T)
+
+# we'll just create the data sets at different resolutions right now... 
+
+
+```
+
+
+# PART 2 determining geolocation accuracy. 
+
+We are interested in determining the accuracy of the existing geolocation of points. 
+Many of these were revisited in 2024, and plants found as close to possible as them were recorded. 
+If no plants could be founding within 50m or so the point was considered an absence at that time. 
+
+
+I tried to finish this up when I had a cold and became totally irate at it. 
 
 ```{r Classify Points belonging to sets of observations}
 occ_data <- st_read('../data/collections/occurrences_coloradense/occurrences.shp', quiet = T) %>% 
@@ -48,18 +71,18 @@ rm(dts, dts_l)
 I made a simple mistake when saving the pts to ground truth, I did not write out an ID from the initial process. 
 Hopefully all of the ground verified points can be recovered by a combination of dates the observation was made, and their locations. 
 ```{r}
-all_hist_pres <- bind_rows(
-  st_read('../data/GroundTruthPts/Revisits-cp.shp', quiet = TRUE) |>
-    filter(Trail != '13043 Ridge'), 
-  sf::st_read('../data/GroundTruthPts/Cocheotopa_revisits.shp', quiet = TRUE) |>
+all_hist_pres <- #bind_rows(
+  st_read('../data/GroundTruthPts/Revisits-cp.shp', quiet = TRUE)# |>
+ #   filter(Trail != '13043 Ridge'), 
+#  sf::st_read('../data/GroundTruthPts/Cocheotopa_revisits.shp', quiet = TRUE) |>
   # these were written out seperately and do not have all the same info # we need to add some on
-  mutate(
-    Trail = 'Cocheotopa Dome', 
-    UID = paste0('P-', ID), .before = geometry
-  ) |>
-    st_transform(32613)
-) |>
-  select(-ID)
+#  mutate(
+#    Trail = 'Cocheotopa Dome', 
+#    UID = paste0('P-', ID), .before = geometry
+#  ) |>
+#    st_transform(32613)
+#) |>
+#  select(-ID)
 
 # these are all of the historic points which were ground truthed
 # during iteration 1 sampling. 
@@ -96,7 +119,7 @@ toclean <- left_join(
     select(Site, OBJECT, eventDate), 
   by = 'eventDate')
 
-DIRTY <- toclean %>%  
+DIRTY <- toclean |>  
   group_by(OBJECT) |> 
   mutate(n = n()) |> 
   filter(n > 1)
@@ -134,7 +157,9 @@ iter1gt <- left_join(iter1gt, cleaned, by = c('Site', 'OBJECT')) |>
 # other types of modelling but I have reservations about including it for this
 # analysis
 
-rm(i, ob, DIRTY, cleaned, toclean, occ_data)
+filter(iter1gt, Trail == '13043 Ridge')
+
+# rm(i, ob, DIRTY, cleaned, toclean, occ_data)
 ```
 
 

@@ -34,7 +34,6 @@ ensure_multipolygons <- function(X) { # @ stackoverflow
 }
 
 
-
 #' @param x input occurrence data
 #' @param resolution list of paths to geodata at different resolutions. 
 #' @param iteration numeric, which iteration of modelling is being performed? 
@@ -80,9 +79,10 @@ modeller <- function(x, resolution, iteration, se_prediction){
   # perform the random forest modelling using default settings. 
   rf_model <- ranger::ranger(
     Occurrence ~ ., data = Train, probability = T, keep.inbag = TRUE, 
-    importance = 'permutation')
+    importance = 'permutation'
+    )
   
-  # save the model
+  # sasve the model
   saveRDS(rf_model,
           file = paste0('../results/models/', resolution, '-Iteration', iteration, '.rds'))
   
