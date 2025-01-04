@@ -1,0 +1,13 @@
+---
+title: "Modelling Eriogonum coloradense Presence and Abundance"
+author: "steppe"
+output: html_document
+---
+
+```{r}
+library(sf)
+library(tidyverse)
+library(terra)
+source('functions.R')
+set.seed(23)
+```
