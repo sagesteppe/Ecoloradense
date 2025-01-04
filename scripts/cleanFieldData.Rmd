@@ -78,11 +78,13 @@ These should hopefully help reduce the effects of spatial auto-correlation.
 ```{r}
 comp_abs <- read.csv('../data/GroundTruthing/ComputerAbs.csv') |>
   mutate(
-    Presence_M = 0, Presence_J = 0, Presence = 0 ) |>
+    Presence_M = 0, Presence_J = 0, Presence = 0, 
+    OBJECT = 1:n() + max(ground_truth$OBJECT)) |>
   st_as_sf(coords = c(x = 'Longitude', y = 'Latitude'), crs = 4326) |>
   st_transform(st_crs(ground_truth))
 
 ab <- bind_rows(ground_truth, comp_abs) |>
+  arrange(OBJECT) |>
   st_write('../data/GroundTruthing/Iteration1Pts.shp', append = F)
 
 library(spdep)
