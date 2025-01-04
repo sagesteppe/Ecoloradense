@@ -12,118 +12,92 @@ set.seed(23)
 source('functions.R')
 ```
 
-# PART 1 clean data for iteration 2 modelling
+# PART 1 clean data for iteration 1 count modelling
 
-```{r}
+The count data are very simple, as they do not need to be combined with the historic records. 
+Essentially we select one record per cell, and multiple the number of plants per quadrant (3x3m) to reach the area of the raster grid cell. 
+If multiple records are present per raster grid cell, we multiple the mean number of plants across quadrants to achieve this value. 
+
+```{r Save count data for iteration 1 modelling, eval = F}
+
+gt2024 <- st_read('../data/GroundTruthing/Iteration1Pts.shp', quiet = T)
+# we'll just create the data sets at different resolutions right now... 
+# these are final for count data - no historic records have these attributes.
+st_write(subset_pts(x = gt2024, res = 3, root = rt, mode = 'Count'), 
+  '../data/Data4modelling/3m-count-iter1.gpkg', append = F)
+st_write(subset_pts(x = gt2024, res = 10, root = rt, mode = 'Count'), 
+  '../data/Data4modelling/10m-count-iter1..gpkg', append = F)
+st_write(subset_pts(x = gt2024, res = 30, root = rt, mode = 'Count'), 
+  '../data/Data4modelling/30m-count-iter1..gpkg', append = F)
+st_write(subset_pts(x = gt2024, res = 90, root = rt, mode = 'Count'), 
+  '../data/Data4modelling/90m-count-iter1..gpkg', append = F)
+rm(gt2024, rt)
+```
+
+# PART 2 clean data for presence absence modelling
+
+These are just the historic records. 
+
+```{r iteration 0}
 hist_occ_data <- st_read('../data/collections/occurrences_coloradense/occurrences.shp', quiet = T) %>% 
     mutate(
-      ID = 1:n(),
-      Occurrence = 1) %>% 
+      Presenc = 1,
+      Date = gsub('-', '.', as.character(eventDate)),
+      Type = 'Historic',
+      OBJECT = 1:n()
+      ) %>% 
     st_transform(32613) %>% 
-  distinct(eventDate, geometry, .keep_all = TRUE)
+  distinct(Date, geometry, .keep_all = TRUE) %>% 
+  select(-eventDate)
 
-
-#' Reduce the number of points per training/test set so that no cells are duplicated. 
-#' 
-#' @description Each of the different resolutions of raster data will require
-#' different testing and training data to ensure that records (e.g. a raster grid 
-#' cell) are not replicated. This function first calculates the hypotenuse of a the resolution
-#' using the 'ideal' X& Y edges of the raster - which we know to be inaccurate by 
-#' ca. an entire meter at the '10m' resolution scale - to give us a rough estimate
-#' of how many points will be dropped.  Then it loads an actual layer of the 
-#' raster stack at the relevant resolution, extracts the pixel ID's and removes
-#' the duplicate cells. At this stage it will look at the absences, and remove
-#' any which are in the same cell as an occurrence. 
-#' 
-#' @param x sf data set of presences and absences. 
-#' @param res Numeric. Simplified resolution as meters, one of 3, 10, 30, 90. 
-#' @param root Path to root of spatial data. 
-#' @param mode Character. One of 'Presence', 'Count', defaults to 'Presence'. 
-#' If running in 'Presence' mode, then select one record per raster cell, always
-#' choosing a presence over an absence. If running in mode 'Count' sum all records 
-#' per raster cell, and relative the sample quadrat 3x3 m, to the size of the cell. 
-#' For example, if using a 90m cell, and their are three quadrats: 
-#' 
-subset_pts <- function(x, res, root, mode){
-  
-  if(missing(mode)){mode <- 'Presence'}
-   res_string <- switch(as.character(res),
-       "3" = "3m",
-       "10" = "1-3arc",
-       "30" = "1arc",
-       "90" = "3arc",
-       stop("Input to `res` invalid. Need be one of: 3, 10, 30, 90")
-       )
-  
-  within_hypotenuse <- sum( 
-   as.numeric(
-     sf::st_distance(
-       x, 
-       x[sf::st_nearest_feature(x),],
-       by_element = TRUE)
-     ) < sqrt(2 * (res^2))
-   ) # these records are possibly in the same cell as another
-    # record for the finest resolution modelling.  
-  
-  rasta <- terra::rast( # we only need to read in one raster - by definition these
-    # are all aligned to each other. 
-    file.path(root, paste0('dem_' ,res_string), 'dem.tif')
-  )
-  
-  x['RasterCell'] <- terra::extract(rasta, x, cells = TRUE)$cell
-  RC <- split(x, f = x$RasterCell) 
-      
-  if(mode=='Presence'){
-      # if there are multiple points per cell, 1st) discard the absences (if applicable)
-      # 2) randomly sample out one of the presences.  
-    select_rec <- function(x){
-      # if only presenc==0 | presenc==1, sample randomly. 
-      # if both presenc==0 and presenc==1 co-exist, sample from presenc==1, 
-      if(nrow(x)>1){
-            if(all(x$Presenc==0) | all(x$Presenc==1) == TRUE){
-              x <- x[sample(1:nrow(x), 1),]
-            } else {
-              xsub <- x[x$Presenc==1,]
-              x <- xsub[sample(1:nrow(xsub), 1),]}
-      }
-      return(x)
-    }
-    RC <- lapply(RC, select_rec)
-    
-  } else { # if mode == 'Count'
-    # area cell, area quadrant * mean plants per life stage. 
-    
-    countR <- function(x){
-      x$Prsnc_J <- ((res^2) / (3^2)) * mean(x$Prsnc_J)
-      x$Prsnc_M <- ((res^2) / (3^2)) * mean(x$Prsnc_M)
-      x$Prsnc_S <- ((res^2) / (3^2)) * mean(x$Prsnc_S, na.rm = TRUE)
-      x <- x[sample(1:nrow(x), 1),] 
-    }
-    RC <- lapply(RC, countR)
-  }
-  dplyr::bind_rows(RC) |>
-    dplyr::arrange(OBJECT)
-}
-
-pres <- st_read('../data/GroundTruthing/Iteration1Pts.shp', quiet = T)
-
-# we'll just create the data sets at different resolutions right now... 
-iter1_3m <- subset_pts(x = pres, res = 3, root = '../data/spatial/processed', mode = 'Count')
-iter1_10m <- subset_pts(x = pres, res = 10, root = '../data/spatial/processed', mode = 'Count')
-iter1_30m <- subset_pts(x = pres, res = 30, root = '../data/spatial/processed', mode = 'Count')
-iter1_90m <- subset_pts(x = pres, res = 90, root = '../data/spatial/processed', mode = 'Count')
+rt <- '../data/spatial/processed' 
+st_write(subset_pts(x = hist_occ_data, res = 3, root = rt, mode = 'Presence'), 
+  '../data/Data4modelling/3m-presence-iter0.gpkg', append = F)
+st_write(subset_pts(x = hist_occ_data, res = 10, root = rt, mode = 'Presence'), 
+  '../data/Data4modelling/10m-presence-iter0.gpkg', append = F)
+st_write(subset_pts(x = hist_occ_data, res = 30, root = rt, mode = 'Presence'), 
+  '../data/Data4modelling/30m-presence-iter0.gpkg', append = F)
+st_write(subset_pts(x = hist_occ_data, res = 90, root = rt, mode = 'Presence'), 
+  '../data/Data4modelling/90m-presence-iter0.gpkg', append = F)
 
 ```
 
+This is the combination of historic records and the ground truthed data for 2024. 
+Note that a record from 2024 always overwrites a historic record if they are found in the same cell. 
 
-# PART 2 determining geolocation accuracy. 
+```{r iteration 1}
+hist_occ_data <- st_read('../data/collections/occurrences_coloradense/occurrences.shp', quiet = T) %>% 
+    mutate(
+      Presenc = 1,
+      Date = gsub('-', '.', as.character(eventDate)),
+      Type = 'Historic'
+      ) %>% 
+    st_transform(32613) %>% 
+  distinct(Date, geometry, .keep_all = TRUE) %>% 
+  select(-eventDate)
+
+gt2024 <- st_read('../data/GroundTruthing/Iteration1Pts.shp', quiet = T) |>
+  mutate(Type = 'Current', .before = 'geometry')
+all_pts <- dplyr::bind_rows(gt2024, hist_occ_data)
+
+rt <- '../data/spatial/processed' 
+st_write(subset_pts(x = all_pts, res = 3, root = rt, mode = 'Presence'), 
+  '../data/Data4modelling/3m-presence-iter1.gpkg', append = F)
+st_write(subset_pts(x = all_pts, res = 10, root = rt, mode = 'Presence'), 
+  '../data/Data4modelling/10m-presence-iter1.gpkg', append = F)
+st_write(subset_pts(x = all_pts, res = 30, root = rt, mode = 'Presence'), 
+  '../data/Data4modelling/30m-presence-iter1.gpkg', append = F)
+st_write(subset_pts(x = all_pts, res = 90, root = rt, mode = 'Presence'), 
+  '../data/Data4modelling/90m-presence-iter1.gpkg', append = F)
+
+rm(all_pts, gt2024, rt)
+```
+
+# PART 3 determining geolocation accuracy. 
 
 We are interested in determining the accuracy of the existing geolocation of points. 
 Many of these were revisited in 2024, and plants found as close to possible as them were recorded. 
 If no plants could be founding within 50m or so the point was considered an absence at that time. 
-
-
-I tried to finish this up when I had a cold and became totally irate at it. 
 
 ```{r Classify Points belonging to sets of observations}
 occ_data <- st_read('../data/collections/occurrences_coloradense/occurrences.shp', quiet = T) %>% 
