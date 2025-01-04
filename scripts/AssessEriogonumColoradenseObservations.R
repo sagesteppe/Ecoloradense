@@ -1,14 +1,14 @@
 library(tidyverse)
 library(sf)
 
-setwd('~/Documents/assoRted/EriogonumColoradenseTaxonomy/scripts')
+setwd('~/Documents/Ecoloradense/scripts')
 
-inat <- read.csv('../data/collections/iNaturalistObservations/observations-417874.csv') %>% 
+inat <- read.csv('../data/collections/iNaturalistObservations_coloradense/observations-417874.csv') %>% 
   filter(positional_accuracy <= 10) %>% 
   st_as_sf(coords = c('longitude', 'latitude'), crs = 4326) %>% 
   select(id, observed_on, user_login, quality_grade) 
 
-soro <- readr::read_csv('../data/collections/SoroSymbiota/occurrences.csv', show_col_types = FALSE) %>% 
+soro <- readr::read_csv('../data/collections/SoroSymbiota_coloradense/occurrences.csv', show_col_types = FALSE) %>% 
   drop_na(decimalLatitude, decimalLongitude) %>% 
   st_as_sf(coords = c('decimalLongitude', 'decimalLatitude'), crs = 4326) %>% 
   select(georeferenceRemarks, georeferencedBy,locality, eventDate, recordedBy, 
