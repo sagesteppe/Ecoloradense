@@ -16,9 +16,10 @@ set.seed(23)
 source('functions.R')
 ```
 
-```{r}
+```{r Classify Points belonging to sets of observations}
 occ_data <- st_read('../data/collections/occurrences_coloradense/occurrences.shp', quiet = T) %>% 
     mutate(
+      ID = 1:n(),
       Occurrence = 1) %>% 
     st_transform(32613) %>% 
   distinct(eventDate, geometry, .keep_all = TRUE)
@@ -35,7 +36,7 @@ dts <- bind_rows(Filter(function(x) nrow(x) == 1, dts))
 # now for simplicities sake we make a distinct 'Observation ID' to accompany 
 # all of the points records
 
-occ_dat <- bind_rows(dts, dts_l) |>
+occ_data <- bind_rows(dts, dts_l) |>
   arrange(eventDate, Obs.grp) |>
   group_by(eventDate, Obs.grp) |>
   mutate(Occurrence.grp = cur_group_id(), .after = Occurrence) |>
@@ -44,13 +45,24 @@ occ_dat <- bind_rows(dts, dts_l) |>
 rm(dts, dts_l)
 ```
 
-
 I made a simple mistake when saving the pts to ground truth, I did not write out an ID from the initial process. 
 Hopefully all of the ground verified points can be recovered by a combination of dates the observation was made, and their locations. 
-
 ```{r}
-all_hist_pres <- st_read('../data/GroundTruthPts/Revisits-cp.shp') 
+all_hist_pres <- bind_rows(
+  st_read('../data/GroundTruthPts/Revisits-cp.shp', quiet = TRUE) |>
+    filter(Trail != '13043 Ridge'), 
+  sf::st_read('../data/GroundTruthPts/Cocheotopa_revisits.shp', quiet = TRUE) |>
+  # these were written out seperately and do not have all the same info # we need to add some on
+  mutate(
+    Trail = 'Cocheotopa Dome', 
+    UID = paste0('P-', ID), .before = geometry
+  ) |>
+    st_transform(32613)
+) |>
+  select(-ID)
 
+# these are all of the historic points which were ground truthed
+# during iteration 1 sampling. 
 iter1gt <- st_read('../data/GroundTruthing/Iteration1Pts.shp', quiet = TRUE) |>
   filter(str_detect(Site, 'p.*')) |>
   mutate(
@@ -58,7 +70,9 @@ iter1gt <- st_read('../data/GroundTruthing/Iteration1Pts.shp', quiet = TRUE) |>
   left_join(st_drop_geometry(all_hist_pres), by = c('Site' = 'UID'))
 
 # now subset the occurrence data to relevent dates
-occ_data <- filter(occ_data, eventDate %in% iter1gt$eventDate)
+occ_data <- filter(occ_data, eventDate %in% iter1gt$eventDate) 
+# these are the 36 records we ground truthed - but some may be repeats of an 
+# observation event. 
 
 table(sf::st_nearest_feature(occ_data, iter1gt)) 
 # not super informative, because I didn't cover the full range of the species. 
@@ -74,12 +88,12 @@ table(occ_data$eventDate)[ table(occ_data$eventDate) > 1]
 ```
 
 Points will need to be joined on both date and coordinates. 
-While most records from the same day seem to be duplicates of a single observation, 
-I am not 100% certain of this. 
 
 ```{r join points}
 # neither method would be enough to match on on their own accord. 
-toclean <- left_join(occ_data, st_drop_geometry(iter1gt), 
+toclean <- left_join(
+  occ_data, st_drop_geometry(iter1gt) |>
+    select(Site, OBJECT, eventDate), 
   by = 'eventDate')
 
 DIRTY <- toclean %>%  
@@ -87,4 +101,66 @@ DIRTY <- toclean %>%
   mutate(n = n()) |> 
   filter(n > 1)
 
+# these are the geometries we need to test with the dirty group. 
+ob <- vector(length = nrow(DIRTY))
+for (i in seq_len(nrow(DIRTY))){
+  ob[[i]] <- sf::st_distance(DIRTY[i,], filter(iter1gt, Site == DIRTY$Site[i]))
+}
+
+DIRTY$Dist <- ob
+DIRTY |>
+  group_by(Occurrence.grp) |>
+  arrange(Occurrence.grp, Dist) #|>
+  # you can review them before slicing, but these are safe bets. Note 'Dist' is 0 on some
+  # not because I recorded coordinates, I just recopied the nav to coords in the field. 
+
+cleaned <- bind_rows(
+  
+  toclean |>
+    group_by(ID) |> 
+    mutate(n = n()) |> 
+    filter(n == 1),
+
+  DIRTY |>
+    group_by(ID) |>
+    arrange(ID, Dist) |>
+    slice_min(Dist) 
+) |>
+  select(ID, Site, OBJECT) |>
+  st_drop_geometry()
+
+iter1gt <- left_join(iter1gt, cleaned, by = c('Site', 'OBJECT')) |>
+  drop_na(ID) # something weird here, can't quite figure, can keep this for 
+# other types of modelling but I have reservations about including it for this
+# analysis
+
+rm(i, ob, DIRTY, cleaned, toclean, occ_data)
 ```
+
+
+Now that data are cleaned, we want to determine how many of these historic observation records had a plant at them. 
+
+```{r}
+
+ggplot(data = iter1gt, aes(x = factor(Presenc), fill = factor(Presenc))) + 
+  geom_bar() # this is a real jaw dropper ! - like what !!!
+
+ggplot(data = iter1gt, aes(x = eventDate, color = factor(Presenc), shape = factor(Presenc), y = Presenc)) + 
+  geom_point() + 
+  theme_minimal() # good! but I am surprised by the existence of any '0's that are absence... 
+ # let's calculate their distance to a nearest observation... 
+
+pts_pres <- st_read('../data/GroundTruthing/Iteration1Pts.shp', quiet = TRUE) |>
+  filter(Presenc == 1)
+
+nearest_pos <- as.numeric(
+  sf::st_distance(iter1gt,
+                  pts_pres[st_nearest_feature(iter1gt, pts_pres),], 
+                  by_element = TRUE)
+)
+
+sf::st_write(iter1gt, '../data/GroundTruthing/matches.shp', append = F)
+iter1gt$Dist <- nearest_pos
+
+```
+
