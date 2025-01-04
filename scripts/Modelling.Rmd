@@ -11,3 +11,55 @@ library(terra)
 source('functions.R')
 set.seed(23)
 ```
+
+```{r}
+p <- '../data/Data4modelling'
+f <- file.path(p, list.files(p))
+```
+
+Model presence for iteration 0, that is historic records only. 
+
+```{r}
+f[grep('iter0',  f)]
+
+remotes::install_github("rvalavi/blockCV", dependencies = TRUE)
+```
+
+Model presence for iteration 1, both the historic and 2024 ground truthed data. 
+```{r}
+f[grep('iter1',  f)]
+
+m90 <- sf::st_read("../data/Data4modelling/30m-presence-iter1.gpkg") %>% 
+  rename(Occurrence = Presenc) |>
+  sf::st_as_sf() 
+
+m90 <- filter(m90, st_is(m90, "POINT"))
+modeller(m90, resolution = '1-3arc', iteration = 1, se_prediction = FALSE,
+         train_split = 0.9, p2proc = '../data/spatial/processed')
+```
+
+```{r}
+readRDS('../results/tables/1-3arc-Iteration1.rds')
+model <- readRDS('../results/models/1-3arc-Iteration1.rds')
+
+ggplot(
+    enframe(
+        model$variable.importance,
+        name = "variable",
+        value = "importance"
+    ),
+    aes(
+        x = reorder(variable, importance),
+        y = importance,
+        fill = importance
+    )
+) +
+    geom_bar(stat = "identity", position = "dodge") +
+    coord_flip() +
+    ylab("Variable Importance") +
+    xlab("") +
+    ggtitle("Information Value Summary") +
+    guides(fill = "none") +
+    scale_fill_gradient(low = "red", high = "blue")
+
+```

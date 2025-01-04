@@ -15,14 +15,6 @@ rastReader <- function(x, p2proc){
   
 }
 
-#' identify the SW corner of a 3m raster cell for ground truthing. 
-#' 
-#' @param template
-SWcorner <- function(x){
-  
-  
-}
-
 
 ensure_multipolygons <- function(X) { # @ stackoverflow
   tmp1 <- tempfile(fileext = ".gpkg")
@@ -39,7 +31,10 @@ ensure_multipolygons <- function(X) { # @ stackoverflow
 #' @param iteration numeric, which iteration of modelling is being performed? 
 #' @param se_prediction boolean, whether to predict the SE surfaces or not, can add roughly
 #' a week onto the prediction at 3m. 
-modeller <- function(x, resolution, iteration, se_prediction){
+#' @param p2proc path to the processed raster data. 
+#' @param train_split Numeric. The proportion of data to use for train, at first iteration
+#' a standard 0.8, good, but lot's of data are available for test later so up to 0.9 good. 
+modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_split){
   
   if(missing(se_prediction)){se_prediction <- FALSE}
   rast_dat <- rastReader(paste0('dem_', resolution), p2proc) 
@@ -53,9 +48,7 @@ modeller <- function(x, resolution, iteration, se_prediction){
     dplyr::mutate(
       Occurrence = as.factor(Occurrence), 
       Pennock = as.factor(Pennock), 
-      geomorphons = as.factor(geomorphons), 
-      Longitude = unlist(purrr::map(.$geometry,1)),
-      Latitude  = unlist(purrr::map(.$geometry,2))) |> 
+      geomorphons = as.factor(geomorphons)) |> 
     sf::st_drop_geometry()
 
   #######################         MODELLING           ##########################
@@ -73,7 +66,7 @@ modeller <- function(x, resolution, iteration, se_prediction){
   
   # split the input data into both an explicit train and test data set. 
   TrainIndex <- caret::createDataPartition(
-    df$Occurrence, p = .8, list = FALSE, times = 1)
+    df$Occurrence, p = train_split, list = FALSE, times = 1)
   Train <- df[ TrainIndex,]; Test <- df[-TrainIndex,]
 
   # perform the random forest modelling using default settings. 
@@ -82,7 +75,7 @@ modeller <- function(x, resolution, iteration, se_prediction){
     importance = 'permutation'
     )
   
-  # sasve the model
+  # save the model
   saveRDS(rf_model,
           file = paste0('../results/models/', resolution, '-Iteration', iteration, '.rds'))
   
@@ -107,11 +100,10 @@ modeller <- function(x, resolution, iteration, se_prediction){
       paste0('../results/tables/', resolution, '-Iteration', iteration, '.csv'),
       row.names = F)
   
-  rm(df, df_prauc, TrainIndex, Train, Test, predictions, cmRestrat, Longitude, Latitude)
+  rm(df, df_prauc, TrainIndex, Train, Test, predictions, cmRestrat)
   }
   
   pout <- '../results/suitability_maps'
-  rm(df)
   ###################      PREDICT ONTO SURFACE        #########################
   # this prediction is generally straightforward, it doesn't take an obscene
   # amount of RAM and can happen relatively quickly, just overnight for the 

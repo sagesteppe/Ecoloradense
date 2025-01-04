@@ -27,11 +27,11 @@ rt <- '../data/spatial/processed'
 st_write(subset_pts(x = gt2024, res = 3, root = rt, mode = 'Count'), 
   '../data/Data4modelling/3m-count-iter1.gpkg', append = F)
 st_write(subset_pts(x = gt2024, res = 10, root = rt, mode = 'Count'), 
-  '../data/Data4modelling/10m-count-iter1..gpkg', append = F)
+  '../data/Data4modelling/10m-count-iter1.gpkg', append = F)
 st_write(subset_pts(x = gt2024, res = 30, root = rt, mode = 'Count'), 
-  '../data/Data4modelling/30m-count-iter1..gpkg', append = F)
+  '../data/Data4modelling/30m-count-iter1.gpkg', append = F)
 st_write(subset_pts(x = gt2024, res = 90, root = rt, mode = 'Count'), 
-  '../data/Data4modelling/90m-count-iter1..gpkg', append = F)
+  '../data/Data4modelling/90m-count-iter1.gpkg', append = F)
 rm(gt2024, rt)
 ```
 
