@@ -444,3 +444,100 @@ HistObsGrps <- function(x){
                 Obs.grp = grps$Obs.Grp, .before = 'geometry'
   )
 }
+
+#' Reduce the number of points per training/test set so that no cells are duplicated. 
+#' 
+#' @description Each of the different resolutions of raster data will require
+#' different testing and training data to ensure that records (e.g. a raster grid 
+#' cell) are not replicated. This function first calculates the hypotenuse of a the resolution
+#' using the 'ideal' X& Y edges of the raster - which we know to be inaccurate by 
+#' ca. an entire meter at the '10m' resolution scale - to give us a rough estimate
+#' of how many points will be dropped.  Then it loads an actual layer of the 
+#' raster stack at the relevant resolution, extracts the pixel ID's and removes
+#' the duplicate cells. At this stage it will look at the absences, and remove
+#' any which are in the same cell as an occurrence. 
+#' 
+#' @param x sf data set of presences and absences. 
+#' @param res Numeric. Simplified resolution as meters, one of 3, 10, 30, 90. 
+#' @param root Path to root of spatial data. 
+#' @param mode Character. One of 'Presence', 'Count', defaults to 'Presence'. 
+#' If running in 'Presence' mode, then select one record per raster cell, always
+#' choosing a presence over an absence. If running in mode 'Count' sum all records 
+#' per raster cell, and relative the sample quadrat 3x3 m, to the size of the cell. 
+#' For example, if using a 90m cell, and their are three quadrats: 
+#' 
+subset_pts <- function(x, res, root, mode){
+  
+  if(missing(mode)){mode <- 'Presence'}
+  res_string <- switch(as.character(res),
+                       "3" = "3m",
+                       "10" = "1-3arc",
+                       "30" = "1arc",
+                       "90" = "3arc",
+                       stop("Input to `res` invalid. Need be one of: 3, 10, 30, 90")
+  )
+  
+  within_hypotenuse <- sum( 
+    as.numeric(
+      sf::st_distance(
+        x, 
+        x[sf::st_nearest_feature(x),],
+        by_element = TRUE)
+    ) < sqrt(2 * (res^2))
+  ) # these records are possibly in the same cell as another
+  # record for the finest resolution modelling.  
+  # doesn't fit very well. anyways on to the empirical method. 
+  # message('As many as: ', within_hypotenuse/2, ' records could be dropped')
+  
+  rasta <- terra::rast( # we only need to read in one raster - by definition these
+    # are all aligned to each other. 
+    file.path(root, paste0('dem_' ,res_string), 'dem.tif')
+  )
+  
+  x['RasterCell'] <- terra::extract(rasta, x, cells = TRUE)$cell
+  RC <- split(x, f = x$RasterCell) 
+  
+  if(mode=='Presence'){
+    # if there are multiple points per cell, 1st) discard the absences (if applicable)
+    # 2) randomly sample out one of the presences.  
+    
+    select_rec <- function(x){
+      # if only presenc==0 | presenc==1, sample randomly. 
+      # if both presenc==0 and presenc==1 co-exist, sample from presenc==1, 
+      if(nrow(x)>1){
+        if(all(x$Presenc==0) | all(x$Presenc==1) == TRUE){
+          # remove the historic record if present. 
+          if(length(unique(x$Type)==2)){
+            x <- x[x$Type=='Current',]
+          }
+          
+          x <- x[sample(1:nrow(x), 1),]
+        } else {
+          # remove the historic record if present. 
+          if(length(unique(x$Type)==2)){
+            x <- x[x$Type=='Current',]
+          }
+          
+          xsub <- x[x$Presenc==1,]
+          x <- xsub[sample(1:nrow(xsub), 1),]}
+      }
+      return(x)
+    }
+    RC <- lapply(RC, select_rec)
+    
+  } else { # if mode == 'Count'
+    # area cell, area quadrant * mean plants per life stage. 
+    
+    countR <- function(x){
+      x$Prsnc_J <- ((res^2) / (3^2)) * mean(x$Prsnc_J)
+      x$Prsnc_M <- ((res^2) / (3^2)) * mean(x$Prsnc_M)
+      x$Prsnc_S <- ((res^2) / (3^2)) * mean(x$Prsnc_S, na.rm = TRUE)
+      x <- x[sample(1:nrow(x), 1),] 
+    }
+    RC <- lapply(RC, countR)
+  }
+  dplyr::bind_rows(RC) |>
+    dplyr::arrange(OBJECT) |>
+    dplyr::select(-RasterCell) |>
+    sf::st_as_sf()
+}
