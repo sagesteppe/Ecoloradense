@@ -1,5 +1,5 @@
 ---
-title: "Modelling First Iteration of Eriogonum coloradense"
+title: "Modelling Eriogonum coloradense"
 author: "steppe"
 output: html_document
 ---
