@@ -33,43 +33,55 @@ m30 <- bind_rows(m30, abs)
 m30 <- filter(m30, st_is(m30, "POINT")) |>
   select(Occurrence)
 
-
 #' Generate data sets for SD modelling at different configurations of distOrders and PAratios
 #' 
 #' @description This function helps subset the input data (x) to combinations of distOrders- where
 #' points within x distance of the raster tile resolution are removed, and PAratios the ratio
 #' of presence to absence points - which is used to control the excess of absence points. 
 #' @param x an sf/dataframe/tibble. All potential records which could be used for modelling
-#' @param distOrder the set of distances ..... ?
+#' @param distOrder Numeric. The multiple of the resolution to remove near absences by. One of: 0, 1, 2, 4, 8 etc.
 #' @param PAratio Numeric. The denominator of the ratio, Presence is always 1, so 1.5 would indicate
 #' 100 presence records and 150 absence records. 
-distOrder_PAratio_simulator <- function(x, distOrder, PAratio){
+#' @param resolution Numeric. The approximate resolution of the input data set, one of: 3, 10, 30, 90.
+distOrder_PAratio_simulator <- function(x, distOrder, PAratio, resolution, ...){
   
+  res_string <- switch(
+    as.character(resolution),
+    "3" = "3m",
+    "10" = "1-3arc",
+    "30" = "1arc",
+    "90" = "3arc",
+    stop("Input to `resolution` invalid. Need be one of: 3, 10, 30, 90")
+  )
+    
+  # subset to absence points at distance intervals from presence points. 
+  # This accomplishes the distOrder parameter. 
+  abs <- x[x$Occurrence==0,]
+  prs <- x[x$Occurrence==1,]
+  abs <- abs[as.numeric(sf::st_distance(
+    abs,
+    prs[sf::st_nearest_feature(abs, prs),], by_element = TRUE
+  )) > (distOrder*resolution),]
+  
+  # now recombine the data, we will sample down to get the PA ratio we need. 
+  x <- dplyr::bind_rows(prs, abs)
+
+  # results indicate that 3:1 is pretty good, but very conservative in terms of suitable habitat
+  abs <- abs[sample(1:nrow(abs), size =  nrow(prs) * PAratio, replace = F),]
+  x <- dplyr::bind_rows(prs, abs)
+  
+  modeller(x, PAratio = paste0("1:", PAratio),
+           resolution = res_string, distOrder = 'DO:2', ...)
   
 }
 
+distOrder_PAratio_simulator(
+  x = m30, distOrder = 2, PAratio = 2,
+  resolution = 90, iteration = 1, se_prediction = FALSE,
+  train_split = 0.9, p2proc = '../data/spatial/processed'
+  )
 
-# subset to absence points at distance intervals from presence points. 
-# This accomplishes the distOrder parameter. 
-abs <- m30[m30$Occurrence==0,]
-prs <- m30[m30$Occurrence==1,]
-abs <- abs[as.numeric(sf::st_distance(
-  abs,
-  prs[st_nearest_feature(abs, prs),], by_element = TRUE
-)) > 180,]
 
-# now recombine the data, we will sample down to get the PA ratio we need. 
-m30 <- bind_rows(prs, abs)
-
-# results indicate that 3:1 is pretty good, but very conservative in terms of suitable habitat
-abs <- abs[sample(1:nrow(abs), 
-                  size =  nrow(prs) * 2.2, replace = F),]
-m30 <- bind_rows(prs, abs)
-table(m30$Occurrence)
-
-modeller(m30, resolution = '3arc', iteration = 1, se_prediction = FALSE,
-         train_split = 0.9, p2proc = '../data/spatial/processed', PAratio = "1:2.2", 
-         distOrder = 'DO:2')
 ```
 
 
