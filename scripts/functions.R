@@ -33,8 +33,13 @@ ensure_multipolygons <- function(X) { # @ stackoverflow
 #' a week onto the prediction at 3m. 
 #' @param p2proc path to the processed raster data. 
 #' @param train_split Numeric. The proportion of data to use for train, at first iteration
-#' a standard 0.8, good, but lot's of data are available for test later so up to 0.9 good. 
-modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_split){
+#' a standard 0.8, good, but lot's of data are available for test later so up to 0.9 good.
+#' @param PAratio Numeric. The ratio of presence to absences - simply for appending to file name, 
+#' the exact quantity are saved in model objects. "1:2" 
+#' @param distOrder Character. The distance between the nearest absence to presence, as a multiple of the cell resolution
+#' e.g. distOrder 1 at a 90m resolution indicates the nearest absence is >90m away from a presence, at 10m it indicates > 10m away.
+#' 
+modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_split, PAratio, distOrder){
   
   if(missing(se_prediction)){se_prediction <- FALSE}
   rast_dat <- rastReader(paste0('dem_', resolution), p2proc) 
@@ -51,6 +56,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   #    geomorphons = as.factor(geomorphons)) |> 
     sf::st_drop_geometry()
 
+  fname <- paste0(resolution, '-Iteration', iteration, '-PA', PAratio, distOrder)
   #######################         MODELLING           ##########################
   # this is the fastest portion of this process. It will take at most a few minutes
   # at any resolution, the goal of this paper wasn't really focused on comparing
@@ -59,10 +65,11 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   # for stochasticity in this portion of the work. 
   
   # only rerun modelling if a saved .rds object doesn't exist. 
-  if(file.exists(paste0('../results/models/', resolution, '-Iteration', iteration, '.rds'))){
-    rf_model <- readRDS(paste0('../results/models/', resolution, '-Iteration', iteration, '.rds'))
+  if(file.exists(paste0('../results/models/', fname, '.rds'))){
+    rf_model <- readRDS(paste0('../results/models/', fname, '.rds'))
     message(
-      'An exising model for this resolution and iteration already exists; reloading it now for projection')
+      'An exising model for this resolution and iteration already exists; 
+      reloading it now for projection')
   } else {
   
   # split the input data into both an explicit train and test data set. 
@@ -116,7 +123,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   
   # save the model
   saveRDS(rf_model,
-          file = paste0('../results/models/', resolution, '-Iteration', iteration, '.rds'))
+          file = paste0('../results/models/', fname, '.rds'))
   
   # save the confusion matrix
   predictions <- predict(rf_model, Test, type = 'se', se.method = 'infjack', probability=TRUE)
@@ -125,7 +132,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   cmRestrat <- caret::confusionMatrix(predictions$binary, Test$Occurrence, 
                                       positive = '1', mode = 'everything')
   saveRDS(cmRestrat,
-          file = paste0('../results/tables/', resolution, '-Iteration', iteration, '.rds'))
+          file = paste0('../results/tables/', fname, '.rds'))
   
   # we will also save the Pr-AUC as some folks find it a useful metric for class unbalanced
   # data sets. 
@@ -136,7 +143,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   yardstick::pr_auc(df_prauc, truth, Class1) |>
     mutate(resolution = resolution, iteration = iteration) |>
     write.csv(
-      paste0('../results/tables/', resolution, '-Iteration', iteration, '.csv'),
+      paste0('../results/tables/', fname, '.csv'),
       row.names = F)
   
   rm(df, df_prauc, TrainIndex, Train, Test, predictions, cmRestrat)
@@ -189,7 +196,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
       writeRaster(
         mos[[2]], 
         wopt = c(names = 'Probability'),
-       filename = file.path(pout, paste0(resolution, '-Iteration', iteration, '-Pr.tif')))
+       filename = file.path(pout, paste0(fname, '-Pr.tif')))
     
     rm(mos)
     unlink(file.path(pout, 'pr_tiles')) # can remove the tiles we used for the probability surface.
@@ -197,7 +204,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
     } else { # in these cases, we only need to use a single tile for prediction, we can
      # just use the existing virtual raster to do this. 
     
-      if(!file.exists(file.path(pout, paste0(resolution, '-Iteration', iteration, '-Pr.tif')))){
+      if(!file.exists(file.path(pout, paste0(fname, '-Pr.tif')))){
       message('Writing Predicted Probability to Raster')
         terra::predict( # rasters, skip straight to modelling. 
           cores = 1, f = pr, 
@@ -208,12 +215,19 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
     
         writeRaster( # we wrote a raster with both predicted class probabilities onto it. 
         # we don't want both, we are going to 'rewrite' the raster so only one class remains. 
-          rast(file.path(pout, paste0(resolution, '-IterationCoarse', iteration, '.tif')))[[2]],
-          file.path(pout, paste0(resolution, '-Iteration', iteration, '-Pr.tif')), 
+          rast(
+            file.path(
+              pout, paste0(resolution, '-IterationCoarse', iteration, '.tif')))[[2]],
+          file.path(pout, paste0(fname, '-Pr.tif')), 
           overwrite = T
       )
-      file.remove(file.path(pout, paste0(resolution, '-IterationCoarse', iteration, '.tif')))
-      } else {'Predicted Probability Raster already exists - skipping.'}
+      file.remove(
+        file.path(
+          pout, paste0(resolution, '-IterationCoarse', iteration, '.tif')
+          )
+        )
+      } else {
+        'Predicted Probability Raster already exists - skipping.'}
     }
   
   unlink(file.path(pout, 'pr_tiles'))
@@ -229,7 +243,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   terra::predict( # rasters, skip straight to modelling. 
     cores = 1, f = AOAfun, 
     rast_dat, rf_model, cpkgs = "CAST",
-    filename = file.path(pout, paste0(resolution, '-IterationAOA', iteration, '.tif')),
+    filename = file.path(pout, paste0(fname, '-AOA', '.tif')),
     wopt = c(names = 'AOA'), na.rm=TRUE,
     overwrite = T)
   
@@ -275,7 +289,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
     # # predict the standard error onto the tiles.
     # create and initialize progress bar
     message('Predicting SE to tiles; this may take a really long time')
-    pb <- txtProgressBar(
+    pb <- txtProgressBar( 
       min = 0,  max = length(tiles), style = 3, width = 50, char = "+")
   
     for (i in seq_along(tiles)){
@@ -295,7 +309,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
     writeRaster(
       mos[[2]], 
       wopt = c(names = 'standardError'),
-      filename = file.path(pout, paste0(resolution, '-Iteration', iteration, '-SE.tif')),
+      filename = file.path(fname, '-SE.tif'),
       overwrite = T)
     gc(verbose = FALSE)
     }
