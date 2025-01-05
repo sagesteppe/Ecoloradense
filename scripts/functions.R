@@ -40,7 +40,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   rast_dat <- rastReader(paste0('dem_', resolution), p2proc) 
   cores <- parallel::detectCores()
   
-  df <- dplyr::bind_cols(
+  df.sf <- dplyr::bind_cols(
     dplyr::select(x, Occurrence), 
     dplyr::select(terra::extract(rast_dat, x), -ID), 
   ) |> 
@@ -61,19 +61,64 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   # only rerun modelling if a saved .rds object doesn't exist. 
   if(file.exists(paste0('../results/models/', resolution, '-Iteration', iteration, '.rds'))){
     rf_model <- readRDS(paste0('../results/models/', resolution, '-Iteration', iteration, '.rds'))
-    message('An exising model for this resolution and iteration already exists; reloading it now for projection')
+    message(
+      'An exising model for this resolution and iteration already exists; reloading it now for projection')
   } else {
   
   # split the input data into both an explicit train and test data set. 
   TrainIndex <- caret::createDataPartition(
     df$Occurrence, p = train_split, list = FALSE, times = 1)
-  Train <- df[ TrainIndex,]; Test <- df[-TrainIndex,]
+  Train <- df[TrainIndex,]; Test <- df[-TrainIndex,]
+
+  Train.sf <- sf::st_as_sf(Train, coords = c('Longitude', 'Latitude'), crs = 32613)
 
   # perform the random forest modelling using default settings. 
-  rf_model <- ranger::ranger(
-    Occurrence ~ ., data = Train, probability = T, keep.inbag = TRUE, 
-    importance = 'permutation'
-    )
+  indices_knndm <- CAST::knndm(Train.sf, rast_dat, k=10)
+  
+  tgrid <- expand.grid(
+    mtry = 
+      floor(ncol(Train)/ 2.5):floor(ncol(Train)/ 1.5),
+    splitrule = c("gini", "impurity"),
+    min.node.size = c(1:9, seq(10, 30, by = 5))
+  )
+
+  model <- ranger::train(
+    x = Train[predictors[-grep('Occurence', colnames(Train))]],
+    y = Train$Occurence,
+    method = "ranger",
+    num.trees = 750,
+    tuneGrid = tgrid,
+    metric = 'Accuracy', 
+    trControl = trainControl(
+      method="cv",
+      index = indices_knndm$indx_train,
+      savePredictions = "final")
+  )
+  
+  # it is quite probable our model is overfit. We can drop variables which 
+  # interfere with the signal using forward feature selection
+  rf_model <- CAST::ffs(
+    x = Train[predictors[-grep('Occurence', colnames(Train))]],
+    y = Train$Occurence,
+    method = "ranger", 
+    tuneGrid = data.frame(
+      mtry = model[['finalModel']][['mtry']],
+      min.node.size = model[['finalModel']][['min.node.size']],
+      splitrule = model[['finalModel']][['splitrule']]
+    ),
+    importance = "permutation",
+    verbose = FALSE,
+    num.trees = 750, 
+    trControl = trainControl(
+      method = "cv",
+      index = indices_knndm$indx_train,
+      savePredictions = "final")
+  )
+  
+#  rf_model <- ranger::ranger(
+#    Occurrence ~ ., data = Train, probability = T, keep.inbag = TRUE, 
+#    importance = 'permutation'
+#    )
   
   # save the model
   saveRDS(rf_model,
@@ -179,6 +224,19 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   
   unlink(file.path(pout, 'pr_tiles'))
   gc(verbose = FALSE)
+  
+  ################ AREA OF APPLICABILITY SURFACE       #########################
+  
+  AOAfun <- function(model, r) {
+    CAST::aoa(r, model, LPD = FALSE, verbose=FALSE)$AOA
+  }
+  
+  terra::predict( # rasters, skip straight to modelling. 
+    cores = 1, f = AOAfun, 
+    rast_dat, rf_model, cpkgs = "CAST",
+    filename = file.path(pout, paste0(resolution, '-IterationAOA', iteration, '.tif')),
+    wopt = c(names = 'AOA'), na.rm=TRUE,
+    overwrite = T)
   
   ###############      STANDARD ERROR PREDICTION        ########################
   # the SE predictions are absurdly memory hungry, We will create 'tiles' to 
