@@ -22,7 +22,6 @@ Model presence for iteration 0, that is historic records only.
 
 Model presence for iteration 1, both the historic and 2024 ground truthed data. 
 ```{r}
-f[grep('iter1',  f)]
 
 abs <- st_read('../data/Data4modelling/iter1-pa.gpkg')
 m30 <- sf::st_read("../data/Data4modelling/90m-presence-iter1.gpkg") %>% 
@@ -30,15 +29,33 @@ m30 <- sf::st_read("../data/Data4modelling/90m-presence-iter1.gpkg") %>%
   sf::st_as_sf() 
 ### we know that 1:1 absence to presence is far too low when including the 'local'
 # absences. 
-m30 <- bind_rows(prs, abs)
+m30 <- bind_rows(m30, abs)
+m30 <- filter(m30, st_is(m30, "POINT")) |>
+  select(Occurrence)
+
+
+#' Generate data sets for SD modelling at different configurations of distOrders and PAratios
+#' 
+#' @description This function helps subset the input data (x) to combinations of distOrders- where
+#' points within x distance of the raster tile resolution are removed, and PAratios the ratio
+#' of presence to absence points - which is used to control the excess of absence points. 
+#' @param x an sf/dataframe/tibble. All potential records which could be used for modelling
+#' @param distOrder the set of distances ..... ?
+#' @param PAratio Numeric. The denominator of the ratio, Presence is always 1, so 1.5 would indicate
+#' 100 presence records and 150 absence records. 
+distOrder_PAratio_simulator <- function(x, distOrder, PAratio){
+  
+  
+}
+
 
 # subset to absence points at distance intervals from presence points. 
 # This accomplishes the distOrder parameter. 
 abs <- m30[m30$Occurrence==0,]
 prs <- m30[m30$Occurrence==1,]
 abs <- abs[as.numeric(sf::st_distance(
-  prs,
-  abs[st_nearest_feature(prs, abs),], by_element = TRUE
+  abs,
+  prs[st_nearest_feature(abs, prs),], by_element = TRUE
 )) > 180,]
 
 # now recombine the data, we will sample down to get the PA ratio we need. 
@@ -46,15 +63,12 @@ m30 <- bind_rows(prs, abs)
 
 # results indicate that 3:1 is pretty good, but very conservative in terms of suitable habitat
 abs <- abs[sample(1:nrow(abs), 
-                  size =  nrow(m30[(m30$Occurrence==1),]) * 2, replace = F),]
+                  size =  nrow(prs) * 2.2, replace = F),]
 m30 <- bind_rows(prs, abs)
 table(m30$Occurrence)
-533/234
 
-m30 <- filter(m30, st_is(m30, "POINT")) |>
-  select(Occurrence)
 modeller(m30, resolution = '3arc', iteration = 1, se_prediction = FALSE,
-         train_split = 0.9, p2proc = '../data/spatial/processed', PAratio = "1:2.3", 
+         train_split = 0.9, p2proc = '../data/spatial/processed', PAratio = "1:2.2", 
          distOrder = 'DO:2')
 ```
 
