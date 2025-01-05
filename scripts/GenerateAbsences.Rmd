@@ -4,8 +4,8 @@ author: "steppe"
 output: html_document
 ---
 
-## Iteration 1
-The goal of the model from iteration 1 is to generate many more presences which 
+## Iteration 0
+The goal of the model from iteration 0 is to generate many more presences which 
 can be used for generating larger training/test data set. 
 
 Accordingly at this stage we focus more on elucidating the currently known 
@@ -48,7 +48,7 @@ rm(thinned)
 ```
 
 We will generate pseudo-absences which are from environments notable distinct from our presence records. 
-```{r iteration 1 absence generation, eval = F}
+```{r iteration 0 absence generation, eval = F}
 
 p2proc <- '../data/spatial/processed'
 arc3 <- rastReader('dem_3arc', p2proc) 
@@ -81,5 +81,44 @@ if(nrow(PA_possible) > nrow(occ)){
 st_write(PA_possible, append = F,
          '../data/spatial/processed/pseudo-absences/iteration1/absences.shp')
 nrow(PA_possible)
+```
+
+
+# Iteration 1 absences
+
+Preliminary modelling of the ground truth data show one major limitation of having absences so close to presences. 
+Essentially now most of the map is predicted suitable! 
+Contrary to expectations, the number of background points needs to SWELL relative to the presence and absence points in similar habitat to override the conflicting signal at these close resolutions. 
+
+We will generate 2x as many pseudoabsences as our test data!!! Making a ratio of roughly 3 absence to 1 presence. 
+
+```{r}
+p2proc <- '../data/spatial/processed'
+m30 <- sf::st_read("../data/Data4modelling/30m-presence-iter1.gpkg") %>% 
+  rename(Occurrence = Presenc) |>
+  filter(Occurrence == 1) 
+arc1 <- rastReader('dem_1arc', p2proc) 
+
+# need to apply vifcor to get results, co-linear features will wreck the computations
+v1 <- usdm::vifcor(arc1)
+arc1 <- usdm::exclude(arc1, v1)
+
+PA_possible <- sdm::background(arc1, 
+                n = nrow(m30)*2.25,
+                method = 'gDist', sp = vect(m30)) %>% 
+  select(x, y) %>% 
+  st_as_sf(coords = c(x = 'x', y = 'y'), crs = 32613) %>% 
+  mutate(Occurrence = 0, ID = 1:nrow(.))
+
+st_write(PA_possible, '../data/Data4modelling/iter1-pa.gpkg')
+# st_distance( # WELL SPACED!
+#   PA_possible[st_nearest_feature(PA_possible),], 
+#   PA_possible,
+#   by_element = TRUE
+# )
+
+ggplot() + 
+  geom_sf(data= PA_possible) + 
+  geom_sf(data = m30, color = 'red')
 ```
 
