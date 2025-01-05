@@ -40,15 +40,15 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   rast_dat <- rastReader(paste0('dem_', resolution), p2proc) 
   cores <- parallel::detectCores()
   
-  df.sf <- dplyr::bind_cols(
+  df <- dplyr::bind_cols(
     dplyr::select(x, Occurrence), 
     dplyr::select(terra::extract(rast_dat, x), -ID), 
   ) |> 
     tidyr::drop_na() %>% 
     dplyr::mutate(
-      Occurrence = as.factor(Occurrence), 
-      Pennock = as.factor(Pennock), 
-      geomorphons = as.factor(geomorphons)) |> 
+      Occurrence = as.factor(Occurrence)) |>#, 
+ #     Pennock = as.factor(Pennock), 
+  #    geomorphons = as.factor(geomorphons)) |> 
     sf::st_drop_geometry()
 
   #######################         MODELLING           ##########################
@@ -77,48 +77,42 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   
   tgrid <- expand.grid(
     mtry = 
-      floor(ncol(Train)/ 2.5):floor(ncol(Train)/ 1.5),
-    splitrule = c("gini", "impurity"),
+      floor(ncol(Train)/ 2.4):floor(ncol(Train)/ 1.6),
+    splitrule = 'gini',
     min.node.size = c(1:9, seq(10, 30, by = 5))
   )
 
-  model <- ranger::train(
-    x = Train[predictors[-grep('Occurence', colnames(Train))]],
-    y = Train$Occurence,
+  # calculate class weights for the factor levels. 
+  wts = c(
+    1 - sum(Train$Occurrence==0)/nrow(Train),
+    1 - sum(Train$Occurrence==1)/nrow(Train)
+  )
+  
+  message('Tuning hyperparameters.')
+  model <- caret::train(
+    x = Train[,-grep('Occurrence', colnames(Train))],
+    y = Train$Occurrence,
     method = "ranger",
     num.trees = 750,
     tuneGrid = tgrid,
     metric = 'Accuracy', 
-    trControl = trainControl(
+    keep.inbag = TRUE, 
+    class.weights = wts,
+    importance = 'permutation',
+    trControl = caret::trainControl(
       method="cv",
       index = indices_knndm$indx_train,
-      savePredictions = "final")
+      savePredictions = "final", 
+      allowParallel = TRUE)
   )
   
-  # it is quite probable our model is overfit. We can drop variables which 
-  # interfere with the signal using forward feature selection
-  rf_model <- CAST::ffs(
-    x = Train[predictors[-grep('Occurence', colnames(Train))]],
-    y = Train$Occurence,
-    method = "ranger", 
-    tuneGrid = data.frame(
-      mtry = model[['finalModel']][['mtry']],
-      min.node.size = model[['finalModel']][['min.node.size']],
-      splitrule = model[['finalModel']][['splitrule']]
-    ),
-    importance = "permutation",
-    verbose = FALSE,
-    num.trees = 750, 
-    trControl = trainControl(
-      method = "cv",
-      index = indices_knndm$indx_train,
-      savePredictions = "final")
-  )
-  
-#  rf_model <- ranger::ranger(
-#    Occurrence ~ ., data = Train, probability = T, keep.inbag = TRUE, 
-#    importance = 'permutation'
-#    )
+  rf_model <- ranger::ranger(
+    Occurrence ~ ., data = Train, probability = T, keep.inbag = TRUE, 
+    mtry = model[['finalModel']][['mtry']], 
+    min.node.size = model[['finalModel']][['min.node.size']],
+    importance = 'permutation',
+    class.weights = wts
+    )
   
   # save the model
   saveRDS(rf_model,
@@ -129,7 +123,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   predictions$binary <- as.factor(if_else(predictions$predictions[,2] <= 0.49, 0, 1))
   
   cmRestrat <- caret::confusionMatrix(predictions$binary, Test$Occurrence, 
-                                      prevalence = 1, mode = 'everything')
+                                      positive = '1', mode = 'everything')
   saveRDS(cmRestrat,
           file = paste0('../results/tables/', resolution, '-Iteration', iteration, '.rds'))
   
@@ -225,9 +219,10 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   unlink(file.path(pout, 'pr_tiles'))
   gc(verbose = FALSE)
   
-  ################ AREA OF APPLICABILITY SURFACE       #########################
+  ################ AREA OF APPLICABILITY SURFACE    ############################
   
-  AOAfun <- function(model, r) {
+  message('Writing Area of Applicability to Raster')
+  AOAfun <- function(rf_model, r) {
     CAST::aoa(r, model, LPD = FALSE, verbose=FALSE)$AOA
   }
   

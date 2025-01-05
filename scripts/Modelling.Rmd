@@ -8,6 +8,7 @@ output: html_document
 library(sf)
 library(tidyverse)
 library(terra)
+library(caret)
 source('functions.R')
 set.seed(23)
 ```
@@ -21,26 +22,29 @@ Model presence for iteration 0, that is historic records only.
 
 ```{r}
 f[grep('iter0',  f)]
-
-remotes::install_github("rvalavi/blockCV", dependencies = TRUE)
 ```
 
 Model presence for iteration 1, both the historic and 2024 ground truthed data. 
 ```{r}
 f[grep('iter1',  f)]
 
-m90 <- sf::st_read("../data/Data4modelling/30m-presence-iter1.gpkg") %>% 
+abs <- st_read('../data/Data4modelling/iter1-pa.gpkg')
+m30 <- sf::st_read("../data/Data4modelling/30m-presence-iter1.gpkg") %>% 
   rename(Occurrence = Presenc) |>
   sf::st_as_sf() 
 
-m90 <- filter(m90, st_is(m90, "POINT"))
-modeller(m90, resolution = '1-3arc', iteration = 1, se_prediction = FALSE,
+m30 <- bind_rows(m30, abs)
+
+m30 <- filter(m30, st_is(m30, "POINT")) |>
+  select(Occurrence)
+modeller(m30, resolution = '1arc', iteration = 1, se_prediction = FALSE,
          train_split = 0.9, p2proc = '../data/spatial/processed')
 ```
 
+
 ```{r}
-readRDS('../results/tables/1-3arc-Iteration1.rds')
-model <- readRDS('../results/models/1-3arc-Iteration1.rds')
+readRDS('../results/tables/3arc-Iteration1.rds')
+model <- readRDS('../results/models/3arc-Iteration1.rds')
 
 ggplot(
     enframe(
@@ -59,7 +63,6 @@ ggplot(
     ylab("Variable Importance") +
     xlab("") +
     ggtitle("Information Value Summary") +
-    guides(fill = "none") +
     scale_fill_gradient(low = "red", high = "blue")
 
 ```
