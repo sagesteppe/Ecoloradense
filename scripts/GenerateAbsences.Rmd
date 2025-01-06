@@ -58,7 +58,7 @@ arc3 <- rastReader('dem_3arc', p2proc)
 # is more conservative in predicting suitable habitat. 
 
 PA_possible <- sdm::background(arc3, 
-                n = nrow(occ) + (nrow(occ)*0.1),
+                n = nrow(occ) + (nrow(occ)*0.9),
                 method = 'eDist', sp = occ) %>% 
   select(x, y) %>% 
   st_as_sf(coords = c(x = 'x', y = 'y'), crs = 32613) %>% 
@@ -104,7 +104,7 @@ v1 <- usdm::vifcor(arc1)
 arc1 <- usdm::exclude(arc1, v1)
 
 PA_possible <- sdm::background(arc1, 
-                n = nrow(m30)*2.25,
+                n = nrow(m30)*3.25,
                 method = 'gDist', sp = vect(m30)) %>% 
   select(x, y) %>% 
   st_as_sf(coords = c(x = 'x', y = 'y'), crs = 32613) %>% 
