@@ -4,547 +4,519 @@
 <Folder><name>Absences</name>
   <Placemark>
 	<name>5</name>
-      <Point><coordinates>-107.047378095819,39.003671097723</coordinates></Point>
+      <Point><coordinates>-107.04738,39.00367</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>15</name>
-      <Point><coordinates>-107.047858102447,39.0057110994284</coordinates></Point>
+      <Point><coordinates>-107.04786,39.00571</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>16</name>
-      <Point><coordinates>-107.047978104639,39.0064211001009</coordinates></Point>
+      <Point><coordinates>-107.04798,39.00642</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>19</name>
-      <Point><coordinates>-107.048068105954,39.0068311004549</coordinates></Point>
+      <Point><coordinates>-107.04807,39.00683</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>23</name>
-      <Point><coordinates>-107.030788088681,39.0155011396278</coordinates></Point>
+      <Point><coordinates>-107.03079,39.0155</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>31</name>
-      <Point><coordinates>-107.028888082777,39.0149811421394</coordinates></Point>
+      <Point><coordinates>-107.02889,39.01498</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>32</name>
-      <Point><coordinates>-107.029358084966,39.0153711418318</coordinates></Point>
+      <Point><coordinates>-107.02936,39.01537</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>34</name>
-      <Point><coordinates>-107.029278085531,39.0156411422881</coordinates></Point>
+      <Point><coordinates>-107.02928,39.01564</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>35</name>
-      <Point><coordinates>-107.029078085396,39.0157611427622</coordinates></Point>
+      <Point><coordinates>-107.02908,39.01576</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>36</name>
-      <Point><coordinates>-107.028298083959,39.0159011442172</coordinates></Point>
+      <Point><coordinates>-107.0283,39.0159</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>40</name>
-      <Point><coordinates>-107.025988080538,39.0166111488777</coordinates></Point>
+      <Point><coordinates>-107.02599,39.01661</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>41</name>
-      <Point><coordinates>-107.025218079523,39.0168911504819</coordinates></Point>
+      <Point><coordinates>-107.02522,39.01689</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>49</name>
-      <Point><coordinates>-107.022438056094,39.0108911479191</coordinates></Point>
+      <Point><coordinates>-107.02244,39.01089</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>54</name>
-      <Point><coordinates>-107.017248058075,39.0159011624483</coordinates></Point>
+      <Point><coordinates>-107.01725,39.0159</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>59</name>
-      <Point><coordinates>-107.030878084673,39.0139811376501</coordinates></Point>
+      <Point><coordinates>-107.03088,39.01398</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>75</name>
-      <Point><coordinates>-107.036608058096,38.999521110028</coordinates></Point>
+      <Point><coordinates>-107.03661,38.99952</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>76</name>
-      <Point><coordinates>-107.036768056538,38.9989711083731</coordinates></Point>
+      <Point><coordinates>-107.03677,38.99897</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>79</name>
-      <Point><coordinates>-107.037968060309,38.9992111069746</coordinates></Point>
+      <Point><coordinates>-107.03797,38.99921</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>86</name>
-      <Point><coordinates>-107.040638065365,38.9988011014882</coordinates></Point>
+      <Point><coordinates>-107.04064,38.9988</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>87</name>
-      <Point><coordinates>-107.042028067137,38.9983410980192</coordinates></Point>
+      <Point><coordinates>-107.04203,38.99834</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>88</name>
-      <Point><coordinates>-107.043178069486,38.9982110957786</coordinates></Point>
+      <Point><coordinates>-107.04318,38.99821</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>93</name>
-      <Point><coordinates>-107.038208042454,38.9939910934375</coordinates></Point>
+      <Point><coordinates>-107.03821,38.99399</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>94</name>
-      <Point><coordinates>-107.036828037994,38.9936910949547</coordinates></Point>
+      <Point><coordinates>-107.03683,38.99369</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>95</name>
-      <Point><coordinates>-107.035678035125,38.9936810968229</coordinates></Point>
+      <Point><coordinates>-107.03568,38.99368</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>96</name>
-      <Point><coordinates>-107.035678035125,38.9936810968229</coordinates></Point>
+      <Point><coordinates>-107.03568,38.99368</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>97</name>
-      <Point><coordinates>-107.036818040766,38.9944810969639</coordinates></Point>
+      <Point><coordinates>-107.03682,38.99448</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>98</name>
-      <Point><coordinates>-107.036798042274,38.9949210981068</coordinates></Point>
+      <Point><coordinates>-107.0368,38.99492</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>99</name>
-      <Point><coordinates>-107.031718034464,38.9962311098305</coordinates></Point>
+      <Point><coordinates>-107.03172,38.99623</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>100</name>
-      <Point><coordinates>-107.034298041283,38.9963711059093</coordinates></Point>
+      <Point><coordinates>-107.0343,38.99637</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>101</name>
-      <Point><coordinates>-107.0329380408,38.9971711101952</coordinates></Point>
+      <Point><coordinates>-107.03294,38.99717</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>102</name>
-      <Point><coordinates>-107.032468037406,38.9965411093752</coordinates></Point>
+      <Point><coordinates>-107.03247,38.99654</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>103</name>
-      <Point><coordinates>-107.03171803746,38.9970711119676</coordinates></Point>
+      <Point><coordinates>-107.03172,38.99707</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>117</name>
-      <Point><coordinates>-107.09961126057,39.0198910317659</coordinates></Point>
+      <Point><coordinates>-107.099613,39.01989</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>118</name>
-      <Point><coordinates>-107.09275725326,39.0234210476039</coordinates></Point>
+      <Point><coordinates>-107.092759,39.02342</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>119</name>
-      <Point><coordinates>-107.090575255797,39.0265100551689</coordinates></Point>
+      <Point><coordinates>-107.090577,39.026509</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>129</name>
-      <Point><coordinates>-107.090728259622,39.0279310567543</coordinates></Point>
+      <Point><coordinates>-107.09073,39.02793</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>133</name>
-      <Point><coordinates>-107.090728262019,39.0289110580202</coordinates></Point>
+      <Point><coordinates>-107.09073,39.02891</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>136</name>
-      <Point><coordinates>-107.089938262333,39.0297710604182</coordinates></Point>
+      <Point><coordinates>-107.08994,39.02977</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>138</name>
-      <Point><coordinates>-107.089408263683,39.0308110626231</coordinates></Point>
+      <Point><coordinates>-107.08941,39.03081</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>139</name>
-      <Point><coordinates>-107.089268264618,39.0313210635086</coordinates></Point>
+      <Point><coordinates>-107.08927,39.03132</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>140</name>
-      <Point><coordinates>-107.089288266185,39.0319410642756</coordinates></Point>
+      <Point><coordinates>-107.08929,39.03194</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>141</name>
-      <Point><coordinates>-107.089798264074,39.0306110617302</coordinates></Point>
+      <Point><coordinates>-107.0898,39.03061</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>142</name>
-      <Point><coordinates>-107.090038263539,39.0301710607715</coordinates></Point>
+      <Point><coordinates>-107.09004,39.03017</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>143</name>
-      <Point><coordinates>-107.090928256361,39.0264110544641</coordinates></Point>
+      <Point><coordinates>-107.09093,39.02641</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>160</name>
-      <Point><coordinates>-107.036298181581,39.0446311658201</coordinates></Point>
+      <Point><coordinates>-107.0363,39.04463</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>161</name>
-      <Point><coordinates>-107.090678252121,39.0249110529354</coordinates></Point>
+      <Point><coordinates>-107.09068,39.02491</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>162</name>
-      <Point><coordinates>-107.034021158729,39.0381491616502</coordinates></Point>
+      <Point><coordinates>-107.034023,39.038148</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>164</name>
-      <Point><coordinates>-107.034188157037,39.0374011604764</coordinates></Point>
+      <Point><coordinates>-107.03419,39.0374</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>166</name>
-      <Point><coordinates>-107.034718157225,39.0370411591835</coordinates></Point>
+      <Point><coordinates>-107.03472,39.03704</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>167</name>
-      <Point><coordinates>-107.035498157613,39.036551157328</coordinates></Point>
+      <Point><coordinates>-107.0355,39.03655</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>180</name>
-      <Point><coordinates>-107.041738192432,39.044251156612</coordinates></Point>
+      <Point><coordinates>-107.04174,39.04425</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>184</name>
-      <Point><coordinates>-107.045358208299,39.0472011544038</coordinates></Point>
+      <Point><coordinates>-107.04536,39.0472</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>185</name>
-      <Point><coordinates>-107.046328211964,39.0477811535594</coordinates></Point>
+      <Point><coordinates>-107.04633,39.04778</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>190</name>
-      <Point><coordinates>-107.048608222314,39.0498011523885</coordinates></Point>
+      <Point><coordinates>-107.04861,39.0498</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>196</name>
-      <Point><coordinates>-107.052168240834,39.0538811517309</coordinates></Point>
+      <Point><coordinates>-107.05217,39.05388</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>203</name>
-      <Point><coordinates>-107.055248257838,39.0578311517171</coordinates></Point>
+      <Point><coordinates>-107.05525,39.05783</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>209</name>
-      <Point><coordinates>-107.000368094766,39.0417992202964</coordinates></Point>
+      <Point><coordinates>-107.00037,39.041798</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>210</name>
-      <Point><coordinates>-107.00038459391,39.0414962199188</coordinates></Point>
+      <Point><coordinates>-107.0003865,39.041495</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>211</name>
-      <Point><coordinates>-107.00691011141,39.0425742106581</coordinates></Point>
+      <Point><coordinates>-107.006912,39.042573</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>212</name>
-      <Point><coordinates>-107.006910117295,39.0445982130221</coordinates></Point>
+      <Point><coordinates>-107.006912,39.044597</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>217</name>
-      <Point><coordinates>-107.011698137328,39.0479212092299</coordinates></Point>
+      <Point><coordinates>-107.0117,39.04792</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>220</name>
-      <Point><coordinates>-107.013698144588,39.0489412072262</coordinates></Point>
+      <Point><coordinates>-107.0137,39.04894</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>221</name>
-      <Point><coordinates>-107.014398146931,39.0492312064474</coordinates></Point>
+      <Point><coordinates>-107.0144,39.04923</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>225</name>
-      <Point><coordinates>-107.016818155123,39.0502712038036</coordinates></Point>
+      <Point><coordinates>-107.01682,39.05027</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>233</name>
-      <Point><coordinates>-107.020888174359,39.0539712016929</coordinates></Point>
+      <Point><coordinates>-107.02089,39.05397</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>243</name>
-      <Point><coordinates>-107.024958188768,39.0560111976435</coordinates></Point>
+      <Point><coordinates>-107.02496,39.05601</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>246</name>
-      <Point><coordinates>-107.025858200657,39.0595712004694</coordinates></Point>
+      <Point><coordinates>-107.02586,39.05957</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>250</name>
-      <Point><coordinates>-107.027848212435,39.0622912005753</coordinates></Point>
+      <Point><coordinates>-107.02785,39.06229</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>271</name>
-      <Point><coordinates>-107.038608013009,38.9853710711005</coordinates></Point>
+      <Point><coordinates>-107.03861,38.98537</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>273</name>
-      <Point><coordinates>-107.036348005567,38.9848710734795</coordinates></Point>
+      <Point><coordinates>-107.03635,38.98487</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>276</name>
-      <Point><coordinates>-107.036798005671,38.9845810720239</coordinates></Point>
+      <Point><coordinates>-107.0368,38.98458</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>284</name>
-      <Point><coordinates>-107.032617992528,38.9838410768647</coordinates></Point>
+      <Point><coordinates>-107.03262,38.98384</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>293</name>
-      <Point><coordinates>-107.032227989836,38.9833610762704</coordinates></Point>
+      <Point><coordinates>-107.03223,38.98336</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>294</name>
-      <Point><coordinates>-107.03370799296,38.9831910734674</coordinates></Point>
+      <Point><coordinates>-107.03371,38.98319</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>295</name>
-      <Point><coordinates>-107.034347994915,38.9832870726854</coordinates></Point>
+      <Point><coordinates>-107.03435,38.983286</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>296</name>
-      <Point><coordinates>-107.034787993837,38.9826710704212</coordinates></Point>
+      <Point><coordinates>-107.03479,38.98267</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>297</name>
-      <Point><coordinates>-107.035557995141,38.9824910687344</coordinates></Point>
+      <Point><coordinates>-107.03556,38.98249</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>298</name>
-      <Point><coordinates>-107.036897997604,38.9822310659362</coordinates></Point>
+      <Point><coordinates>-107.0369,38.98223</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>299</name>
-      <Point><coordinates>-107.03885799825,38.9810110597376</coordinates></Point>
+      <Point><coordinates>-107.03886,38.98101</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>300</name>
-      <Point><coordinates>-107.041057997597,38.9792410518009</coordinates></Point>
+      <Point><coordinates>-107.04106,38.97924</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>301</name>
-      <Point><coordinates>-107.04109799492,38.9784510497592</coordinates></Point>
+      <Point><coordinates>-107.0411,38.97845</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>302</name>
-      <Point><coordinates>-107.041897997695,38.9786610490189</coordinates></Point>
+      <Point><coordinates>-107.0419,38.97866</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>303</name>
-      <Point><coordinates>-107.044298013287,38.9813710519702</coordinates></Point>
+      <Point><coordinates>-107.0443,38.98137</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>304</name>
-      <Point><coordinates>-107.04479801763,38.9822510533631</coordinates></Point>
+      <Point><coordinates>-107.0448,38.98225</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>305</name>
-      <Point><coordinates>-107.048608029443,38.9828810488326</coordinates></Point>
+      <Point><coordinates>-107.04861,38.98288</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>306</name>
-      <Point><coordinates>-107.052438036997,38.9822710412041</coordinates></Point>
+      <Point><coordinates>-107.05244,38.98227</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>307</name>
-      <Point><coordinates>-107.05317804104,38.9829010415669</coordinates></Point>
+      <Point><coordinates>-107.05318,38.9829</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>308</name>
-      <Point><coordinates>-107.055158052194,38.9846910427733</coordinates></Point>
+      <Point><coordinates>-107.05516,38.98469</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>325</name>
-      <Point><coordinates>-106.97673801897,39.0108112992127</coordinates></Point>
+      <Point><coordinates>-106.97674,39.01081</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>327</name>
-      <Point><coordinates>-106.977728020219,39.0114612949212</coordinates></Point>
+      <Point><coordinates>-106.97773,39.01146</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>333</name>
-      <Point><coordinates>-106.981078021744,39.0127612796949</coordinates></Point>
+      <Point><coordinates>-106.98108,39.01276</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>338</name>
-      <Point><coordinates>-106.982238022833,39.0134012746253</coordinates></Point>
+      <Point><coordinates>-106.98224,39.0134</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>340</name>
-      <Point><coordinates>-106.982998023935,39.0139512714372</coordinates></Point>
+      <Point><coordinates>-106.983,39.01395</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>344</name>
-      <Point><coordinates>-106.985188023904,39.0144612612671</coordinates></Point>
+      <Point><coordinates>-106.98519,39.01446</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>346</name>
-      <Point><coordinates>-106.984648025952,39.0150212644326</coordinates></Point>
+      <Point><coordinates>-106.98465,39.01502</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>353</name>
-      <Point><coordinates>-106.987238019603,39.0135012503411</coordinates></Point>
+      <Point><coordinates>-106.98724,39.0135</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>354</name>
-      <Point><coordinates>-106.988868013023,39.0116712405336</coordinates></Point>
+      <Point><coordinates>-106.98887,39.01167</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>360</name>
-      <Point><coordinates>-106.665618144626,38.1899702972521</coordinates></Point>
+      <Point><coordinates>-106.66562,38.18997</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>362</name>
-      <Point><coordinates>-106.661738133974,38.192600285099</coordinates></Point>
+      <Point><coordinates>-106.66174,38.1926</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>364</name>
-      <Point><coordinates>-106.658776126242,38.193587278292</coordinates></Point>
+      <Point><coordinates>-106.658778,38.193587</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>374</name>
-      <Point><coordinates>-106.663018140646,38.1838203082589</coordinates></Point>
+      <Point><coordinates>-106.66302,38.18382</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>385</name>
-      <Point><coordinates>-106.678498175495,38.1925503102196</coordinates></Point>
+      <Point><coordinates>-106.6785,38.19255</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>387</name>
-      <Point><coordinates>-106.681548182917,38.1928903139461</coordinates></Point>
+      <Point><coordinates>-106.68155,38.19289</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>388</name>
-      <Point><coordinates>-106.681648182633,38.194270310755</coordinates></Point>
+      <Point><coordinates>-106.68165,38.19427</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>391</name>
-      <Point><coordinates>-106.684348188173,38.1972703075207</coordinates></Point>
+      <Point><coordinates>-106.68435,38.19727</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>392</name>
-      <Point><coordinates>-106.685208190084,38.1978503073996</coordinates></Point>
+      <Point><coordinates>-106.68521,38.19785</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>393</name>
-      <Point><coordinates>-106.68437818791,38.1981503054354</coordinates></Point>
+      <Point><coordinates>-106.68438,38.19815</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>394</name>
-      <Point><coordinates>-106.681458180348,38.198980299071</coordinates></Point>
+      <Point><coordinates>-106.68146,38.19898</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>395</name>
-      <Point><coordinates>-106.678198171693,38.2004402906746</coordinates></Point>
+      <Point><coordinates>-106.6782,38.20044</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>396</name>
-      <Point><coordinates>-106.677088168864,38.2006302885591</coordinates></Point>
+      <Point><coordinates>-106.67709,38.20063</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>408</name>
-      <Point><coordinates>-106.67056816268,38.1752103403609</coordinates></Point>
+      <Point><coordinates>-106.67057,38.17521</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>409</name>
-      <Point><coordinates>-106.669298159808,38.1745603400396</coordinates></Point>
+      <Point><coordinates>-106.6693,38.17456</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>413</name>
-      <Point><coordinates>-106.678828184426,38.1716003614209</coordinates></Point>
+      <Point><coordinates>-106.67883,38.1716</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>415</name>
-      <Point><coordinates>-106.691668214427,38.1758203703608</coordinates></Point>
+      <Point><coordinates>-106.69167,38.17582</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>426</name>
-      <Point><coordinates>-106.701558239528,38.1738403899074</coordinates></Point>
+      <Point><coordinates>-106.70156,38.17384</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>441</name>
-      <Point><coordinates>-106.697608226498,38.1826903625921</coordinates></Point>
+      <Point><coordinates>-106.69761,38.18269</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>443</name>
-      <Point><coordinates>-106.688188202624,38.1843103446189</coordinates></Point>
+      <Point><coordinates>-106.68819,38.18431</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>446</name>
-      <Point><coordinates>-106.69635822578,38.1763603760501</coordinates></Point>
+      <Point><coordinates>-106.69636,38.17636</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>448</name>
-      <Point><coordinates>-106.698358230482,38.176970377557</coordinates></Point>
+      <Point><coordinates>-106.69836,38.17697</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>453</name>
-      <Point><coordinates>-106.660330119645,38.2196372175608</coordinates></Point>
+      <Point><coordinates>-106.660332,38.219637</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>500</name>
-      <Point><coordinates>-107.146328569771,39.1137310838715</coordinates></Point>
+      <Point><coordinates>-107.14633,39.11373</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>502</name>
-      <Point><coordinates>-107.147808572419,39.1137210816296</coordinates></Point>
+      <Point><coordinates>-107.14781,39.11372</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>507</name>
-      <Point><coordinates>-106.996537880284,38.9752511222735</coordinates></Point>
+      <Point><coordinates>-106.99654,38.97525</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>515</name>
-      <Point><coordinates>-107.072648118227,38.9912910302878</coordinates></Point>
+      <Point><coordinates>-107.07265,38.99129</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>519</name>
-      <Point><coordinates>-107.075478135163,38.9942710326844</coordinates></Point>
+      <Point><coordinates>-107.07548,38.99427</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>523</name>
-      <Point><coordinates>-107.080378154789,38.9965610299569</coordinates></Point>
+      <Point><coordinates>-107.08038,38.99656</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>526</name>
-      <Point><coordinates>-107.086018173183,38.9979610238405</coordinates></Point>
+      <Point><coordinates>-107.08602,38.99796</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>536</name>
-      <Point><coordinates>-107.101198217203,39.000191003407</coordinates></Point>
+      <Point><coordinates>-107.1012,39.00019</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>542</name>
-      <Point><coordinates>-107.069818110511,38.9910810344183</coordinates></Point>
-  </Placemark>
-  <Placemark>
-	<name>400</name>
-      <Point><coordinates>-106.982798084964,38.990798099044</coordinates></Point>
-  </Placemark>
-  <Placemark>
-	<name>420</name>
-      <Point><coordinates>-106.980959834806,38.9919230366102</coordinates></Point>
-  </Placemark>
-  <Placemark>
-	<name>434</name>
-      <Point><coordinates>-106.979084982215,38.9904948452332</coordinates></Point>
-  </Placemark>
-  <Placemark>
-	<name>451</name>
-      <Point><coordinates>-106.97584669417,38.9906048555275</coordinates></Point>
-  </Placemark>
-  <Placemark>
-	<name>438</name>
-      <Point><coordinates>-106.997314567418,38.9903705974514</coordinates></Point>
-  </Placemark>
-  <Placemark>
-	<name>405</name>
-      <Point><coordinates>-106.974553708663,38.9947111824291</coordinates></Point>
-  </Placemark>
-  <Placemark>
-	<name>439</name>
-      <Point><coordinates>-107.000833975473,38.988888059085</coordinates></Point>
+      <Point><coordinates>-107.06982,38.99108</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>172</name>
@@ -555,32 +527,8 @@
       <Point><coordinates>-107.042690832614,39.0180963562721</coordinates></Point>
   </Placemark>
   <Placemark>
-	<name>402</name>
-      <Point><coordinates>-107.035569368988,39.0137361598311</coordinates></Point>
-  </Placemark>
-  <Placemark>
-	<name>406</name>
-      <Point><coordinates>-107.023446906222,39.0067224040225</coordinates></Point>
-  </Placemark>
-  <Placemark>
-	<name>404</name>
-      <Point><coordinates>-107.017675914977,39.0050445686529</coordinates></Point>
-  </Placemark>
-  <Placemark>
-	<name>403</name>
-      <Point><coordinates>-107.006218461968,39.0021733339676</coordinates></Point>
-  </Placemark>
-  <Placemark>
-	<name>407</name>
-      <Point><coordinates>-107.004237249643,39.0005991204492</coordinates></Point>
-  </Placemark>
-  <Placemark>
 	<name>455</name>
       <Point><coordinates>-107.074310710843,39.1627747104442</coordinates></Point>
-  </Placemark>
-  <Placemark>
-	<name>401</name>
-      <Point><coordinates>-107.075531439422,39.1634736824731</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>456</name>
@@ -599,16 +547,8 @@
       <Point><coordinates>-106.995477159846,39.0127626286022</coordinates></Point>
   </Placemark>
   <Placemark>
-	<name>366</name>
-      <Point><coordinates>-106.995477159846,39.0127626286022</coordinates></Point>
-  </Placemark>
-  <Placemark>
 	<name>328</name>
       <Point><coordinates>-106.979233655376,39.01232701414</coordinates></Point>
-  </Placemark>
-  <Placemark>
-	<name>452</name>
-      <Point><coordinates>-107.103021384034,39.0812534035456</coordinates></Point>
   </Placemark>
   <Placemark>
 	<name>458</name>
@@ -1059,30 +999,6 @@
       <Point><coordinates>-107.099540112308,39.0005688597902</coordinates></Point>
   </Placemark>
   <Placemark>
-	<name>412</name>
-      <Point><coordinates>-106.971292,38.991084</coordinates></Point>
-  </Placemark>
-  <Placemark>
-	<name>414</name>
-      <Point><coordinates>-106.970278,38.991213</coordinates></Point>
-  </Placemark>
-  <Placemark>
-	<name>454</name>
-      <Point><coordinates>-106.970327,38.990774</coordinates></Point>
-  </Placemark>
-  <Placemark>
-	<name>417</name>
-      <Point><coordinates>-106.97036,38.991151</coordinates></Point>
-  </Placemark>
-  <Placemark>
-	<name>435</name>
-      <Point><coordinates>-106.9795986918,38.9922887972</coordinates></Point>
-  </Placemark>
-  <Placemark>
-	<name>433</name>
-      <Point><coordinates>-106.9818334748,38.9914444881</coordinates></Point>
-  </Placemark>
-  <Placemark>
 	<name>72</name>
       <Point><coordinates>-107.03199717,39.01018055</coordinates></Point>
   </Placemark>
@@ -1121,6 +1037,30 @@
   <Placemark>
 	<name>534</name>
       <Point><coordinates>-107.097701,39.000339</coordinates></Point>
+  </Placemark>
+  <Placemark>
+	<name>412</name>
+      <Point><coordinates>-106.68,38.17</coordinates></Point>
+  </Placemark>
+  <Placemark>
+	<name>414</name>
+      <Point><coordinates>-106.6818,38.1711</coordinates></Point>
+  </Placemark>
+  <Placemark>
+	<name>454</name>
+      <Point><coordinates>-106.658368,38.225178</coordinates></Point>
+  </Placemark>
+  <Placemark>
+	<name>417</name>
+      <Point><coordinates>-106.728417,38.15568</coordinates></Point>
+  </Placemark>
+  <Placemark>
+	<name>435</name>
+      <Point><coordinates>-106.70031,38.18078</coordinates></Point>
+  </Placemark>
+  <Placemark>
+	<name>433</name>
+      <Point><coordinates>-106.706831,38.176093</coordinates></Point>
   </Placemark>
 </Folder>
 </Document></kml>

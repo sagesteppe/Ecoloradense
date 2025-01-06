@@ -19,32 +19,60 @@ ground_truth <- read.csv('../data/GroundTruthing/Pts.csv') |>
     across(c('Dominant_Phen'), ~ na_if(., '')), 
     across(Presence_M:Presence_J, ~ replace_na(., 0)))
 
+# this whole 'r' random points thing needs to be done separately for both the
+# cochetopa and the  other set of points !!
 rand_pts_iter1 <- st_read('../data/GroundTruthPts/Iteration1-cp.shp', quiet = T) |>
   select(UID) %>% 
-  inner_join(., ground_truth, by = c('UID' = 'GlobalRandomID')) |>
+  inner_join(., 
+             filter(ground_truth,  Location_abbrevation != 'CD'), 
+    by = c('UID' = 'GlobalRandomID')) |>
   mutate(Site = paste0('r-', UID)) |>
   select(-Latitude, -Longitude, -UID) 
 
+rand_pts_iter2 <- st_read('../data/GroundTruthPts/Iteration1-Coechotopa.shp', quiet = T) |>
+  select(ID) %>% 
+  inner_join(., 
+             filter(ground_truth, 
+                    str_detect(Site, '[a-z]', negate = TRUE), Location_abbrevation == 'CD') |>
+               mutate(Site = as.numeric(Site)), 
+    by = c('ID' = 'Site')) |>
+  mutate(Site = paste0('r-', ID)) |>
+  select(-Latitude, -Longitude) 
 
-st_read('../data/GroundTruthPts/Cocheotopa_revisits.shp', quiet = T)
-# MAYBE JUST ADD A 'CP' TO THE UID HERE??? 
+rand_pts_iter1 <- bind_rows(rand_pts_iter1, rand_pts_iter2)
 
 ground_truth <- filter(ground_truth, is.na(GlobalRandomID)) # remove these random pts
 
 # THESE NEEDS REDONE - THE COCHETOPA DOME POINTS ARE INTEREFERED WITH THE RIDGE 14043 POINTS!!!!
 # objects: 375, 400, 405, 412, 414, 417, 320 433, 434, 435, 451, 454
 
-
+# we can't perform the same join - if we join the cochetopa data with the full data set, 
+# than sites from 13043 ridge will be joined instead. This is because CD points were
+# written out later, and seperately, but restart their presence count at 1. 
 revisits <- st_read('../data/GroundTruthPts/Revisits-cp.shp', quiet = T) |> 
   select(UID) |> 
   mutate(UID = str_replace(UID, 'P', 'p')) %>%  
-  inner_join(., filter(ground_truth, str_detect(Site, 'p')), by = c('UID' = 'Site'))  
+  inner_join(., filter(ground_truth, 
+                       str_detect(Site, 'p') & Location_abbrevation != 'CD'),
+             by = c('UID' = 'Site'))  
+
+# we can safely join the CD sites here. 
+revisits_cd <- st_read('../data/GroundTruthPts/Cocheotopa_revisits.shp', quiet = T) |> 
+  select(ID) |> 
+  mutate(UID = paste0('p-', ID)) %>%  
+  inner_join(., filter(ground_truth, 
+                       str_detect(Site, 'p') & Location_abbrevation == 'CD'),
+             by = c('UID' = 'Site'))  |>
+  sf::st_transform(st_crs(revisits))
+
+revisits <- bind_rows(revisits, revisits_cd)
 
 ground_truth <- filter(ground_truth, str_detect(Site, 'p', negate= T)) |>
   select(-GlobalRandomID) |>
   st_as_sf(coords = c(x = 'Longitude', y = 'Latitude'), crs = 4269) |>
   st_transform(st_crs(revisits))
 
+rm(revisits_cd, rand_pts_iter2)
 ```
 
 We'll turn revisits into two data frames, this will be used to compare the accuracy of the coordinates to the occurrences. 
