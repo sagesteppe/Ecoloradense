@@ -35,7 +35,7 @@ rand_pts_iter2 <- st_read('../data/GroundTruthPts/Iteration1-Coechotopa.shp', qu
              filter(ground_truth, 
                     str_detect(Site, '[a-z]', negate = TRUE), Location_abbrevation == 'CD') |>
                mutate(Site = as.numeric(Site)), 
-    by = c('ID' = 'Site')) |>
+    by = c('ID' = 'GlobalRandomID')) |>
   mutate(Site = paste0('r-', ID)) |>
   select(-Latitude, -Longitude) 
 
