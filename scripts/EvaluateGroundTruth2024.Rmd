@@ -67,7 +67,9 @@ This is the combination of historic records and the ground truthed data for 2024
 Note that a record from 2024 always overwrites a historic record if they are found in the same cell. 
 
 ```{r iteration 1}
-hist_occ_data <- st_read('../data/collections/occurrences_coloradense/occurrences.shp', quiet = T) %>% 
+hist_occ_data <- st_read(
+  '../data/collections/occurrences_coloradense/occurrences.shp', 
+  quiet = T) %>% 
     mutate(
       Presenc = 1,
       Date = gsub('-', '.', as.character(eventDate)),

@@ -68,7 +68,7 @@ PA_possible <- sdm::background(arc3,
 # subjectively evaluated suitable habitat were removed. 
 nrow(PA_possible)
 st_write(PA_possible, 
-         '../data/spatial/raw/pseudo-absences/iteration1/absences.shp', append = F)
+         '../data/spatial/raw/pseudo-absences/iteration1/absences.shp')
 
 # these points were identified in QGIS as likely occurring in suitable habitat. 
 removals <- c(19, 41, 42, 46, 67, 76)
@@ -99,18 +99,14 @@ m30 <- sf::st_read("../data/Data4modelling/30m-presence-iter1.gpkg") %>%
   filter(Occurrence == 1) 
 arc1 <- rastReader('dem_1arc', p2proc) 
 
-# need to apply vifcor to get results, co-linear features will wreck the computations
-v1 <- usdm::vifcor(arc1)
-arc1 <- usdm::exclude(arc1, v1)
-
 PA_possible <- sdm::background(arc1, 
-                n = nrow(m30)*3.25,
+                n = nrow(m30)*3.5,# we want some extra's just in case to push this ratio up. 
                 method = 'gDist', sp = vect(m30)) %>% 
   select(x, y) %>% 
   st_as_sf(coords = c(x = 'x', y = 'y'), crs = 32613) %>% 
   mutate(Occurrence = 0, ID = 1:nrow(.))
 
-st_write(PA_possible, '../data/Data4modelling/iter1-pa.gpkg')
+st_write(PA_possible, '../data/Data4modelling/iter1-pa.gpkg', append = FALSE)
 # st_distance( # WELL SPACED!
 #   PA_possible[st_nearest_feature(PA_possible),], 
 #   PA_possible,
