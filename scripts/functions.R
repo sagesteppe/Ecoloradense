@@ -39,7 +39,8 @@ ensure_multipolygons <- function(X) { # @ stackoverflow
 #' @param distOrder Character. The distance between the nearest absence to presence, as a multiple of the cell resolution
 #' e.g. distOrder 1 at a 90m resolution indicates the nearest absence is >90m away from a presence, at 10m it indicates > 10m away.
 #' 
-modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_split, PAratio, distOrder){
+modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_split,
+                     PAratio, distOrder){
   
   if(missing(se_prediction)){se_prediction <- FALSE}
   rast_dat <- rastReader(paste0('dem_', resolution), p2proc) 

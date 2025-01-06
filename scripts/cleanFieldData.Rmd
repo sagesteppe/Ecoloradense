@@ -25,7 +25,15 @@ rand_pts_iter1 <- st_read('../data/GroundTruthPts/Iteration1-cp.shp', quiet = T)
   mutate(Site = paste0('r-', UID)) |>
   select(-Latitude, -Longitude, -UID) 
 
+
+st_read('../data/GroundTruthPts/Cocheotopa_revisits.shp', quiet = T)
+# MAYBE JUST ADD A 'CP' TO THE UID HERE??? 
+
 ground_truth <- filter(ground_truth, is.na(GlobalRandomID)) # remove these random pts
+
+# THESE NEEDS REDONE - THE COCHETOPA DOME POINTS ARE INTEREFERED WITH THE RIDGE 14043 POINTS!!!!
+# objects: 375, 400, 405, 412, 414, 417, 320 433, 434, 435, 451, 454
+
 
 revisits <- st_read('../data/GroundTruthPts/Revisits-cp.shp', quiet = T) |> 
   select(UID) |> 
@@ -72,7 +80,7 @@ gt_abs <- filter(ground_truth, Presence == 0) |>
                  quiet = T, append = F)
 ```
 
-We will add some randoms based on my scouting efforts. 
+We will add some random points based on my scouting efforts. 
 These should hopefully help reduce the effects of spatial auto-correlation. 
 
 ```{r}
