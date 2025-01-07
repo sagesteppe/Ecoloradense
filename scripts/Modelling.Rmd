@@ -80,7 +80,6 @@ ggplot(
 
 ```{r}
 
-
 ct <- st_read('../data/Data4modelling/30m-count-iter1.gpkg') |>
   select(Prsnc_M)
 
@@ -97,6 +96,85 @@ cores <- parallel::detectCores()
     tidyr::drop_na() 
   
   saveRDS(df, '../data/test_ct_data.Rds')
+  df <- readRDS('../data/test_ct_data.Rds')
   
+```
+
+
+
+```{r}
+library(xgboost)
+
+r <- terra::rast('../results/suitability_maps/1arc-Iteration1-PA1_2.7DO_2-Pr.tif')
+names(r) <- 'Pr.SuitHab'
+
+df <- readRDS('../data/test_ct_data.Rds') 
+df <- df |>
+  sf::st_drop_geometry() |>
+  bind_cols(
+    Pr.SuitHab = terra::extract(r, df)$Pr.SuitHab
+  )
+
+# let's try and bring count back to it's 3x3m quadrat size, I think too big 
+# of numbers throws xgboost off. 
+df <- mutate(df, Prsnc_M = Prsnc_M / 30)
+# df <- filter(df, Prsnc_M > 0 | Pr.SuitHab > 0.45)
+
+data_split <- df |>
+  rsample::initial_split(strata = Prsnc_M, prop = 4/5)
+
+train <- rsample::training(data_split)
+test  <- rsample::testing(data_split)
+
+rec <- recipes::recipe(Prsnc_M ~ ., data = train) 
+
+indices_knndm <- CAST::knndm(
+  sf::st_as_sf(train, coords = c('Longitude', 'Latitude'), crs = 4326),
+  space = 'feature',
+  k=10)
+
+rs <- rsample::bootstraps(train, times = 15) 
+
+xgb_reg_model <- parsnip::boost_tree( 
+  mode = 'regression',
+  trees = tune(),
+  tree_depth = tune(),
+  min_n = tune(), 
+  loss_reduction = tune(),
+  learn_rate = tune(), 
+  stop_iter = tune()
+) |>
+    parsnip::set_engine("xgboost", objective = "count:poisson")
+
+
+doParallel::registerDoParallel() 
+model_params <- xgb_reg_model |>
+   finetune::tune_sim_anneal(rec, # about 10-15 minutes to run
+                             # honestly rarely beat the initial starts. 
+                             # even when greatly increasing the iterations. 
+                   resamples = rs, iter = 15, initial = parallel::detectCores()
+                   )
+
+best_param <- tune::select_best(model_params, metric = "rmse")
+
+xgb_reg_model <- xgb_reg_model |>
+  tune::finalize_model(best_param)
+
+xgb_fit <- xgb_reg_model %>% 
+  fit(Prsnc_M ~ ., data = train)
+
+wflow <- workflows::workflow() %>% 
+  workflows::add_model(xgb_reg_model) %>% 
+  workflows::add_recipe(rec) 
+
+test_pred <- data.frame(
+    'Observed' = test$Prsnc_M, 
+    'Predicted' = stats::predict(xgb_fit, new_data = test)
+)
+
+par(pty="s")
+plot(test_pred$Observed, test_pred$.pred)
+
+vip::vip(xgb_fit, num_features = 20)
 ```
 
