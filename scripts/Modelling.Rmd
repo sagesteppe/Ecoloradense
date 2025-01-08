@@ -21,7 +21,7 @@ f <- file.path(p, list.files(p))
 Model presence for iteration 0, that is historic records only. 
 
 Model presence for iteration 1, both the historic and 2024 ground truthed data. 
-```{r}
+```{r, eval = F}
 
 abs <- st_read('../data/Data4modelling/iter1-pa.gpkg')
 m30 <- sf::st_read("../data/Data4modelling/30m-presence-iter1.gpkg") %>% 
@@ -103,9 +103,7 @@ cores <- parallel::detectCores()
 
 
 ```{r}
-library(xgboost)
-
-r <- terra::rast('../results/suitability_maps/1arc-Iteration1-PA1_2.7DO_2-Pr.tif')
+r <- terra::rast('../results/suitability_maps/1arc-Iteration1-PA1:2.7DO:2-Pr.tif')
 names(r) <- 'Pr.SuitHab'
 
 df <- readRDS('../data/test_ct_data.Rds') 
@@ -115,10 +113,10 @@ df <- df |>
     Pr.SuitHab = terra::extract(r, df)$Pr.SuitHab
   )
 
+
 # let's try and bring count back to it's 3x3m quadrat size, I think too big 
 # of numbers throws xgboost off. 
-df <- mutate(df, Prsnc_M = Prsnc_M / 30)
-# df <- filter(df, Prsnc_M > 0 | Pr.SuitHab > 0.45)
+df <- mutate(df, Prsnc_M = round(Prsnc_M / 100,0))
 
 data_split <- df |>
   rsample::initial_split(strata = Prsnc_M, prop = 4/5)
@@ -127,12 +125,6 @@ train <- rsample::training(data_split)
 test  <- rsample::testing(data_split)
 
 rec <- recipes::recipe(Prsnc_M ~ ., data = train) 
-
-indices_knndm <- CAST::knndm(
-  sf::st_as_sf(train, coords = c('Longitude', 'Latitude'), crs = 4326),
-  space = 'feature',
-  k=10)
-
 rs <- rsample::bootstraps(train, times = 15) 
 
 xgb_reg_model <- parsnip::boost_tree( 
@@ -147,15 +139,17 @@ xgb_reg_model <- parsnip::boost_tree(
     parsnip::set_engine("xgboost", objective = "count:poisson")
 
 
+?tune_sim_anneal
 doParallel::registerDoParallel() 
 model_params <- xgb_reg_model |>
    finetune::tune_sim_anneal(rec, # about 10-15 minutes to run
                              # honestly rarely beat the initial starts. 
                              # even when greatly increasing the iterations. 
+                     #        metrics = yardstick::metric_set(yardstick::mae),
                    resamples = rs, iter = 15, initial = parallel::detectCores()
                    )
 
-best_param <- tune::select_best(model_params, metric = "rmse")
+best_param <- tune::select_best(model_params, metric = "mae")
 
 xgb_reg_model <- xgb_reg_model |>
   tune::finalize_model(best_param)
@@ -169,12 +163,52 @@ wflow <- workflows::workflow() %>%
 
 test_pred <- data.frame(
     'Observed' = test$Prsnc_M, 
-    'Predicted' = stats::predict(xgb_fit, new_data = test)
+    'Predicted' = stats::predict(xgb_fit, new_data = test),
+    'Pr.suit' = test$Pr.SuitHab
 )
+Metrics::rmse(test_pred$Observed, test_pred$.pred)
 
-par(pty="s")
-plot(test_pred$Observed, test_pred$.pred)
+ggplot(data = test_pred) + 
+  geom_point(aes(x = Observed, y = .pred, color = Pr.suit)) +
+  theme(aspect.ratio = 1) 
 
 vip::vip(xgb_fit, num_features = 20)
+```
+
+
+```{r}
+library(gbm3)
+
+?trainControl
+trainControl <- trainControl(method="repeatedcv", number=10, repeats = 5)
+
+  model <- caret::train(
+    x = train[,-grep('Prsnc_M', colnames(train))],
+    y = train$Prsnc_M,
+    method = "gbm",
+    distribution="poisson",
+    metric = 'MAE', 
+    trControl = caret::trainControl(
+      method="cv",
+      index = indices_knndm$indx_train,
+      allowParallel = TRUE)
+    )
+  
+  
+  test_pred <- data.frame(
+    'Observed' = test$Prsnc_M, 
+    'Predicted' = predict(model, newdata=test, type="raw"), 
+    'Pr.suit' = test$Pr.SuitHab
+)
+  
+Metrics::mae(test_pred$Observed, test_pred$Predicted)
+Metrics::rmse(test_pred$Observed, test_pred$Predicted)
+
+ggplot(data = test_pred) + 
+  geom_point(aes(x = Observed, y = Predicted, color = Pr.suit)) +
+  theme(aspect.ratio = 1) +
+  coord_fixed() + 
+  geom_abline()
+
 ```
 
