@@ -51,31 +51,8 @@ getwd()
 ```
 
 
-```{r}
-readRDS('../results/tables/3arc-Iteration1-PA2:1DO:1.rds')
-model <- readRDS('../results/models/3arc-Iteration1-PA2:1DO:1.rds')
 
-ggplot(
-    enframe(
-        model$variable.importance,
-        name = "variable",
-        value = "importance"
-    ),
-    aes(
-        x = reorder(variable, importance),
-        y = importance,
-        fill = importance
-    )
-) +
-    geom_bar(stat = "identity", position = "dodge") +
-    coord_flip() +
-    ylab("Variable Importance") +
-    xlab("") +
-    ggtitle("Information Value Summary") +
-    scale_fill_gradient(low = "red", high = "blue")
-
-```
-
+# playing with count prediction 
 
 
 ```{r}
@@ -102,7 +79,7 @@ cores <- parallel::detectCores()
 
 
 
-```{r}
+```{r xgboost}
 r <- terra::rast('../results/suitability_maps/1arc-Iteration1-PA1:2.7DO:2-Pr.tif')
 names(r) <- 'Pr.SuitHab'
 
@@ -113,7 +90,6 @@ df <- df |>
     Pr.SuitHab = terra::extract(r, df)$Pr.SuitHab
   )
 
-
 # let's try and bring count back to it's 3x3m quadrat size, I think too big 
 # of numbers throws xgboost off. 
 df <- mutate(df, Prsnc_M = round(Prsnc_M / 100,0))
@@ -123,6 +99,13 @@ data_split <- df |>
 
 train <- rsample::training(data_split)
 test  <- rsample::testing(data_split)
+
+indices_knndm <- CAST::knndm(
+  sf::st_as_sf(train, coords = c('Longitude', 'Latitude'), crs = 32613) |> select(-Prsnc_M),
+  rast_dat,
+  space = 'geographic',
+  k=10)
+
 
 rec <- recipes::recipe(Prsnc_M ~ ., data = train) 
 rs <- rsample::bootstraps(train, times = 15) 
@@ -139,7 +122,6 @@ xgb_reg_model <- parsnip::boost_tree(
     parsnip::set_engine("xgboost", objective = "count:poisson")
 
 
-?tune_sim_anneal
 doParallel::registerDoParallel() 
 model_params <- xgb_reg_model |>
    finetune::tune_sim_anneal(rec, # about 10-15 minutes to run
@@ -149,7 +131,7 @@ model_params <- xgb_reg_model |>
                    resamples = rs, iter = 15, initial = parallel::detectCores()
                    )
 
-best_param <- tune::select_best(model_params, metric = "mae")
+best_param <- tune::select_best(model_params, metric = "rmse")
 
 xgb_reg_model <- xgb_reg_model |>
   tune::finalize_model(best_param)
@@ -166,6 +148,9 @@ test_pred <- data.frame(
     'Predicted' = stats::predict(xgb_fit, new_data = test),
     'Pr.suit' = test$Pr.SuitHab
 )
+
+
+Metrics::mae(test_pred$Observed, test_pred$.pred)
 Metrics::rmse(test_pred$Observed, test_pred$.pred)
 
 ggplot(data = test_pred) + 
@@ -176,13 +161,11 @@ vip::vip(xgb_fit, num_features = 20)
 ```
 
 
-```{r}
-library(gbm3)
+```{r try with gbm3}
 
-?trainControl
 trainControl <- trainControl(method="repeatedcv", number=10, repeats = 5)
 
-  model <- caret::train(
+  gbm_model <- caret::train(
     x = train[,-grep('Prsnc_M', colnames(train))],
     y = train$Prsnc_M,
     method = "gbm",
@@ -190,14 +173,14 @@ trainControl <- trainControl(method="repeatedcv", number=10, repeats = 5)
     metric = 'MAE', 
     trControl = caret::trainControl(
       method="cv",
-      index = indices_knndm$indx_train,
+     # index = indices_knndm$indx_train,
       allowParallel = TRUE)
     )
   
   
   test_pred <- data.frame(
     'Observed' = test$Prsnc_M, 
-    'Predicted' = predict(model, newdata=test, type="raw"), 
+    'Predicted' = predict(gbm_model, newdata=test, type="raw"), 
     'Pr.suit' = test$Pr.SuitHab
 )
   
@@ -210,5 +193,48 @@ ggplot(data = test_pred) +
   coord_fixed() + 
   geom_abline()
 
+```
+
+
+Try with mboost
+```{r}
+
+trainControl <- trainControl(method="repeatedcv", number=10, repeats = 5)
+
+train[,-grep('Prsnc_M', colnames(train))] <- apply(
+  train[,-grep('Prsnc_M', colnames(train))], 
+  MARGIN = 2, 
+  FUN = scales::rescale, to=c(0,1)
+  )
+
+  model_glmboost <- caret::train(
+    x = train[,-grep('Prsnc_M', colnames(train))],
+    y = train$Prsnc_M,
+    method = "glmboost",
+    family=mboost::Poisson(),
+    metric = 'MAE', 
+    trControl = caret::trainControl(
+      method="cv",
+ #     index = indices_knndm$indx_train,
+      allowParallel = TRUE)
+    )
+  
+summary(model)
+
+
+  test_pred <- data.frame(
+    'Observed' = test$Prsnc_M, 
+    'Predicted' = predict(model_glmboost, newdata=test, type="raw"), 
+    'Pr.suit' = test$Pr.SuitHab
+)
+  
+Metrics::mae(test_pred$Observed, test_pred$Predicted)
+Metrics::rmse(test_pred$Observed, test_pred$Predicted)
+
+ggplot(data = test_pred) + 
+  geom_point(aes(x = Observed, y = Predicted, color = Pr.suit)) +
+  theme(aspect.ratio = 1) +
+  coord_fixed() + 
+  geom_abline()
 ```
 
