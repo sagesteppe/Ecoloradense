@@ -9,6 +9,9 @@ library(sf)
 library(tidyverse)
 library(terra)
 library(caret)
+library(bonsai)
+library(parsnip)
+library(lightgbm)
 source('functions.R')
 set.seed(23)
 ```
@@ -20,11 +23,11 @@ f <- file.path(p, list.files(p))
 
 Model presence for iteration 0, that is historic records only. 
 
-Model presence for iteration 1, both the historic and 2024 ground truthed data. 
+Model presence for iteration 1, both the historic and 2024 ground truth data. 
 ```{r, eval = F}
 
 abs <- st_read('../data/Data4modelling/iter1-pa.gpkg')
-m30 <- sf::st_read("../data/Data4modelling/30m-presence-iter1.gpkg") %>% 
+m30 <- sf::st_read("../data/Data4modelling/10m-presence-iter1.gpkg") %>% 
   rename(Occurrence = Presenc) |>
   sf::st_as_sf() 
 ### we know that 1:1 absence to presence is far too low when including the 'local'
@@ -34,8 +37,8 @@ m30 <- filter(m30, st_is(m30, "POINT")) |>
   select(Occurrence)
 
 distOrder_PAratio_simulator(
-  x = m30, distOrder = 2, PAratio = 3.0,
-  resolution = 30, iteration = 1, se_prediction = FALSE,
+  x = m30, distOrder = 0, PAratio = 3.0,
+  resolution = 10, iteration = 1, se_prediction = FALSE,
   train_split = 0.9, p2proc = '../data/spatial/processed'
   )
 
@@ -55,60 +58,83 @@ getwd()
 # playing with count prediction 
 
 
-```{r}
+```{r Partition data and clean for modelling}
 
-ct <- st_read('../data/Data4modelling/30m-count-iter1.gpkg') |>
-  select(Prsnc_M)
+ct <- st_read('../data/Data4modelling/30m-count-iter1.gpkg', quiet = TRUE) |>
+  select(Prsnc_M, Prsnc_J) |>
+  mutate(across(starts_with("Prsnc_"), ~ round(.x / 100, 0)))
 
+# extract independent variables to data set . 
 resolution = "1arc"
 train_split = 0.8; p2proc = '../data/spatial/processed'
-  
 rast_dat <- rastReader(paste0('dem_', resolution), p2proc) 
-cores <- parallel::detectCores()
-  
-  df <- dplyr::bind_cols(
-    ct, 
-    dplyr::select(terra::extract(rast_dat, ct), -ID), 
-  ) |> 
-    tidyr::drop_na() 
-  
-  saveRDS(df, '../data/test_ct_data.Rds')
-  df <- readRDS('../data/test_ct_data.Rds')
-  
-```
+r <- rast('../results/suitability_maps/1arc-Iteration1-PA1:3DO:2-Pr.tif')
 
+df <- dplyr::bind_cols(
+  ct, 
+  dplyr::select(terra::extract(rast_dat, ct), -ID), 
+  Pr.SuitHab = terra::extract(r, ct)$X1
+) |> 
+  mutate(Prsnc_All = Prsnc_J + Prsnc_M, .before = 1) |>
+  tidyr::drop_na() 
 
-
-```{r xgboost}
-r <- terra::rast('../results/suitability_maps/1arc-Iteration1-PA1:2.7DO:2-Pr.tif')
-names(r) <- 'Pr.SuitHab'
-
-df <- readRDS('../data/test_ct_data.Rds') 
-df <- df |>
-  sf::st_drop_geometry() |>
-  bind_cols(
-    Pr.SuitHab = terra::extract(r, df)$Pr.SuitHab
-  )
-
-# let's try and bring count back to it's 3x3m quadrat size, I think too big 
-# of numbers throws xgboost off. 
-df <- mutate(df, Prsnc_M = round(Prsnc_M / 100,0))
+hist(df$Prsnc_J)
 
 data_split <- df |>
-  rsample::initial_split(strata = Prsnc_M, prop = 4/5)
+  rsample::initial_split(strata = Prsnc_All, prop = 4/5)
 
 train <- rsample::training(data_split)
 test  <- rsample::testing(data_split)
 
-indices_knndm <- CAST::knndm(
-  sf::st_as_sf(train, coords = c('Longitude', 'Latitude'), crs = 32613) |> select(-Prsnc_M),
-  rast_dat,
-  space = 'geographic',
-  k=10)
+# NOT CURRENTLY WORKING 
+# indices_knndm <- CAST::knndm(
+#   sf::st_as_sf(train, coords = c('Longitude', 'Latitude'), crs = 32613) |> select(-Prsnc_M),
+#  rast_dat,
+#  space = 'geographic',
+#  k=10)
 
 
-rec <- recipes::recipe(Prsnc_M ~ ., data = train) 
-rs <- rsample::bootstraps(train, times = 15) 
+```
+
+Modelling count data has not been very successful, nor did the field work really develop any strong insights on what drives the abundance of the plants. 
+Rather the abundance seemed random within populations, and between - with the exception of Cocheotopa where plants were much smaller and incredibly more abundant than elsewhere. 
+
+```{r idw data}
+library(gstat)
+
+krig_preds <- data.frame(
+    'Observed' = test$Prsnc_All, 
+    'Predicted' = gstat::krige(Prsnc_All ~ 1, train, newdata = test)$var1.pred,
+    'Pr.suit' = test$Pr.SuitHab
+)
+
+ggplot(data = krig_preds) + 
+  geom_point(aes(x = Observed, y = Predicted, color = Pr.suit)) +
+  theme(aspect.ratio = 1) +
+  coord_fixed() + 
+  geom_abline()
+
+krig_preds <- data.frame(
+    'Observed' = test$Prsnc_M, 
+    'Predicted' = gstat::krige(Prsnc_M ~ 1, train, newdata = test)$var1.pred,
+    'Pr.suit' = test$Pr.SuitHab
+)
+
+Metrics::mae(krig_preds$Observed, krig_preds$Predicted)
+```
+
+
+```{r xgboost}
+
+train <- sf::st_drop_geometry(train) |>
+  select(-Prsnc_M, -Prsnc_J)
+test  <- rsample::testing(data_split)
+
+rec <- recipes::recipe(Prsnc_All ~ ., data = train) 
+rs <- rsample::bootstraps(train, times = 15)
+```
+
+```{r xgboost poisson, eval = F}
 
 xgb_reg_model <- parsnip::boost_tree( 
   mode = 'regression',
@@ -124,20 +150,18 @@ xgb_reg_model <- parsnip::boost_tree(
 
 doParallel::registerDoParallel() 
 model_params <- xgb_reg_model |>
-   finetune::tune_sim_anneal(rec, # about 10-15 minutes to run
-                             # honestly rarely beat the initial starts. 
-                             # even when greatly increasing the iterations. 
-                     #        metrics = yardstick::metric_set(yardstick::mae),
+   finetune::tune_sim_anneal(rec, 
+                             metrics = yardstick::metric_set(yardstick::mae),
                    resamples = rs, iter = 15, initial = parallel::detectCores()
                    )
 
-best_param <- tune::select_best(model_params, metric = "rmse")
+best_param <- tune::select_best(model_params, metric = "mae")
 
 xgb_reg_model <- xgb_reg_model |>
   tune::finalize_model(best_param)
 
 xgb_fit <- xgb_reg_model %>% 
-  fit(Prsnc_M ~ ., data = train)
+  fit(Prsnc_All ~ ., data = train)
 
 wflow <- workflows::workflow() %>% 
   workflows::add_model(xgb_reg_model) %>% 
@@ -149,15 +173,113 @@ test_pred <- data.frame(
     'Pr.suit' = test$Pr.SuitHab
 )
 
+ggplot(data = test_pred) + 
+  geom_point(aes(x = Observed, y = .pred, color = Pr.suit)) +
+  theme(aspect.ratio = 1) 
+
+vip::vip(xgb_fit, num_features = 20)
 
 Metrics::mae(test_pred$Observed, test_pred$.pred)
 Metrics::rmse(test_pred$Observed, test_pred$.pred)
+```
+
+```{r xgboost with tweedie distribution}
+
+
+xgb_reg_model <- parsnip::boost_tree( 
+  mode = 'regression',
+  trees = tune(),
+  tree_depth = tune(),
+  min_n = tune(), 
+  loss_reduction = tune(),
+  learn_rate = tune(), 
+  stop_iter = tune()
+) |>
+    parsnip::set_engine("xgboost", objective = "reg:tweedie")
+
+
+doParallel::registerDoParallel() 
+model_params <- xgb_reg_model |>
+   finetune::tune_sim_anneal(rec, 
+                             metrics = yardstick::metric_set(yardstick::mae),
+                   resamples = rs, iter = 15, initial = parallel::detectCores()
+   )
+
+
+best_param <- tune::select_best(model_params, metric = "mae")
+
+xgb_reg_model <- xgb_reg_model |>
+  tune::finalize_model(best_param)
+
+xgb_fit <- xgb_reg_model %>% 
+  fit(Prsnc_All ~ ., data = train)
+
+wflow <- workflows::workflow() %>% 
+  workflows::add_model(xgb_reg_model) %>% 
+  workflows::add_recipe(rec) 
+
+test_pred <- data.frame(
+    'Observed' = test$Prsnc_M, 
+    'Predicted' = stats::predict(xgb_fit, new_data = test),
+    'Pr.suit' = test$Pr.SuitHab
+)
 
 ggplot(data = test_pred) + 
   geom_point(aes(x = Observed, y = .pred, color = Pr.suit)) +
   theme(aspect.ratio = 1) 
 
 vip::vip(xgb_fit, num_features = 20)
+
+Metrics::mae(test_pred$Observed, test_pred$.pred)
+Metrics::rmse(test_pred$Observed, test_pred$.pred)
+```
+
+
+```{r lightgbm}
+
+
+lgbm_reg_model <- parsnip::boost_tree( 
+  mode = 'regression',
+  trees = tune(),
+  tree_depth = tune(),
+  min_n = tune(), 
+  loss_reduction = tune(),
+  learn_rate = tune(), 
+  stop_iter = tune()
+) |>
+    parsnip::set_engine("lightgbm", objective = "count:poisson")
+
+doParallel::registerDoParallel() 
+model_params <- lgbm_reg_model |>
+   finetune::tune_sim_anneal(
+     rec, 
+     metrics = yardstick::metric_set(yardstick::mae),
+     resamples = rs, iter = 15, initial = parallel::detectCores()
+     )
+
+best_param <- tune::select_best(model_params, metric = "mae")
+
+```
+
+Try with mboost
+```{r}
+
+mboost_reg_model <- parsnip::boost_tree( 
+  mode = 'regression',
+  trees = tune(),
+  tree_depth = tune(),
+  min_n = tune(), 
+  loss_reduction = tune(),
+  learn_rate = tune(), 
+  stop_iter = tune()
+) |>
+    parsnip::set_engine("mboost", objective = "count:poisson")
+
+model_params <- mboost_reg_model |>
+   finetune::tune_sim_anneal(rec, 
+                             metrics = yardstick::metric_set(yardstick::mae),
+                   resamples = rs, iter = 15, initial = parallel::detectCores()
+                   )
 ```
 
 
@@ -166,28 +288,28 @@ vip::vip(xgb_fit, num_features = 20)
 trainControl <- trainControl(method="repeatedcv", number=10, repeats = 5)
 
   gbm_model <- caret::train(
-    x = train[,-grep('Prsnc_M', colnames(train))],
-    y = train$Prsnc_M,
+    x = train[,-grep('Prsnc_All', colnames(train))],
+    y = train$Prsnc_All,
     method = "gbm",
     distribution="poisson",
     metric = 'MAE', 
     trControl = caret::trainControl(
-      method="cv",
+      method="repeatedcv", number=10, repeats = 5,
      # index = indices_knndm$indx_train,
       allowParallel = TRUE)
     )
   
   
-  test_pred <- data.frame(
+  gbm_pred <- data.frame(
     'Observed' = test$Prsnc_M, 
     'Predicted' = predict(gbm_model, newdata=test, type="raw"), 
     'Pr.suit' = test$Pr.SuitHab
 )
   
-Metrics::mae(test_pred$Observed, test_pred$Predicted)
-Metrics::rmse(test_pred$Observed, test_pred$Predicted)
+Metrics::mae(gbm_pred$Observed, gbm_pred$Predicted)
+Metrics::rmse(gbm_pred$Observed, gbm_pred$Predicted)
 
-ggplot(data = test_pred) + 
+ggplot(data = gbm_pred) + 
   geom_point(aes(x = Observed, y = Predicted, color = Pr.suit)) +
   theme(aspect.ratio = 1) +
   coord_fixed() + 
@@ -196,45 +318,4 @@ ggplot(data = test_pred) +
 ```
 
 
-Try with mboost
-```{r}
-
-trainControl <- trainControl(method="repeatedcv", number=10, repeats = 5)
-
-train[,-grep('Prsnc_M', colnames(train))] <- apply(
-  train[,-grep('Prsnc_M', colnames(train))], 
-  MARGIN = 2, 
-  FUN = scales::rescale, to=c(0,1)
-  )
-
-  model_glmboost <- caret::train(
-    x = train[,-grep('Prsnc_M', colnames(train))],
-    y = train$Prsnc_M,
-    method = "glmboost",
-    family=mboost::Poisson(),
-    metric = 'MAE', 
-    trControl = caret::trainControl(
-      method="cv",
- #     index = indices_knndm$indx_train,
-      allowParallel = TRUE)
-    )
-  
-summary(model)
-
-
-  test_pred <- data.frame(
-    'Observed' = test$Prsnc_M, 
-    'Predicted' = predict(model_glmboost, newdata=test, type="raw"), 
-    'Pr.suit' = test$Pr.SuitHab
-)
-  
-Metrics::mae(test_pred$Observed, test_pred$Predicted)
-Metrics::rmse(test_pred$Observed, test_pred$Predicted)
-
-ggplot(data = test_pred) + 
-  geom_point(aes(x = Observed, y = Predicted, color = Pr.suit)) +
-  theme(aspect.ratio = 1) +
-  coord_fixed() + 
-  geom_abline()
-```
 

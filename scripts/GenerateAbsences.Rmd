@@ -83,6 +83,17 @@ st_write(PA_possible, append = F,
 nrow(PA_possible)
 ```
 
+Given how well the additional absences helped with the iteration 1 modelling, we will also generate some geographic distances for iter0 modelling. 
+
+```{r}
+PA_possible <- sdm::background(arc1, 
+                n = nrow(m30)*3.5,# we want some extra's just in case to push this ratio up. 
+                method = 'gDist', sp = vect(m30)) %>% 
+  select(x, y) %>% 
+  st_as_sf(coords = c(x = 'x', y = 'y'), crs = 32613) %>% 
+  mutate(Occurrence = 0, ID = 1:nrow(.))
+```
+
 
 # Iteration 1 absences
 
