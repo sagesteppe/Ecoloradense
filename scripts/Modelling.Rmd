@@ -12,6 +12,7 @@ library(caret)
 library(bonsai)
 library(parsnip)
 library(lightgbm)
+library(future)
 source('functions.R')
 set.seed(23)
 ```
@@ -76,12 +77,12 @@ df <- dplyr::bind_cols(
   Pr.SuitHab = terra::extract(r, ct)$X1
 ) |> 
   mutate(Prsnc_All = Prsnc_J + Prsnc_M, .before = 1) |>
-  tidyr::drop_na() 
+  tidyr::drop_na() |>
+  select(-Prsnc_J, -Prsnc_M)
 
-hist(df$Prsnc_J)
 
 data_split <- df |>
-  rsample::initial_split(strata = Prsnc_All, prop = 4/5)
+  rsample::initial_split(strata = Prsnc_All, prop = 4/5) 
 
 train <- rsample::training(data_split)
 test  <- rsample::testing(data_split)
@@ -99,6 +100,14 @@ test  <- rsample::testing(data_split)
 Modelling count data has not been very successful, nor did the field work really develop any strong insights on what drives the abundance of the plants. 
 Rather the abundance seemed random within populations, and between - with the exception of Cocheotopa where plants were much smaller and incredibly more abundant than elsewhere. 
 
+The null hypothesis for estimating population sizes will be the use of the arithmatic mean per populations. 
+
+```{r arithmatic mean of counts per population}
+
+```
+
+The use of kriging interpolation, where we simple smooth averages out between the plots, will be our null hypothesis for any spatial estimates of population size. 
+
 ```{r idw data}
 library(gstat)
 
@@ -114,29 +123,19 @@ ggplot(data = krig_preds) +
   coord_fixed() + 
   geom_abline()
 
-krig_preds <- data.frame(
-    'Observed' = test$Prsnc_M, 
-    'Predicted' = gstat::krige(Prsnc_M ~ 1, train, newdata = test)$var1.pred,
-    'Pr.suit' = test$Pr.SuitHab
-)
-
 Metrics::mae(krig_preds$Observed, krig_preds$Predicted)
 ```
 
 
-```{r xgboost}
 
-train <- sf::st_drop_geometry(train) |>
-  select(-Prsnc_M, -Prsnc_J)
+```{r Boosting models}
+train <- sf::st_drop_geometry(train) 
 test  <- rsample::testing(data_split)
 
 rec <- recipes::recipe(Prsnc_All ~ ., data = train) 
-rs <- rsample::bootstraps(train, times = 15)
-```
+rs <- rsample::bootstraps(train, times = 10)
 
-```{r xgboost poisson, eval = F}
-
-xgb_reg_model <- parsnip::boost_tree( 
+tune_gr <- parsnip::boost_tree( 
   mode = 'regression',
   trees = tune(),
   tree_depth = tune(),
@@ -144,31 +143,38 @@ xgb_reg_model <- parsnip::boost_tree(
   loss_reduction = tune(),
   learn_rate = tune(), 
   stop_iter = tune()
-) |>
-    parsnip::set_engine("xgboost", objective = "count:poisson")
+)
+```
 
+```{r xgboost poisson, eval = F}
 
-doParallel::registerDoParallel() 
-model_params <- xgb_reg_model |>
-   finetune::tune_sim_anneal(rec, 
-                             metrics = yardstick::metric_set(yardstick::mae),
-                   resamples = rs, iter = 15, initial = parallel::detectCores()
-                   )
+xgb_poisson <- tune_gr  |>
+  parsnip::set_engine("xgboost", objective = "count:poisson") 
 
-best_param <- tune::select_best(model_params, metric = "mae")
+xgb_poisson_gr <- xgb_poisson |>
+  # going to use a typical grid which can support subgrid searchers. 
+  extract_parameter_set_dials() |>
+  dials::grid_regular(levels = 4)
 
-xgb_reg_model <- xgb_reg_model |>
+future::plan(multisession, workers = parallel::detectCores())
+params_xg_poisson <- xgb_poisson |>
+      finetune::tune_race_anova(
+        rec,
+        resamples = rs,
+        metrics = yardstick::metric_set(yardstick::mae), 
+        grid = xb_poisson_gr
+      )
+
+best_param <- tune::select_best(params_xg_poisson, metric = "mae")
+
+xg_poisson <- params_xg_poisson |>
   tune::finalize_model(best_param)
 
-xgb_fit <- xgb_reg_model %>% 
+xgb_pois_fit <- xg_poisson %>% 
   fit(Prsnc_All ~ ., data = train)
 
-wflow <- workflows::workflow() %>% 
-  workflows::add_model(xgb_reg_model) %>% 
-  workflows::add_recipe(rec) 
-
 test_pred <- data.frame(
-    'Observed' = test$Prsnc_M, 
+    'Observed' = test$Prsnc_All, 
     'Predicted' = stats::predict(xgb_fit, new_data = test),
     'Pr.suit' = test$Pr.SuitHab
 )
@@ -178,48 +184,39 @@ ggplot(data = test_pred) +
   theme(aspect.ratio = 1) 
 
 vip::vip(xgb_fit, num_features = 20)
-
 Metrics::mae(test_pred$Observed, test_pred$.pred)
 Metrics::rmse(test_pred$Observed, test_pred$.pred)
 ```
 
 ```{r xgboost with tweedie distribution}
 
-
-xgb_reg_model <- parsnip::boost_tree( 
-  mode = 'regression',
-  trees = tune(),
-  tree_depth = tune(),
-  min_n = tune(), 
-  loss_reduction = tune(),
-  learn_rate = tune(), 
-  stop_iter = tune()
-) |>
+xgb_reg_model <- tune_gr |>
     parsnip::set_engine("xgboost", objective = "reg:tweedie")
 
+bt_grid <- xgb_reg_model %>%
+  # going to use a typical grid which can support subgrid searchers. 
+  extract_parameter_set_dials() %>% 
+  dials::grid_regular(levels = 4)
 
-doParallel::registerDoParallel() 
-model_params <- xgb_reg_model |>
-   finetune::tune_sim_anneal(rec, 
-                             metrics = yardstick::metric_set(yardstick::mae),
-                   resamples = rs, iter = 15, initial = parallel::detectCores()
-   )
+future::plan(multisession, workers = parallel::detectCores())
+xbg_tweedie_params <- xgb_reg_model |>
+      finetune::tune_race_anova(
+        rec,
+        resamples = rs,
+        metrics = yardstick::metric_set(yardstick::mae), 
+        grid = bt_grid
+      )
 
+best_param_tweedie <- tune::select_best(xbg_tweedie_params, metric = "mae")
 
-best_param <- tune::select_best(model_params, metric = "mae")
+xgb_tweedie_mod <- xbg_tweedie_params |>
+  tune::finalize_model(best_param_tweedie)
 
-xgb_reg_model <- xgb_reg_model |>
-  tune::finalize_model(best_param)
-
-xgb_fit <- xgb_reg_model %>% 
+xgb_fit <- xgb_tweedie_mod %>% 
   fit(Prsnc_All ~ ., data = train)
 
-wflow <- workflows::workflow() %>% 
-  workflows::add_model(xgb_reg_model) %>% 
-  workflows::add_recipe(rec) 
-
 test_pred <- data.frame(
-    'Observed' = test$Prsnc_M, 
+    'Observed' = test$Prsnc_All, 
     'Predicted' = stats::predict(xgb_fit, new_data = test),
     'Pr.suit' = test$Pr.SuitHab
 )
@@ -237,25 +234,32 @@ Metrics::rmse(test_pred$Observed, test_pred$.pred)
 
 ```{r lightgbm}
 
-
-lgbm_reg_model <- parsnip::boost_tree( 
+tune_gr <- parsnip::boost_tree( 
   mode = 'regression',
+  mtry = integer(),
   trees = tune(),
   tree_depth = tune(),
   min_n = tune(), 
   loss_reduction = tune(),
-  learn_rate = tune(), 
-  stop_iter = tune()
-) |>
-    parsnip::set_engine("lightgbm", objective = "count:poisson")
+  learn_rate = tune()
+)
 
-doParallel::registerDoParallel() 
-model_params <- lgbm_reg_model |>
-   finetune::tune_sim_anneal(
-     rec, 
-     metrics = yardstick::metric_set(yardstick::mae),
-     resamples = rs, iter = 15, initial = parallel::detectCores()
-     )
+lgbm_poisson_gr <- tune_gr  |>
+  parsnip::set_engine("lightgbm", objective = "poisson")
+
+gr <- lgbm_poisson_gr |>
+  # going to use a typical grid which can support subgrid searchers. 
+  extract_parameter_set_dials() |>
+  dials::grid_regular(levels = 4)
+
+future::plan(multisession, workers = parallel::detectCores())
+params_xg_poisson <- lgbm_poisson_gr |>
+      finetune::tune_race_anova(
+        rec,
+        resamples = rs,
+        metrics = yardstick::metric_set(yardstick::mae), 
+        grid = gr
+      )
 
 best_param <- tune::select_best(model_params, metric = "mae")
 
