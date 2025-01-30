@@ -55,9 +55,7 @@ getwd()
 ```
 
 
-
 # playing with count prediction 
-
 
 ```{r Partition data and clean for modelling}
 
@@ -118,14 +116,14 @@ preds <- train %>%
   summarize(Predicted = mean(Prsnc_All)) %>% 
   sf::st_drop_geometry()
 
-test_mean <- test %>% 
+arith_mean <- test %>% 
   select(Observed = Prsnc_All, Lctn_bb) |>
   sf::st_drop_geometry()
 
-preds <- left_join(test_mean, preds, by = 'Lctn_bb')
-Metrics::mae(preds$Observed, preds$Predicted)
+mean_preds <- left_join(arith_mean, preds, by = 'Lctn_bb')
+Metrics::mae(mean_preds$Observed, mean_preds$Predicted)
 
-ggplot(data = preds) + 
+ggplot(data = mean_preds) + 
   geom_point(aes(x = Observed, y = Predicted)) +
   theme(aspect.ratio = 1) +
   coord_fixed() + 
@@ -136,7 +134,6 @@ ggplot(data = preds) +
 The use of kriging interpolation, where we simple smooth averages out between the plots, will be our null hypothesis for any spatial estimates of population size. 
 
 ```{r idw data}
-library(gstat)
 
 krig_preds <- data.frame(
     'Observed' = test$Prsnc_All, 
@@ -165,8 +162,8 @@ rs <- rsample::bootstraps(train, times = 10)
 tune_gr <- parsnip::boost_tree( 
   mode = 'regression',
   trees = tune(),
-  tree_depth = tune(),
-  min_n = tune()#, 
+  tree_depth = tune()#,
+#  min_n = tune(), 
 #  loss_reduction = tune(),
 #  learn_rate = tune(), 
 #  stop_iter = tune()
@@ -176,7 +173,7 @@ tune_gr <- parsnip::boost_tree(
 While random forests are relatively robust against the presence of uninformative features, gradient boosting methods are less so.
 Here we will use recursive feature elimination to drop some variables from our data set. 
 
-```{r}
+```{r Feature Selection}
 
 ctrl <- caret::rfeControl(
   functions = caret::treebagFuncs, method = "repeatedcv", repeats = 10,
@@ -202,7 +199,7 @@ train <- select(train, all_of(c('Prsnc_All', var)))
 As we can see from the table above, fewer variables work considerably better. 
 We reduce the mean absolute error by nearly half a plant per quadrant! 
 
-```{r xgboost poisson, eval = F}
+```{r xgboost poisson}
 
 xgb_poisson <- tune_gr  |>
   parsnip::set_engine("xgboost", objective = "count:poisson") 
@@ -229,19 +226,60 @@ xg_poisson <- xgb_poisson |>
 xgb_pois_fit <- xg_poisson %>% 
   fit(Prsnc_All ~ ., data = train)
 
-test_pred <- data.frame(
+xbg_pois_preds <- data.frame(
     'Observed' = test$Prsnc_All, 
     'Predicted' = stats::predict(xgb_pois_fit, new_data = test),
     'Pr.suit' = test$Pr.SuitHab
 )
 
-ggplot(data = test_pred) + 
+ggplot(data = xbg_pois_preds) + 
   geom_point(aes(x = Observed, y = .pred, color = Pr.suit)) +
   theme(aspect.ratio = 1) 
 
 vip::vip(xgb_pois_fit, num_features = 20)
-Metrics::mae(test_pred$Observed, test_pred$.pred)
+Metrics::mae(xbg_pois_preds$Observed, xbg_pois_preds$.pred)
+
+rm(xgb_poisson, xgb_poisson_gr)
 ```
+
+There are a good number of zeros, but not enough to warrant a zero inflated negative binomial. 
+We will try a negative binomial objective. 
+```{r xgboost negative binomial}
+
+xgb_nb <- tune_gr  |>
+  parsnip::set_engine("xgboost", objective = "reg:squarederror") 
+
+xgb_nb_gr <- xgb_nb |>
+  # going to use a typical grid which can support subgrid searchers. 
+  extract_parameter_set_dials() |>
+  dials::grid_regular(levels = 4)
+
+future::plan(multisession, workers = parallel::detectCores())
+params_xg_nb <- xgb_nb |>
+      finetune::tune_race_anova(
+        rec,
+        resamples = rs,
+        metrics = yardstick::metric_set(yardstick::mae), 
+        grid = xgb_nb_gr
+      )
+
+best_xg_nb <- tune::select_best(params_xg_nb, metric = "mae")
+
+xg_nb <- xgb_nb |>
+  tune::finalize_model(best_xg_nb)
+
+xgb_nb_fit <- xg_nb %>% 
+  fit(Prsnc_All ~ ., data = train)
+
+xbg_nb_pred <- data.frame(
+    'Observed' = test$Prsnc_All, 
+    'Predicted' = stats::predict(xgb_nb_fit, new_data = test),
+    'Pr.suit' = test$Pr.SuitHab
+)
+
+Metrics::mae(xbg_nb_pred$Observed, xbg_nb_pred$.pred)
+```
+
 
 ```{r xgboost with tweedie distribution}
 
@@ -258,7 +296,7 @@ xbg_tweedie_params <- xgb_tweedie_model |>
       finetune::tune_race_anova(
         rec,
         resamples = rs,
-        metrics = yardstick::metric_set(yardstick::mae), 
+       metrics = yardstick::metric_set(yardstick::mae), 
         grid = bt_grid
       )
 
@@ -267,22 +305,45 @@ best_param_tweedie <- tune::select_best(xbg_tweedie_params, metric = "mae")
 xgb_tweedie_mod <- xgb_tweedie_model |>
   tune::finalize_model(best_param_tweedie)
 
-xgb_fit <- xgb_tweedie_mod %>% 
+xgb_tweedie_fit <- xgb_tweedie_mod %>% 
   fit(Prsnc_All ~ ., data = train)
 
-test_pred <- data.frame(
+xbg_tweedie_preds <- data.frame(
     'Observed' = test$Prsnc_All, 
-    'Predicted' = stats::predict(xgb_fit, new_data = test),
+    'Predicted' = stats::predict(xgb_tweedie_fit, new_data = test),
     'Pr.suit' = test$Pr.SuitHab
 )
 
-ggplot(data = test_pred) + 
+ggplot(data = xbg_tweedie_preds) + 
   geom_point(aes(x = Observed, y = .pred, color = Pr.suit)) +
   theme(aspect.ratio = 1) 
 
-Metrics::mae(test_pred$Observed, test_pred$.pred)
-Metrics::rmse(test_pred$Observed, test_pred$.pred)
+Metrics::mae(xbg_tweedie_pred$Observed, xbg_tweedie_pred$.pred)
 ```
+
+Make a table of results 
+```{r}
+
+data.frame(
+  Model = c('Arithmetic Mean', 'Kriging', 'XGB Poisson', 'XGB Tweedie'), 
+  MAE = c(
+    Metrics::mae(mean_preds$Observed, mean_preds$Predicted),
+    
+    
+    )
+)
+
+
+xbg_pois_preds
+Metrics::rmse(mean_preds$Observed, mean_preds$Predicted)
+
+Metrics::mae(krig_preds$Observed, krig_preds$Predicted)
+Metrics::mae(xbg_tweedie_pred$Observed, xbg_tweedie_pred$.pred)
+Metrics::mae(krig_preds$Observed, krig_preds$Predicted)
+```
+
+
+
 
 
 ```{r lightgbm}
@@ -290,53 +351,32 @@ Metrics::rmse(test_pred$Observed, test_pred$.pred)
 tune_gr <- parsnip::boost_tree( 
   mode = 'regression',
   mtry = integer(),
-  trees = tune(),
-  tree_depth = tune(),
-  min_n = tune()
+  trees = tune()#,
+ # tree_depth = tune(),
+#  min_n = tune()
 )
 
 lgbm_poisson_gr <- tune_gr  |>
-  parsnip::set_engine("lightgbm", objective = "poisson")
+  parsnip::set_engine("lightgbm", objective = "reg:squarederror")
 
-gr <- lgbm_poisson_gr |>
+bt_grid <- lgb_poisson_model %>%
   # going to use a typical grid which can support subgrid searchers. 
-  extract_parameter_set_dials() |>
+  extract_parameter_set_dials() %>% 
   dials::grid_regular(levels = 4)
 
 future::plan(multisession, workers = parallel::detectCores())
-params_lgbm_poisson <- lgbm_poisson_gr |>
+lgb_poisson_params <- lgb_poisson_model |>
       finetune::tune_race_anova(
         rec,
         resamples = rs,
-        metrics = yardstick::metric_set(yardstick::mae), 
-        grid = gr
+       metrics = yardstick::metric_set(yardstick::mae), 
+        grid = bt_grid
       )
-
 best_param <- tune::select_best(model_params, metric = "mae")
 
 ```
 
 Try with mboost
-```{r}
-
-mboost_reg_model <- parsnip::boost_tree( 
-  mode = 'regression',
-  trees = tune(),
-  tree_depth = tune(),
-  min_n = tune(), 
-  loss_reduction = tune(),
-  learn_rate = tune(), 
-  stop_iter = tune()
-) |>
-    parsnip::set_engine("mboost", objective = "count:poisson")
-
-model_params <- mboost_reg_model |>
-   finetune::tune_sim_anneal(rec, 
-                             metrics = yardstick::metric_set(yardstick::mae),
-                   resamples = rs, iter = 15, initial = parallel::detectCores()
-                   )
-```
-
 
 ```{r try with gbm3}
 
@@ -350,16 +390,16 @@ trainControl <- trainControl(method="repeatedcv", number=10, repeats = 5)
     metric = 'MAE', 
     trControl = caret::trainControl(
       method="repeatedcv", number=10, repeats = 5,
-     # index = indices_knndm$indx_train,
       allowParallel = TRUE)
     )
   
   
   gbm_pred <- data.frame(
-    'Observed' = test$Prsnc_M, 
+    'Observed' = test$Prsnc_All, 
     'Predicted' = predict(gbm_model, newdata=test, type="raw"), 
     'Pr.suit' = test$Pr.SuitHab
 )
+  
   
 Metrics::mae(gbm_pred$Observed, gbm_pred$Predicted)
 Metrics::rmse(gbm_pred$Observed, gbm_pred$Predicted)
