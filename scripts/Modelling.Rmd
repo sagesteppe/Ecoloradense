@@ -236,7 +236,7 @@ ggplot(data = xbg_pois_preds) +
   geom_point(aes(x = Observed, y = .pred, color = Pr.suit)) +
   theme(aspect.ratio = 1) 
 
-vip::vip(xgb_pois_fit, num_features = 20)
+vip::vip(xgb_pois_fit)
 Metrics::mae(xbg_pois_preds$Observed, xbg_pois_preds$.pred)
 
 rm(xgb_poisson, xgb_poisson_gr)
@@ -318,6 +318,7 @@ ggplot(data = xbg_tweedie_preds) +
   geom_point(aes(x = Observed, y = .pred, color = Pr.suit)) +
   theme(aspect.ratio = 1) 
 
+vip::vip(xgb_tweedie_fit)
 Metrics::mae(xbg_tweedie_pred$Observed, xbg_tweedie_pred$.pred)
 ```
 
@@ -334,12 +335,13 @@ data.frame(
 )
 
 
-xbg_pois_preds
-Metrics::rmse(mean_preds$Observed, mean_preds$Predicted)
+Metrics::rmse(xbg_pois_preds$Observed, xbg_pois_preds$.pred)
+Metrics::rmse(xbg_tweedie_pred$Observed, xbg_tweedie_pred$.pred)
 
+Metrics::mae(mean_preds$Observed, mean_preds$Predicted)
 Metrics::mae(krig_preds$Observed, krig_preds$Predicted)
+Metrics::mae(xbg_pois_preds$Observed, xbg_pois_preds$.pred)
 Metrics::mae(xbg_tweedie_pred$Observed, xbg_tweedie_pred$.pred)
-Metrics::mae(krig_preds$Observed, krig_preds$Predicted)
 ```
 
 
