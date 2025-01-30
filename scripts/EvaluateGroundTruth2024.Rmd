@@ -24,6 +24,7 @@ gt2024 <- st_read('../data/GroundTruthing/Iteration1Pts.shp', quiet = T)
 # we'll just create the data sets at different resolutions right now... 
 # these are final for count data - no historic records have these attributes.
 rt <- '../data/spatial/processed' 
+
 st_write(subset_pts(x = gt2024, res = 3, root = rt, mode = 'Count'), 
   '../data/Data4modelling/3m-count-iter1.gpkg', append = F)
 st_write(subset_pts(x = gt2024, res = 10, root = rt, mode = 'Count'), 

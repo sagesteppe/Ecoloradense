@@ -61,9 +61,11 @@ getwd()
 
 ```{r Partition data and clean for modelling}
 
+# note that we have already multiplied these values out so that they went from a 
+# 3x3m quadrat to the number of
+
 ct <- st_read('../data/Data4modelling/30m-count-iter1.gpkg', quiet = TRUE) |>
-  select(Prsnc_M, Prsnc_J) |>
-  mutate(across(starts_with("Prsnc_"), ~ round(.x / 100, 0)))
+  select(Prsnc_M, Prsnc_J, Lctn_bb)
 
 # extract independent variables to data set . 
 resolution = "1arc"
@@ -77,9 +79,8 @@ df <- dplyr::bind_cols(
   Pr.SuitHab = terra::extract(r, ct)$X1
 ) |> 
   mutate(Prsnc_All = Prsnc_J + Prsnc_M, .before = 1) |>
-  tidyr::drop_na() |>
+ # tidyr::drop_na() |>
   select(-Prsnc_J, -Prsnc_M)
-
 
 data_split <- df |>
   rsample::initial_split(strata = Prsnc_All, prop = 4/5) 
@@ -94,15 +95,38 @@ test  <- rsample::testing(data_split)
 #  space = 'geographic',
 #  k=10)
 
-
+rm(ct)
 ```
 
 Modelling count data has not been very successful, nor did the field work really develop any strong insights on what drives the abundance of the plants. 
 Rather the abundance seemed random within populations, and between - with the exception of Cocheotopa where plants were much smaller and incredibly more abundant than elsewhere. 
 
-The null hypothesis for estimating population sizes will be the use of the arithmatic mean per populations. 
+The null hypothesis for estimating population sizes will be the use of the arithmetic mean per populations. 
 
-```{r arithmatic mean of counts per population}
+```{r arithmetic mean of counts per population}
+
+# this isn't a perfect comparision, because the locations more reflect how I hiked
+# rather than a population. i.e. all visits in a day, unless i went back to truck
+# between them were lumped into a single 'location'. so we can't report these values
+# in the end. 
+
+preds <- train %>% 
+  group_by(Lctn_bb) %>% 
+  summarize(Predicted = mean(Prsnc_All)) %>% 
+  sf::st_drop_geometry()
+
+test_mean <- test %>% 
+  select(Observed = Prsnc_All, Lctn_bb) |>
+  sf::st_drop_geometry()
+
+preds <- left_join(test_mean, preds, by = 'Lctn_bb')
+Metrics::mae(preds$Observed, preds$Predicted)
+
+ggplot(data = preds) + 
+  geom_point(aes(x = Observed, y = Predicted)) +
+  theme(aspect.ratio = 1) +
+  coord_fixed() + 
+  geom_abline()
 
 ```
 
@@ -127,9 +151,9 @@ Metrics::mae(krig_preds$Observed, krig_preds$Predicted)
 ```
 
 
-
-```{r Boosting models}
-train <- sf::st_drop_geometry(train) 
+```{r Split data for modelling}
+train <- sf::st_drop_geometry(train) |>
+  select(-Lctn_bb)
 test  <- rsample::testing(data_split)
 
 rec <- recipes::recipe(Prsnc_All ~ ., data = train) 
@@ -139,12 +163,34 @@ tune_gr <- parsnip::boost_tree(
   mode = 'regression',
   trees = tune(),
   tree_depth = tune(),
-  min_n = tune(), 
-  loss_reduction = tune(),
-  learn_rate = tune(), 
-  stop_iter = tune()
+  min_n = tune()#, 
+#  loss_reduction = tune(),
+#  learn_rate = tune(), 
+#  stop_iter = tune()
 )
 ```
+
+While random forests are relatively robust against the presence of uninformative features, gradient boosting methods are less so.
+Here we will use recursive feature elimination to drop some variables from our data set. 
+
+```{r}
+ctrl <- caret::rfeControl(
+  functions = caret::rfFuncs, method = "repeatedcv", repeats = 10,
+  allowParallel = TRUE)
+
+future::plan(multisession, workers = parallel::detectCores())
+rfProfile <- caret::rfe(
+  train[,2:ncol(train)], train$Prsnc_All,
+  rfeControl = ctrl
+  )
+
+train <- select(train, c('Prsnc_All', predictors(rfProfile)))
+
+predictors(rfProfile)
+```
+
+As we can see from the table above, fewer variables work considerably better. 
+We reduce the mean absolute error by nearly half a plant per quadrant! 
 
 ```{r xgboost poisson, eval = F}
 
@@ -162,20 +208,20 @@ params_xg_poisson <- xgb_poisson |>
         rec,
         resamples = rs,
         metrics = yardstick::metric_set(yardstick::mae), 
-        grid = xb_poisson_gr
+        grid = xgb_poisson_gr
       )
 
-best_param <- tune::select_best(params_xg_poisson, metric = "mae")
+best_xg_pois <- tune::select_best(params_xg_poisson, metric = "mae")
 
-xg_poisson <- params_xg_poisson |>
-  tune::finalize_model(best_param)
+xg_poisson <- xgb_poisson |>
+  tune::finalize_model(best_xg_pois)
 
 xgb_pois_fit <- xg_poisson %>% 
   fit(Prsnc_All ~ ., data = train)
 
 test_pred <- data.frame(
     'Observed' = test$Prsnc_All, 
-    'Predicted' = stats::predict(xgb_fit, new_data = test),
+    'Predicted' = stats::predict(xgb_pois_fit, new_data = test),
     'Pr.suit' = test$Pr.SuitHab
 )
 
@@ -183,23 +229,23 @@ ggplot(data = test_pred) +
   geom_point(aes(x = Observed, y = .pred, color = Pr.suit)) +
   theme(aspect.ratio = 1) 
 
-vip::vip(xgb_fit, num_features = 20)
+vip::vip(xgb_pois_fit, num_features = 20)
 Metrics::mae(test_pred$Observed, test_pred$.pred)
 Metrics::rmse(test_pred$Observed, test_pred$.pred)
 ```
 
 ```{r xgboost with tweedie distribution}
 
-xgb_reg_model <- tune_gr |>
+xgb_tweedie_model <- tune_gr |>
     parsnip::set_engine("xgboost", objective = "reg:tweedie")
 
-bt_grid <- xgb_reg_model %>%
+bt_grid <- xgb_tweedie_model %>%
   # going to use a typical grid which can support subgrid searchers. 
   extract_parameter_set_dials() %>% 
   dials::grid_regular(levels = 4)
 
 future::plan(multisession, workers = parallel::detectCores())
-xbg_tweedie_params <- xgb_reg_model |>
+xbg_tweedie_params <- xgb_tweedie_model |>
       finetune::tune_race_anova(
         rec,
         resamples = rs,
@@ -209,7 +255,7 @@ xbg_tweedie_params <- xgb_reg_model |>
 
 best_param_tweedie <- tune::select_best(xbg_tweedie_params, metric = "mae")
 
-xgb_tweedie_mod <- xbg_tweedie_params |>
+xgb_tweedie_mod <- xgb_tweedie_model |>
   tune::finalize_model(best_param_tweedie)
 
 xgb_fit <- xgb_tweedie_mod %>% 

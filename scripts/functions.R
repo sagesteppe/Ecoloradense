@@ -510,7 +510,7 @@ HistObsGrps <- function(x){
 #' @description Each of the different resolutions of raster data will require
 #' different testing and training data to ensure that records (e.g. a raster grid 
 #' cell) are not replicated. This function first calculates the hypotenuse of a the resolution
-#' using the 'ideal' X& Y edges of the raster - which we know to be inaccurate by 
+#' using the 'ideal' X & Y edges of the raster - which we know to be inaccurate by 
 #' ca. an entire meter at the '10m' resolution scale - to give us a rough estimate
 #' of how many points will be dropped.  Then it loads an actual layer of the 
 #' raster stack at the relevant resolution, extracts the pixel ID's and removes
@@ -551,7 +551,7 @@ subset_pts <- function(x, res, root, mode){
   
   rasta <- terra::rast( # we only need to read in one raster - by definition these
     # are all aligned to each other. 
-    file.path(root, paste0('dem_' ,res_string), 'dem.tif')
+    file.path(root, paste0('dem_', res_string), 'dem.tif')
   )
   
   x['RasterCell'] <- terra::extract(rasta, x, cells = TRUE)$cell
@@ -594,7 +594,9 @@ subset_pts <- function(x, res, root, mode){
       x$Prsnc_S <- ((res^2) / (3^2)) * mean(x$Prsnc_S, na.rm = TRUE)
       x <- x[sample(1:nrow(x), 1),] 
     }
-    RC <- lapply(RC, countR)
+
+    # let's train the models on the raw count data,not the transformed values. 
+#    RC <- lapply(RC, countR)
   }
   dplyr::bind_rows(RC) |>
     dplyr::arrange(OBJECT) |>
