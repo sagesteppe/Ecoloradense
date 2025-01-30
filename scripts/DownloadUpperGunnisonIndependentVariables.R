@@ -638,13 +638,100 @@ terra::resample(r, arc1_template, threads = 16, filename = './dem_1arc/NDVI.tif'
 terra::resample(r, arc13_template, threads = 16, filename = './dem_1-3arc/NDVI.tif')
 terra::resample(r, m3_template, threads = 16, filename = './dem_3m/NDVI.tif')
 
+# we can also calculate SAVI real quick
+setwd(paste0(p, 'NDVI_raw'))
+f <- list.files()
+
+lapply(f, function(x){res(rast(x))})
+
+
+savi_calc <- function(x){
+  r <- terra::rast(x)
+  names(r) <- c('Red', 'NIR')
+  savi <- ((r['NIR'] - r['Red']) / (r['NIR'] + r['Red'] + 0.5)) * (1.5)
+  terra::writeRaster(savi, paste0('../SAVI_Calc/', x))
+}
+
+parallel::mclapply(f, savi_calc)
+
+setwd(paste0(p, 'SAVI_Calc'))
+f <- list.files()
+
+lapply(f, function(x){res(rast(x))})
+res(rast(f[5]))
+calced <- terra::vrt(f, '../SAVI_Products/SAVI_vrt')
+r <- rast("../SAVI_Products/SAVI_vrt")
+terra::writeRaster(r, "../SAVI_Products/SAVI.tif")
+r <- terra::rast("../SAVI_Products/SAVI.tif")
+names(r) <- 'SAVI'
+
+setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed')
+terra::resample(r, arc3_template, threads = 16, filename = './dem_3arc/SAVI.tif') 
+terra::resample(r, arc1_template, threads = 16, filename = './dem_1arc/SAVI.tif') 
+terra::resample(r, arc13_template, threads = 16, filename = './dem_1-3arc/SAVI.tif')
+terra::resample(r, m3_template, threads = 16, filename = './dem_3m/SAVI.tif')
 
 
 
+
+## I want to make a few more geomorphology variables which were'nt made with the first 
+# batch 
+morphoMaker <- function(x, p){
+  
+  if(str_detect(x, 'tif$')){demIN <- x} else{
+    demIN <- terra::mosaic(terra::sprc(file.path(x, list.files(x, 'tif$'))))
+  }
+  # these describe different dimensions of curavture at a cell relative to it's local
+  # landscape 
+  whitebox::wbt_minimal_curvature(demIN, output = file.path(p, "mininmal_curv.tif"))
+  whitebox::wbt_mean_curvature(demIN,  output = file.path(p, "mean_curv.tif"))
+  
+}
+
+setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
+
+arc3 <- rast('../data/spatial/processed/dem_3arc/dem.tif')
+morphoMaker(x = '../data/spatial/processed/dem_3arc/dem.tif', 
+            p = '../data/spatial/processed/dem_3arc/geomorphology')
+
+morphoMaker(x = '../data/spatial/processed/dem_1arc/dem.tif', 
+            p = '../data/spatial/processed/dem_1arc/geomorphology')
+
+morphoMaker(x = '../data/spatial/processed/dem_1-3arc/dem.tif', 
+            p = '../data/spatial/processed/dem_1-3arc/geomorphology')
+
+morphoMaker(x = '../data/spatial/raw/dem_3m', 
+            p = '../data/spatial/processed/dem_3m/geomorphology')
+
+
+# we will also decompose aspect into Northness and Eastness
+
+x = c(
+  './dem_3arc/geomorphology/aspect.tif', 
+  './dem_1arc/geomorphology/aspect.tif', 
+  './dem_1-3arc/geomorphology/aspect.tif'
+)
+
+decomposeAspect <- function(x){
+  
+  Aspect <- terra::rast(x)
+  
+  northness <- cos(Aspect * pi / 180)
+  eastness <- sin(Aspect * pi / 180)
+  names(northness) <- 'Northness'
+  names(eastness) <- 'Eastness'
+  
+  file.path(dirname(x), 'northness.tif')
+  writeRaster(northness, file.path(dirname(x), 'northness.tif'))
+  writeRaster(eastness, file.path(dirname(x), 'eastness.tif'))
+}
+
+setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed')
+lapply(x, decomposeAspect)
 
 
 #### we will also create a couple of products from spatialEco package which relate 
-# to how much heat areas on a lanscape accumulate
+# to how much heat areas on a lanDscape accumulate
 x = c(
   './dem_3arc/geomorphology/aspect.tif', 
   './dem_1arc/geomorphology/aspect.tif', 
@@ -654,21 +741,16 @@ x = c(
 heat <- function(x){
   
   r <- terra::rast(x)
-  r <-  spatialEco::dahi(r)
-  names(r) <- 'DAHI'
-  terra::writeRaster(r, file.path(dirname(x), 'DAHI.tif'))
+  dahi_r <-  spatialEco::dahi(r)
+  names(dahi_r) <- 'DAHI'
+  terra::writeRaster(dahi_r, file.path(dirname(x), 'DAHI.tif'))
   
-  hli <-  spatialEco::hli(r)
+  hli <- spatialEco::hli(r)
   names(hli) <- 'HLI'
   terra::writeRaster(r, file.path(dirname(x), 'HLI.tif'))
   
 }
 
+setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed')
 lapply(x, heat)
 
-# edit we made these and the products were absolute noise, no reason to try and 
-# use them. just manually deleted them from the directories. 
-elev <- rast(system.file("extdata/elev.tif", package="spatialEco"))
-Ha <- spatialEco::dahi(elev)
-plot(Ha)
-plot(elev)
