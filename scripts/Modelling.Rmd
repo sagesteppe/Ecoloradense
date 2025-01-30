@@ -71,7 +71,9 @@ ct <- st_read('../data/Data4modelling/30m-count-iter1.gpkg', quiet = TRUE) |>
 resolution = "1arc"
 train_split = 0.8; p2proc = '../data/spatial/processed'
 rast_dat <- rastReader(paste0('dem_', resolution), p2proc) 
+rast_dat <- rast_dat[[-c(34)]]
 r <- rast('../results/suitability_maps/1arc-Iteration1-PA1:3DO:2-Pr.tif')
+names(rast_dat)
 
 df <- dplyr::bind_cols(
   ct, 
@@ -79,8 +81,9 @@ df <- dplyr::bind_cols(
   Pr.SuitHab = terra::extract(r, ct)$X1
 ) |> 
   mutate(Prsnc_All = Prsnc_J + Prsnc_M, .before = 1) |>
- # tidyr::drop_na() |>
+  tidyr::drop_na() |>
   select(-Prsnc_J, -Prsnc_M)
+
 
 data_split <- df |>
   rsample::initial_split(strata = Prsnc_All, prop = 4/5) 
@@ -174,19 +177,26 @@ While random forests are relatively robust against the presence of uninformative
 Here we will use recursive feature elimination to drop some variables from our data set. 
 
 ```{r}
+
 ctrl <- caret::rfeControl(
-  functions = caret::rfFuncs, method = "repeatedcv", repeats = 10,
+  functions = caret::treebagFuncs, method = "repeatedcv", repeats = 10,
   allowParallel = TRUE)
 
 future::plan(multisession, workers = parallel::detectCores())
 rfProfile <- caret::rfe(
   train[,2:ncol(train)], train$Prsnc_All,
-  rfeControl = ctrl
+  rfeControl = ctrl, metric = 'MAE'
   )
 
-train <- select(train, c('Prsnc_All', predictors(rfProfile)))
+var <- rfProfile$variables
+var <- var[var$Variables==8,] |>
+  group_by(var) |>
+  summarise(Overall_mean = mean(Overall)) |>
+  arrange(-Overall_mean) |>
+  slice_max(n = 8, order_by = Overall_mean) |>
+  pull(var)
 
-predictors(rfProfile)
+train <- select(train, all_of(c('Prsnc_All', var)))
 ```
 
 As we can see from the table above, fewer variables work considerably better. 
@@ -231,7 +241,6 @@ ggplot(data = test_pred) +
 
 vip::vip(xgb_pois_fit, num_features = 20)
 Metrics::mae(test_pred$Observed, test_pred$.pred)
-Metrics::rmse(test_pred$Observed, test_pred$.pred)
 ```
 
 ```{r xgboost with tweedie distribution}
@@ -271,8 +280,6 @@ ggplot(data = test_pred) +
   geom_point(aes(x = Observed, y = .pred, color = Pr.suit)) +
   theme(aspect.ratio = 1) 
 
-vip::vip(xgb_fit, num_features = 20)
-
 Metrics::mae(test_pred$Observed, test_pred$.pred)
 Metrics::rmse(test_pred$Observed, test_pred$.pred)
 ```
@@ -285,9 +292,7 @@ tune_gr <- parsnip::boost_tree(
   mtry = integer(),
   trees = tune(),
   tree_depth = tune(),
-  min_n = tune(), 
-  loss_reduction = tune(),
-  learn_rate = tune()
+  min_n = tune()
 )
 
 lgbm_poisson_gr <- tune_gr  |>
@@ -299,7 +304,7 @@ gr <- lgbm_poisson_gr |>
   dials::grid_regular(levels = 4)
 
 future::plan(multisession, workers = parallel::detectCores())
-params_xg_poisson <- lgbm_poisson_gr |>
+params_lgbm_poisson <- lgbm_poisson_gr |>
       finetune::tune_race_anova(
         rec,
         resamples = rs,
