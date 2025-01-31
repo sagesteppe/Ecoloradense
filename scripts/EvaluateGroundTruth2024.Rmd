@@ -24,7 +24,6 @@ gt2024 <- st_read('../data/GroundTruthing/Iteration1Pts.shp', quiet = T)
 # we'll just create the data sets at different resolutions right now... 
 # these are final for count data - no historic records have these attributes.
 rt <- '../data/spatial/processed' 
-
 st_write(subset_pts(x = gt2024, res = 3, root = rt, mode = 'Count'), 
   '../data/Data4modelling/3m-count-iter1.gpkg', append = F)
 st_write(subset_pts(x = gt2024, res = 10, root = rt, mode = 'Count'), 
@@ -134,6 +133,7 @@ rm(dts, dts_l)
 
 I made a simple mistake when saving the pts to ground truth, I did not write out an ID from the initial process. 
 Hopefully all of the ground verified points can be recovered by a combination of dates the observation was made, and their locations. 
+
 ```{r}
 all_hist_pres <- #bind_rows(
   st_read('../data/GroundTruthPts/Revisits-cp.shp', quiet = TRUE)# |>

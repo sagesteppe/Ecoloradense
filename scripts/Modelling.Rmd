@@ -13,6 +13,8 @@ library(bonsai)
 library(parsnip)
 library(lightgbm)
 library(future)
+library(dials)
+library(finetune)
 source('functions.R')
 set.seed(23)
 ```
@@ -159,16 +161,16 @@ test  <- rsample::testing(data_split)
 rec <- recipes::recipe(Prsnc_All ~ ., data = train) 
 rs <- rsample::bootstraps(train, times = 10)
 
-
 tune_gr <- parsnip::boost_tree( 
   mode = 'regression',
-  trees = c(1, 400, 800, 1200),
-  tree_depth = seq(2,8, by = 2),
-  min_n = c(1, 3, 7, 10), 
+  trees = tune(),
+  tree_depth = tune(),
+  min_n = tune(), 
   loss_reduction = tune(),
-  learn_rate = tune(), 
-  stop_iter = tune()
+  learn_rate = tune(),
+  stop_iter =tune()
 )
+
 ```
 
 While random forests are relatively robust against the presence of uninformative features, gradient boosting methods are less so.
@@ -205,20 +207,27 @@ We reduce the mean absolute error by nearly half a plant per quadrant!
 xgb_poisson <- tune_gr  |>
   parsnip::set_engine("xgboost", objective = "count:poisson") 
 
-xgb_poisson_gr <- xgb_poisson |>
-  # going to use a typical grid which can support subgrid searchers. 
-  extract_parameter_set_dials() #|>
-  dials::grid_regular(levels = 4)
-  
-  ?grid_regular
+my_params <- parameters( # it's a pretty basic grid for running xgboost 
+  list( # with small sample sizes, essentially we try to get at preventing
+    trees(range = c(1L, 1200L)),  # overfitting in two ways. - by reducing the
+    tree_depth(range = c(2L , 8L)), # tree depth, and the number of trees grown
+    min_n(range = c(2L, 20)),
+    learn_rate(range = c(0.01, 0.3)),
+    loss_reduction(range = c(0, 20)),
+    stop_iter(range = c(3, 20))
+  ) # although it's pretty simple I am quite confident we have reduced the MAE
+) # of our models by 20-25% on our independent test data using these restrictions.
+
+xgb_gr <- my_params %>% 
+  grid_regular(levels = 3)
 
 future::plan(multisession, workers = parallel::detectCores())
 params_xg_poisson <- xgb_poisson |>
-      finetune::tune_race_anova(
+      tune::tune_grid(
         rec,
         resamples = rs,
         metrics = yardstick::metric_set(yardstick::mae), 
-        grid = xgb_poisson_gr
+        grid = xgb_gr
       )
 
 best_xg_pois <- tune::select_best(params_xg_poisson, metric = "mae")
@@ -248,59 +257,28 @@ rm(xgb_poisson, xgb_poisson_gr)
 There are a good number of zeros, but not enough to warrant a zero inflated negative binomial. 
 We will try a negative binomial objective. 
 ```{r xgboost negative binomial}
-
-xgb_nb <- tune_gr  |>
-  parsnip::set_engine("xgboost", objective = "reg:squarederror") 
-
-xgb_nb_gr <- xgb_nb |>
-  # going to use a typical grid which can support subgrid searchers. 
-  extract_parameter_set_dials() |>
-  dials::grid_regular(levels = 4)
-
-future::plan(multisession, workers = parallel::detectCores())
-params_xg_nb <- xgb_nb |>
-      finetune::tune_race_anova(
-        rec,
-        resamples = rs,
-        metrics = yardstick::metric_set(yardstick::mae), 
-        grid = xgb_nb_gr
-      )
-
-best_xg_nb <- tune::select_best(params_xg_nb, metric = "mae")
-
-xg_nb <- xgb_nb |>
-  tune::finalize_model(best_xg_nb)
-
-xgb_nb_fit <- xg_nb %>% 
-  fit(Prsnc_All ~ ., data = train)
-
-xbg_nb_pred <- data.frame(
-    'Observed' = test$Prsnc_All, 
-    'Predicted' = stats::predict(xgb_nb_fit, new_data = test),
-    'Pr.suit' = test$Pr.SuitHab
-)
-
-Metrics::mae(xbg_nb_pred$Observed, xbg_nb_pred$.pred)
+1+1
 ```
 
+Tweedie needs to be allowed to explore the hyperparameters more than poisson. 
 
-```{r xgboost with tweedie distribution}
+```{r xgboost with tweedie distribution, eval = F}
 
 xgb_tweedie_model <- tune_gr |>
     parsnip::set_engine("xgboost", objective = "reg:tweedie")
 
-bt_grid <- xgb_tweedie_model %>%
+xgb_poisson_gr <- xgb_tweedie_model |>
   # going to use a typical grid which can support subgrid searchers. 
-  extract_parameter_set_dials() %>% 
-  dials::grid_regular(levels = 4)
-
+  extract_parameter_set_dials() |>
+  dials::grid_regular(levels = 3)
+  
 future::plan(multisession, workers = parallel::detectCores())
 xbg_tweedie_params <- xgb_tweedie_model |>
       finetune::tune_race_anova(
         rec,
         resamples = rs,
-       metrics = yardstick::metric_set(yardstick::mae), 
-        grid = bt_grid
+        metrics = yardstick::metric_set(yardstick::mae), 
+        grid = xgb_poisson_gr
       )
 
 best_param_tweedie <- tune::select_best(xbg_tweedie_params, metric = "mae")
@@ -322,7 +300,7 @@ ggplot(data = xbg_tweedie_preds) +
   theme(aspect.ratio = 1) 
 
 vip::vip(xgb_tweedie_fit)
-Metrics::mae(xbg_tweedie_pred$Observed, xbg_tweedie_pred$.pred)
+Metrics::mae(xbg_tweedie_preds$Observed, xbg_tweedie_preds$.pred)
 ```
 
 Make a table of results 
@@ -339,12 +317,12 @@ data.frame(
 
 
 Metrics::rmse(xbg_pois_preds$Observed, xbg_pois_preds$.pred)
-Metrics::rmse(xbg_tweedie_pred$Observed, xbg_tweedie_pred$.pred)
+Metrics::rmse(xbg_tweedie_preds$Observed, xbg_tweedie_preds$.pred)
 
 Metrics::mae(mean_preds$Observed, mean_preds$Predicted)
 Metrics::mae(krig_preds$Observed, krig_preds$Predicted)
 Metrics::mae(xbg_pois_preds$Observed, xbg_pois_preds$.pred)
-Metrics::mae(xbg_tweedie_pred$Observed, xbg_tweedie_pred$.pred)
+Metrics::mae(xbg_tweedie_preds$Observed, xbg_tweedie_preds$.pred)
 ```
 
 
@@ -354,20 +332,16 @@ Metrics::mae(xbg_tweedie_pred$Observed, xbg_tweedie_pred$.pred)
 ```{r lightgbm}
 
 tune_gr <- parsnip::boost_tree( 
-  mode = 'regression',
-  mtry = integer(),
-  trees = tune()#,
- # tree_depth = tune(),
-#  min_n = tune()
+  mode = 'regression'
 )
 
 lgbm_poisson_gr <- tune_gr  |>
   parsnip::set_engine("lightgbm", objective = "reg:squarederror")
 
-bt_grid <- lgb_poisson_model %>%
+bt_grid <- lgbm_poisson_gr %>%
   # going to use a typical grid which can support subgrid searchers. 
   extract_parameter_set_dials() %>% 
-  dials::grid_regular(levels = 4)
+  dials::grid_regular(levels = 2)
 
 future::plan(multisession, workers = parallel::detectCores())
 lgb_poisson_params <- lgb_poisson_model |>
