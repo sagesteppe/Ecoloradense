@@ -52,9 +52,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   ) |> 
     tidyr::drop_na() %>% 
     dplyr::mutate(
-      Occurrence = as.factor(Occurrence)) |>#, 
- #     Pennock = as.factor(Pennock), 
-  #    geomorphons = as.factor(geomorphons)) |> 
+      Occurrence = as.factor(Occurrence)) |>
     sf::st_drop_geometry()
 
   fname <- paste0(resolution, '-Iteration', iteration, '-PA', PAratio, distOrder)
@@ -125,6 +123,9 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   # save the model
   saveRDS(rf_model,
           file = paste0('../results/models/', fname, '.rds'))
+  
+  # save the test data. 
+  write.csv(Test, paste0('../results/test_data/', fname, '.csv'))
   
   # save the confusion matrix
   predictions <- predict(rf_model, Test, type = 'se', se.method = 'infjack', probability=TRUE)
