@@ -77,9 +77,54 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   Train <- df[TrainIndex,]; Test <- df[-TrainIndex,]
 
   Train.sf <- sf::st_as_sf(Train, coords = c('Longitude', 'Latitude'), crs = 32613)
-
-  # perform the random forest modelling using default settings. 
+  
+  ## remove totally uninformative features using Boruta analysis, these features
+  # can only hinder the model, and make prediction onto raster surfaces take longer
+  
+  BorutaRes <- Boruta::Boruta(Occurrence ~ ., data = Train, num.threads = cores, doTrace = 1)
+  importance <- Boruta::attStats(BorutaRes)
+  rn <- rownames(importance)
+  important_vars <- Boruta::getSelectedAttributes(BorutaRes, withTentative = TRUE)
+  
+  keep <- unique(c('Occurrence', important_vars))
+  Train <- Train[ , names(Train) %in% keep]
+  
+  # develop a cross validation structure which is explicitly spatial  
   indices_knndm <- CAST::knndm(Train.sf, rast_dat, k=10)
+  
+  # Use recursive feature elimination to find the optimal number and set of 
+  # features. 
+  
+  ctrl <- caret::rfeControl(
+    functions = rfFuncs,
+    index = indices_knndm[["indx_train"]], 
+    allowParallel = TRUE
+  )
+  
+  rfProfile <- caret::rfe(
+    Train[,2:ncol(Train)], 
+    Train$Occurrence, 
+    rfeControl = ctrl,
+    metrics = yardstick::metric_set(yardstick::bal_accuracy)
+  )
+  
+  rfP_tenth <- caret::pickSizeTolerance(
+    rfProfile$results, 
+    metric = "Accuracy", 
+    tol = 0.1, 
+    maximize = TRUE
+    )
+  
+  v_tab <- rfProfile$variables
+  selected_vars <- v_tab[v_tab$Variables == rfP_tenth,] %>% 
+    dplyr::group_by(var) %>% 
+    dplyr::summarise(Overall_mean = mean(Overall)) %>% 
+    dplyr::slice_max(Overall_mean, n = rfP_tenth) %>% 
+    dplyr::pull(var)
+  
+  Train <- Train[ , names(Train) %in% c('Occurrence', selected_vars)]
+  
+  # Now we will tune the hyperparameters for this model. 
   
   tgrid <- expand.grid(
     mtry = 
