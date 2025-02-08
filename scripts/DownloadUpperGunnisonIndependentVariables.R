@@ -754,3 +754,48 @@ heat <- function(x){
 setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed')
 lapply(x, heat)
 
+
+
+
+
+
+#############################################################################
+
+# Convert geomorphon and pennock landform positions into a factor rasters ##
+
+p <- '/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed'
+f <- list.files(p, recursive=TRUE, pattern = '.tif$')
+f <- file.path(p, f[grep('Pennock|geomorphons',  f)])
+
+geomorphon_df <- data.frame(
+  Value	= 1:10, 
+  Landform = c(
+    'Flat', 'Summit', 'Ridge', 'Shoulder', 'Spur', 'Slope', 'Hollow', 
+    'Footslope', 'Valley', 'Pit')
+)
+
+pennock_df <- data.frame(
+  Value = c(1:7, 128),
+  Class = c('CFS', 'DFS', 'CSH', 'DSH', 'CBS', 'DBS', 'L', NA)
+)
+
+makeFactors <- function(x){
+  
+  f_out <- file.path(
+    dirname(x), 
+    gsub('.tif', '-fact.tif',  basename(x))
+  )
+  
+  r <- terra::rast(x)
+  
+  if(grepl('Pennock', basename(x)) == TRUE){
+    levels(r) <- pennock_df
+  } else {
+    levels(r) <- geomorphon_df
+  }
+
+  terra::writeRaster(r, f_out)
+  unlink(x)
+}
+
+lapply(f, makeFactors)

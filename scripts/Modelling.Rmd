@@ -39,20 +39,13 @@ m30 <- bind_rows(m30, abs)
 m30 <- filter(m30, st_is(m30, "POINT")) |>
   select(Occurrence)
 
+
 distOrder_PAratio_simulator(
-  x = m30, distOrder = 0, PAratio = 3.0,
-  resolution = 10, iteration = 1, se_prediction = FALSE,
+  x = m30, distOrder = 0, PAratio = 3.9,
+  resolution = 90, iteration = 1, se_prediction = FALSE,
   train_split = 0.9, p2proc = '../data/spatial/processed'
   )
 
-
-process_plss(
-  path = '.', 
-  pathOut = '../geodata', 
-  tile_cells = tile_cells 
-)
-
-getwd()
 
 ```
 
@@ -71,9 +64,11 @@ ct <- st_read('../data/Data4modelling/30m-count-iter1.gpkg', quiet = TRUE) |>
 resolution = "1arc"
 train_split = 0.8; p2proc = '../data/spatial/processed'
 rast_dat <- rastReader(paste0('dem_', resolution), p2proc) 
-rast_dat <- rast_dat[[-c(34)]]
+
 r <- rast('../results/suitability_maps/1arc-Iteration1-PA1:3DO:2-Pr.tif')
 names(rast_dat)
+
+rast_dat
 
 df <- dplyr::bind_cols(
   ct, 
