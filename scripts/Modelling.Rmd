@@ -44,7 +44,6 @@ distOrder_PAratio_simulator(
   resolution = 90, iteration = 1, se_prediction = FALSE,
   train_split = 0.9, p2proc = '../data/spatial/processed'
   )
-  
 ```
 
 
