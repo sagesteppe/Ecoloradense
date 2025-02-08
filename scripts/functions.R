@@ -92,38 +92,6 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   # develop a cross validation structure which is explicitly spatial  
   indices_knndm <- CAST::knndm(Train.sf, rast_dat, k=10)
   
-  # Use recursive feature elimination to find the optimal number and set of 
-  # features. 
-  
-  ctrl <- caret::rfeControl(
-    functions = rfFuncs,
-    index = indices_knndm[["indx_train"]], 
-    allowParallel = TRUE
-  )
-  
-  rfProfile <- caret::rfe(
-    Train[,2:ncol(Train)], 
-    Train$Occurrence, 
-    rfeControl = ctrl,
-    metrics = yardstick::metric_set(yardstick::bal_accuracy)
-  )
-  
-  rfP_tenth <- caret::pickSizeTolerance(
-    rfProfile$results, 
-    metric = "Accuracy", 
-    tol = 0.1, 
-    maximize = TRUE
-    )
-  
-  v_tab <- rfProfile$variables
-  selected_vars <- v_tab[v_tab$Variables == rfP_tenth,] %>% 
-    dplyr::group_by(var) %>% 
-    dplyr::summarise(Overall_mean = mean(Overall)) %>% 
-    dplyr::slice_max(Overall_mean, n = rfP_tenth) %>% 
-    dplyr::pull(var)
-  
-  Train <- Train[ , names(Train) %in% c('Occurrence', selected_vars)]
-  
   # Now we will tune the hyperparameters for this model. 
   
   tgrid <- expand.grid(
@@ -145,7 +113,6 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
     y = Train$Occurrence,
     method = "ranger",
     num.trees = 750,
-    tuneGrid = tgrid,
     metric = 'Accuracy', 
     keep.inbag = TRUE, 
     class.weights = wts,
@@ -172,28 +139,51 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   # save the test data. 
   write.csv(Test, paste0('../results/test_data/', fname, '.csv'))
   
+  
+  # threshold the model and use these values for binary classification estimates
+  predictions <- predict(rf_model, Test, type = 'se', se.method = 'infjack', probability=TRUE)
+  e <- dismo::evaluate(
+    p = predictions$predictions[Test$Occurrence==1,2],
+    a = predictions$predictions[Test$Occurrence==0,2]
+  )
+  
+  th <- dismo::threshold(e)
+  saveRDS(th, file = paste0('../results/evaluations/', fname, '-thresh.rds'))
+  saveRDS(e, file = paste0('../results/evaluations/', fname, '-eval.rds'))
+  
   # save the confusion matrix
   predictions <- predict(rf_model, Test, type = 'se', se.method = 'infjack', probability=TRUE)
-  predictions$binary <- as.factor(if_else(predictions$predictions[,2] <= 0.49, 0, 1))
+  predictions$binary <- as.factor(if_else(predictions$predictions[,2] <= th$spec_sens, 0, 1))
   
   cmRestrat <- caret::confusionMatrix(predictions$binary, Test$Occurrence, 
                                       positive = '1', mode = 'everything')
   saveRDS(cmRestrat,
           file = paste0('../results/tables/', fname, '.rds'))
   
-  # we will also save the Pr-AUC as some folks find it a useful metric for class unbalanced
-  # data sets. 
-  df_prauc <- data.frame(
-    truth = Test$Occurrence,
-    Class1 = predictions$predictions[,1]
+  # we will also save the pr-auc and ROC-auc metrics. 
+  df_auc <- data.frame(
+    truth = as.factor(Test$Occurrence),
+    Class1 = predictions$predictions[,2]
   ) 
-  yardstick::pr_auc(df_prauc, truth, Class1) |>
-    mutate(resolution = resolution, iteration = iteration) |>
-    write.csv(
-      paste0('../results/tables/', fname, '.csv'),
-      row.names = F)
   
-  rm(df, df_prauc, TrainIndex, Train, Test, predictions, cmRestrat)
+  pr_auc_val <- yardstick::pr_auc(
+    data = df_auc, truth = truth, Class1, event_level = 'second') 
+  roc_auc_val <- yardstick::roc_auc(
+    df_auc, truth, Class1, event_level = 'second')
+  
+  setNames(
+    data.frame( 
+      rbind(
+        pr_auc_val, 
+        roc_auc_val
+      )
+    ), nm = c('metric', 'estimator', 'estimate')
+  ) |>
+    mutate(resolution = resolution, iteration = iteration) |>
+    write.csv(paste0('../results/tables/', fname, '.csv'),
+              row.names = F)
+  
+  rm(df, df_auc, TrainIndex, Train, Test, predictions, cmRestrat)
   }
   
   pout <- '../results/suitability_maps'
