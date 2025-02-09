@@ -256,10 +256,15 @@ resample(f,
          threads = 16, method = 'bilinear',
          filename = '../../processed/dem_1arc/climateNA.tif', overwrite = T)
 
+# this became corrupted at some point, and needed to be rewritten. on Feb 9th 2025, 
+# we did it from the 3arc - native resolution 
+
+setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed')
+f <- rast('./dem_3arc/climateNA.tif')
 resample(f, 
-         rast('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/dem_1-3arc/dem.tif'), 
+         rast('./dem_1-3arc/dem.tif'), 
          threads = 16, method = 'bilinear',
-         filename = '../../processed/dem_1-3arc/climateNA.tif', overwrite = T)
+         filename = './dem_1-3arc/climateNA.tif', overwrite = T)
 
 resample(f, 
          rast('/media/steppe/hdd/EriogonumColoradenseTaxonomy/data/spatial/processed/dem_3m/dem.tif'), 
@@ -774,7 +779,7 @@ geomorphon_df <- data.frame(
     'Footslope', 'Valley', 'Pit')
 )
 
-pennock_df <- data.frame(
+pennock_df <- data.frame(limate
   Value = c(1:7, 128),
   Class = c('CFS', 'DFS', 'CSH', 'DSH', 'CBS', 'DBS', 'L', NA)
 )

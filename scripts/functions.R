@@ -194,8 +194,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   
     pr <- function(...) predict(..., type = 'response', num.threads = 1)$predictions 
   
-    if(resolution %in% c('3arc', '1arc', '1-3arc', '3m')){ntile = 1} else
-      if(resolution == '1m'){ntile = 4}  
+    if(resolution %in% c('3arc', '1arc')){ntile = 1} else {ntile = 4}  
   
     if(ntile > 1){
     

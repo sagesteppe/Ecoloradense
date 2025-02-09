@@ -1,10 +1,6 @@
 ---
-title: 'Predicting, habitat suitability, occupancy, and census sizes of a rare plant species using iterative adaptive niche based sampling' 
-author: | 
-    | Reed Clark Benkendorf$^1$^[Author for Correspondence: rbenkendorf@chicagobotanic.org], Jeremie B. Fant$^1$$^,$$^2$, Sophie Taddeo$^3$  
-    |  $^1$ Chicago Botanic Garden, Glencoe, Illinois 60022, USA  
-    |  $^2$ Plant Biology and Conservation, Northwestern University, Evanston, Illinois 60208, USA  
-    |  $^3$ Department of Environmental and Ocean Sciences, University of San Diego, San Diego, California 92110, USA  
+title: Predicting, habitat suitability, occupancy, and census sizes of a rare plant species using iterative adaptive niche based sampling 
+author: "| Reed Clark Benkendorf$^1$^[Correspondence: rbenkendorf@chicagobotanic.org], Jeremie B. Fant$^1$$^,$$^2$, Sophie Taddeo$^3$ \n|  $^1$ Chicago Botanic Garden, Glencoe, Illinois 60022, USA  \n|  $^2$ Plant Biology and Conservation, Northwestern University, Evanston, Illinois 60208, USA \n|  $^3$ Department of Environmental and Ocean Sciences, University of San Diego, San Diego, California 92110, USA"
 abstract: |
   \noindent  
   1)  
@@ -111,11 +107,11 @@ It is considered an S3/G3 species by NatureServe, and a Tier 2 species by State 
 
 ### Data Acqusition 
 Dependent data were gathered from iNaturalist (80 records) and the Consortium of Southern Rockies herbaria (131 records) (@soro2024, INATURALIST). 
-These data were manually reviewed and 16 herbarium records which had low geolocation quality, or which were georeferenced to localities which did not match their herbarium labels were removed.  
+These data were manually reviewed and 16 herbarium records which had low geolocation quality, or which were geo-referenced to localities which did not match their herbarium labels were removed.  
 
 Digital Elevation Models at 3arc (type), and 1arc (type), and Digital Elevation Products at 1/3 arc, and 1m, resolution were acquired from the United States Geological Survey and clipped to the domain of analysis (a rectangle buffered 16km (10 mi). beyond any known population). 
 A 3m resolution digital elevation model, which is not available at a native resolution from the USGS for this area, was created by bilinear resampling of the 1m and 10m data. 
-1m resolution data were only available for roughly XX% of the domain (which contained %% of known populations), the remainder of the species domains 3m data was created by linear resampling of the 10m DEP, a comparison of these results in the overlapping region are present in appendix xx. 
+1m resolution data were only available for roughly XX% of the domain (which contained %% of known populations), the remainder of the species domains 3m data was created by linear resampling of the 10m DEP, a comparison of these results in the overlapping region are present in appendix XX. 
 These elevation products were used to create all geomorphology data sets using whiteboxTools (@wu2022whitebox). 
 Vegetation cover data were made by combining the raster data into continuous covers: Forested, Shrub, and Herbaceous vegetation @tuanmu2014global.  
 
@@ -128,7 +124,7 @@ The first round of ground verification was carried out from June-September 2024.
 All pre-existing occurrence points were considered candidates for revisits and all 24 trails leading to them were marked as SAMPLE UNITS. 
 Each trail was manually mapped, and buffered 45m in each direction and XXX random points were drawn, thinned to distances > XXXm, leaving XXX random plots for assessment. 
 XX trails were visited, allowing for the assessment of XX random points and XX occurrences. 
-When conducting field work, all presences of *E. coloradense* were opportunistically noted, and to better describe the spread of the population points were subjectively placed, with consdirations of local abudance, ca. 30-50m from the previous one until traversing out of the population (n = ). 
+When conducting field work, all presences of *E. coloradense* were opportunistically noted, and to better describe the spread of the population points were subjectively placed, with considerations of local abundance, ca. 30-50m from the previous one until traversing out of the population (n = ). 
 Additionally subjectively placed absences were also collected in areas which seemed favorable, or were in close proximity, to *E. coloradense* individuals; this occurred both in field (n = ) and through use of aerial imagery on a computer afterwards (n = ). 
 
 Adaptive Niche-Based Sampling was carried out in July of 2025. 
@@ -265,6 +261,7 @@ dev.off()
 ```
 
 ```{r AUC-ROC and Cumulative Sum Suitable Habitat Plot}
+
 ```
 
 The area under the receiver operating curve (AUC-ROC) and precision-recall curve (AUC-PR), the True Skill Statistic, and Sensitivity and Specificity (@sofaer2019area, @allouche2006assessing).
@@ -289,6 +286,7 @@ The area under the receiver operating curve (AUC-ROC) and precision-recall curve
 ### Species Occupancy  
 
 ```{r Multiple Logistic Regression Table}
+
 ```
 
 
