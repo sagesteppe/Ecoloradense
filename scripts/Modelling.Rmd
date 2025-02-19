@@ -11,6 +11,7 @@ library(terra)
 library(caret)
 library(bonsai)
 library(parsnip)
+library(ranger)
 library(lightgbm)
 library(future)
 library(dials)
@@ -44,6 +45,7 @@ distOrder_PAratio_simulator(
   resolution = 10, iteration = 1, se_prediction = FALSE,
   train_split = 0.9, p2proc = '../data/spatial/processed'
   )
+
 ```
 
 
@@ -62,7 +64,7 @@ resolution = "1arc"
 train_split = 0.8; p2proc = '../data/spatial/processed'
 rast_dat <- rastReader(paste0('dem_', resolution), p2proc) 
 
-r <- rast('../results/suitability_maps/1arc-Iteration1-PA1:3DO:2-Pr.tif')
+r <- rast('../results/suitability_maps/1arc-Iteration1-PA1:3.3DO:0-Pr.tif')
 names(rast_dat)
 
 rast_dat
@@ -84,11 +86,13 @@ train <- rsample::training(data_split)
 test  <- rsample::testing(data_split)
 
 # NOT CURRENTLY WORKING 
-# indices_knndm <- CAST::knndm(
-#   sf::st_as_sf(train, coords = c('Longitude', 'Latitude'), crs = 32613) |> select(-Prsnc_M),
-#  rast_dat,
-#  space = 'geographic',
-#  k=10)
+
+train.sf <-  sf::st_as_sf(train, coords = c('Longitude', 'Latitude'), crs = 32613) 
+
+indices_knndm <- CAST::knndm(
+  sf::st_as_sf(train, coords = c('Longitude', 'Latitude'), crs = 32613),
+  rast_dat,
+  k=10)
 
 rm(ct)
 ```
@@ -171,7 +175,10 @@ Here we will use recursive feature elimination to drop some variables from our d
 ```{r Feature Selection}
 
 ctrl <- caret::rfeControl(
-  functions = caret::treebagFuncs, method = "repeatedcv", repeats = 10,
+  functions = caret::treebagFuncs, 
+  method = "cv", 
+  index = indices_knndm$indx_train,
+  savePredictions = "final", 
   allowParallel = TRUE)
 
 future::plan(multisession, workers = parallel::detectCores())
@@ -199,16 +206,10 @@ We reduce the mean absolute error by nearly half a plant per quadrant!
 xgb_poisson <- tune_gr  |>
   parsnip::set_engine("xgboost", objective = "count:poisson") 
 
-my_params <- parameters( # it's a pretty basic grid for running xgboost 
-  list( # with small sample sizes, essentially we try to get at preventing
-    trees(range = c(1L, 1200L)),  # overfitting in two ways. - by reducing the
-    tree_depth(range = c(2L , 8L)), # tree depth, and the number of trees grown
-    min_n(range = c(2L, 20)),
-    learn_rate(range = c(0.01, 0.3)),
-    loss_reduction(range = c(0, 20)),
-    stop_iter(range = c(3, 20))
-  ) # although it's pretty simple I am quite confident we have reduced the MAE
-) # of our models by 20-25% on our independent test data using these restrictions.
+xgb_poisson_gr <- xgb_poisson |>
+  # going to use a typical grid which can support subgrid searchers. 
+  extract_parameter_set_dials() |>
+  dials::grid_regular(levels = 3)
 
 xgb_gr <- my_params %>% 
   grid_regular(levels = 3)
@@ -259,7 +260,7 @@ Tweedie needs to be allowed to explore the hyperparameters more than poisson.
 xgb_tweedie_model <- tune_gr |>
     parsnip::set_engine("xgboost", objective = "reg:tweedie")
 
-xgb_poisson_gr <- xgb_tweedie_model |>
+xgb_tweedie_gr <- xgb_tweedie_model |>
   # going to use a typical grid which can support subgrid searchers. 
   extract_parameter_set_dials() |>
   dials::grid_regular(levels = 3)

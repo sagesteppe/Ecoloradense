@@ -38,10 +38,11 @@ ensure_multipolygons <- function(X) { # @ stackoverflow
 #' the exact quantity are saved in model objects. "1:2" 
 #' @param distOrder Character. The distance between the nearest absence to presence, as a multiple of the cell resolution
 #' e.g. distOrder 1 at a 90m resolution indicates the nearest absence is >90m away from a presence, at 10m it indicates > 10m away.
-#' 
+#' @param remove_tiles Boolean. Defaults to FALSE, whether to remove tiles required for model prediction (applies only to high resolution data sets). 
 modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_split,
-                     PAratio, distOrder){
+                     PAratio, distOrder, remove_tiles){
   
+  if(missing(remove_tiles)){remove_tiles <- FALSE}
   if(missing(se_prediction)){se_prediction <- FALSE}
   rast_dat <- rastReader(paste0('dem_', resolution), p2proc) 
   cores <- parallel::detectCores()
@@ -68,7 +69,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
     rf_model <- readRDS(paste0('../results/models/', fname, '.rds'))
     message(
       'An exising model for this resolution and iteration already exists; 
-      reloading it now for projection')
+      reloading it now for prediction')
   } else {
   
   # split the input data into both an explicit train and test data set. 
@@ -132,6 +133,9 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
     class.weights = wts
     )
   
+  # save the cv fold fit model for AOA preds
+  saveRDS(model, 
+          file = paste0('../results/modelsTune/', fname, '.rds'))
   # save the model
   saveRDS(rf_model,
           file = paste0('../results/models/', fname, '.rds'))
@@ -188,9 +192,14 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   
   pout <- '../results/suitability_maps'
   ###################      PREDICT ONTO SURFACE        #########################
-  # this prediction is generally straightforward, it doesn't take an obscene
-  # amount of RAM and can happen relatively quickly, just overnight for the 
-  # higher resolution scenarios. 
+  # the prediction is generally straightforward, it doesn't take an obscene
+  # amount of RAM and can happen relatively quickly; overnight for the 
+  # higher resolution data products.  
+  
+  # there is some weird corner case where we could not skip to the post prediction steps:
+  # AOA, and SE. 
+  
+  if(!file.exists(file.path(pout, paste0(fname, '-Pr.tif')))){
   
     pr <- function(...) predict(..., type = 'response', num.threads = 1)$predictions 
   
@@ -210,7 +219,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
         rm(template)
       }
     
-     tiles <- file.path(pout, 'tilesPR', list.files(file.path(pout, 'tilesPR')))
+     tiles <- file.path(tile_path_4pr, list.files(tile_path_4pr))
      pr_tile_path <- file.path(pout, paste0('pr_tiles', '_', resolution, iteration))
      dir.create(pr_tile_path, showWarnings = F)
     
@@ -218,6 +227,8 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
      pb <- txtProgressBar(
        min = 0,  max = length(tiles), style = 3, width = 50, char = "+")
      for (i in seq_along(tiles)){
+       
+       if(!file.exists(file.path(pr_tile_path, paste0(i, '.tif')))){
        terra::predict(
          rast(tiles[i]), rf_model, f = pr, 
          filename = file.path(pr_tile_path, paste0(i, '.tif')),
@@ -226,6 +237,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
         gc(verbose = FALSE)
      }
      close(pb)
+    }
     
      mos <- terra::mosaic(sprc(
        file.path(pr_tile_path, list.files(pr_tile_path))
@@ -236,7 +248,11 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
        filename = file.path(pout, paste0(fname, '-Pr.tif')))
     
     rm(mos)
-    unlink(file.path(pout, 'pr_tiles')) # can remove the tiles we used for the probability surface.
+    
+    # this should be an OPTION, which defaults to FALSE. 
+    if(remove_tiles == TRUE){
+      unlink(file.path(pout, 'pr_tiles')) # can remove the tiles we used for the probability surface.
+    }
     
     } else { # in these cases, we only need to use a single tile for prediction, we can
      # just use the existing virtual raster to do this. 
@@ -270,16 +286,22 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   unlink(file.path(pout, 'pr_tiles'))
   gc(verbose = FALSE)
   
-  ################ AREA OF APPLICABILITY SURFACE    ############################
+  }
   
+  
+  
+  ################ AREA OF APPLICABILITY SURFACE    ############################
   message('Writing Area of Applicability to Raster')
+  if(!exists('rf_model')){
+    rf_model <- readRDS(paste0('../results/models/', fname, '.rds'))
+  }
   AOAfun <- function(rf_model, r) {
     CAST::aoa(r, model, LPD = FALSE, verbose=FALSE)$AOA
   }
   
   terra::predict( # rasters, skip straight to modelling. 
     cores = 1, f = AOAfun, 
-    rast_dat, rf_model, cpkgs = "CAST",
+    rast_dat, model = rf_model, cpkgs = "CAST",
     filename = file.path(pout, paste0(fname, '-AOA', '.tif')),
     wopt = c(names = 'AOA'), na.rm=TRUE,
     overwrite = T)
