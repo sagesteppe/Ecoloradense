@@ -67,7 +67,6 @@ rast_dat <- rastReader(paste0('dem_', resolution), p2proc)
 r <- rast('../results/suitability_maps/1arc-Iteration1-PA1:3.3DO:0-Pr.tif')
 names(rast_dat)
 
-rast_dat
 
 df <- dplyr::bind_cols(
   ct, 
@@ -78,23 +77,50 @@ df <- dplyr::bind_cols(
   tidyr::drop_na() |>
   select(-Prsnc_J, -Prsnc_M)
 
+# we will create a column which is meant to indicate the spatial configuration of
+# our points. Basically, we have a problem which makes splitting along the outcome
+# variable, not an ideal choice. If you remember, the southern Cocheotopa Dome (CD) population
+# has drastically higher counts of plants than the populations near CB, 10x individuals
+# not being uncommon! So when we 'split' our data, what we end up with is a gradient
+# which is actually a mix of CB:CD and then quickly just becomes CD. So our independent
+# test set isn't really what we see across the species, rather it's evaluating two
+# distinct components. 
 
-data_split <- df |>
-  rsample::initial_split(strata = Prsnc_All, prop = 4/5) 
+# fortunately for these predictions we are only including the plot level data and 
+# some 'near' absences. so we can try and 'ameliorate' this split gradients using
+# three steps: rescale longitude and latitude from 0:1, and do the same with our
+# counts. When we then 'combine' the three data sets, on paper, we should get
+# be able to incorporate a SMIDGE of each of these aspects to the split. Although
+# we will not entirely remove the CD area having more plants, I think we will slightly
+# mute the effect. 
 
-train <- rsample::training(data_split)
-test  <- rsample::testing(data_split)
+twinning_dat <- df |>
+  mutate( # this algo probably rescales too, but we'll just feed em in to be sure. 
+    x = scales::rescale(st_coordinates(df)[,1]), # the stats doc is rich the tech 
+    y = scales::rescale(st_coordinates(df)[,2]),  # not so much 
+    Prsnc = scales::rescale(Prsnc_All)
+  )|>
+  sf::st_drop_geometry() |>
+  select(Prsnc, y, x)
 
-# NOT CURRENTLY WORKING 
+indx <- twinning::twin(twinning_dat, r=5)
 
-train.sf <-  sf::st_as_sf(train, coords = c('Longitude', 'Latitude'), crs = 32613) 
+train <- df[-indx,]
+test  <- df[indx,]
 
+train.sf <- sf::st_as_sf(train, coords = c('Longitude', 'Latitude'), crs = 32613)
 indices_knndm <- CAST::knndm(
-  sf::st_as_sf(train, coords = c('Longitude', 'Latitude'), crs = 32613),
+  train.sf,
   rast_dat,
   k=10)
 
-rm(ct)
+indices_knndm <- spatialsample::spatial_nndm_cv(
+  train.sf,
+  st_as_sfc(st_bbox(rast_dat))
+)
+
+
+rm(ct, indx, twinning_dat)
 ```
 
 Modelling count data has not been very successful, nor did the field work really develop any strong insights on what drives the abundance of the plants. 
@@ -178,7 +204,6 @@ ctrl <- caret::rfeControl(
   functions = caret::treebagFuncs, 
   method = "cv", 
   index = indices_knndm$indx_train,
-  savePredictions = "final", 
   allowParallel = TRUE)
 
 future::plan(multisession, workers = parallel::detectCores())
@@ -187,15 +212,7 @@ rfProfile <- caret::rfe(
   rfeControl = ctrl, metric = 'MAE'
   )
 
-var <- rfProfile$variables
-var <- var[var$Variables==8,] |>
-  group_by(var) |>
-  summarise(Overall_mean = mean(Overall)) |>
-  arrange(-Overall_mean) |>
-  slice_max(n = 8, order_by = Overall_mean) |>
-  pull(var)
-
-train <- select(train, all_of(c('Prsnc_All', var)))
+train <- select(train, all_of(c('Prsnc_All', predictors(rfProfile))))
 ```
 
 As we can see from the table above, fewer variables work considerably better. 
@@ -207,28 +224,22 @@ xgb_poisson <- tune_gr  |>
   parsnip::set_engine("xgboost", objective = "count:poisson") 
 
 xgb_poisson_gr <- xgb_poisson |>
-  # going to use a typical grid which can support subgrid searchers. 
   extract_parameter_set_dials() |>
   dials::grid_regular(levels = 3)
-
-xgb_gr <- my_params %>% 
-  grid_regular(levels = 3)
 
 future::plan(multisession, workers = parallel::detectCores())
 params_xg_poisson <- xgb_poisson |>
       tune::tune_grid(
         rec,
-        resamples = rs,
+        resamples = indices_knndm$indx_train,
         metrics = yardstick::metric_set(yardstick::mae), 
-        grid = xgb_gr
+        grid = xgb_poisson_gr
       )
 
 best_xg_pois <- tune::select_best(params_xg_poisson, metric = "mae")
 
 xg_poisson <- xgb_poisson |>
-  tune::finalize_model(best_xg_pois)
-
-xgb_pois_fit <- xg_poisson %>% 
+  tune::finalize_model(best_xg_pois) |>
   fit(Prsnc_All ~ ., data = train)
 
 xbg_pois_preds <- data.frame(
@@ -250,7 +261,7 @@ rm(xgb_poisson, xgb_poisson_gr)
 There are a good number of zeros, but not enough to warrant a zero inflated negative binomial. 
 We will try a negative binomial objective. 
 ```{r xgboost negative binomial}
-1+1
+
 ```
 
 Tweedie needs to be allowed to explore the hyperparameters more than poisson. 
@@ -271,7 +282,7 @@ xbg_tweedie_params <- xgb_tweedie_model |>
         rec,
         resamples = rs,
         metrics = yardstick::metric_set(yardstick::mae), 
-        grid = xgb_poisson_gr
+        grid = xgb_tweedie_gr
       )
 
 best_param_tweedie <- tune::select_best(xbg_tweedie_params, metric = "mae")
@@ -303,19 +314,18 @@ data.frame(
   Model = c('Arithmetic Mean', 'Kriging', 'XGB Poisson', 'XGB Tweedie'), 
   MAE = c(
     Metrics::mae(mean_preds$Observed, mean_preds$Predicted),
-    
-    
-    )
+    Metrics::mae(krig_preds$Observed, krig_preds$Predicted),
+    Metrics::mae(xbg_pois_preds$Observed, xbg_pois_preds$.pred),
+    Metrics::mae(xbg_tweedie_preds$Observed, xbg_tweedie_preds$.pred)
+    ), 
+  RMSE = c(
+    Metrics::rmse(mean_preds$Observed, mean_preds$Predicted),
+    Metrics::rmse(krig_preds$Observed, krig_preds$Predicted),
+    Metrics::rmse(xbg_pois_preds$Observed, xbg_pois_preds$.pred),
+    Metrics::rmse(xbg_tweedie_preds$Observed, xbg_tweedie_preds$.pred)
+  )
 )
 
-
-Metrics::rmse(xbg_pois_preds$Observed, xbg_pois_preds$.pred)
-Metrics::rmse(xbg_tweedie_preds$Observed, xbg_tweedie_preds$.pred)
-
-Metrics::mae(mean_preds$Observed, mean_preds$Predicted)
-Metrics::mae(krig_preds$Observed, krig_preds$Predicted)
-Metrics::mae(xbg_pois_preds$Observed, xbg_pois_preds$.pred)
-Metrics::mae(xbg_tweedie_preds$Observed, xbg_tweedie_preds$.pred)
 ```
 
 
@@ -324,28 +334,51 @@ Metrics::mae(xbg_tweedie_preds$Observed, xbg_tweedie_preds$.pred)
 
 ```{r lightgbm}
 
-tune_gr <- parsnip::boost_tree( 
-  mode = 'regression'
+spatialsample::spatial_nndm_cv(
+  train.sf,
+  st_as_sfc(st_bbox(rast_dat)),
 )
 
-lgbm_poisson_gr <- tune_gr  |>
-  parsnip::set_engine("lightgbm", objective = "reg:squarederror")
+folds <- rsample::vfold_cv(train, v = 10)
 
-bt_grid <- lgbm_poisson_gr %>%
-  # going to use a typical grid which can support subgrid searchers. 
-  extract_parameter_set_dials() %>% 
-  dials::grid_regular(levels = 2)
+bt_mod <- boost_tree() |> 
+  set_engine(engine = "lightgbm") |> 
+  set_mode(mode = "regression") |> 
+  fit(
+    formula = Prsnc_All ~ ., 
+    data = train
+  )
+
+lightgbm_model <- parsnip::boost_tree(
+        mode = "regression",
+        min_n = tune(),
+        tree_depth = tune(),
+    ) %>%
+    set_engine("lightgbm", objective = "poisson", verbose=-1)
+
+lightgbm_params <- dials::parameters(
+        min_n(), 
+        tree_depth() 
+        )
+
+lgbm_grid <- dials::grid_space_filling(
+        lightgbm_params, 
+        size = 30)
+
+lgbm_wf <- workflows::workflow() %>%
+    workflows::add_model(lightgbm_model) %>% 
+    workflows::add_formula(Prsnc_All ~ .)
 
 future::plan(multisession, workers = parallel::detectCores())
-lgb_poisson_params <- lgb_poisson_model |>
-      finetune::tune_race_anova(
-        rec,
-        resamples = rs,
-       metrics = yardstick::metric_set(yardstick::mae), 
-        grid = bt_grid
-      )
-best_param <- tune::select_best(model_params, metric = "mae")
+lgbm_tuned <- tune::tune_grid(
+    object = lgbm_wf,
+    resamples = folds,
+    grid = lgbm_grid,
+    metrics = yardstick::metric_set(yardstick::mae),
+    control = tune::control_grid(verbose = FALSE)
+)
 
+best_param <- tune::select_best(model_params, metric = "mae")
 ```
 
 Try with mboost
