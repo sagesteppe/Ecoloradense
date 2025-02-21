@@ -714,9 +714,10 @@ distOrder_PAratio_simulator <- function(x, distOrder, PAratio, resolution, ...){
 #' @param train the data which CAST split from. 
 CAST2rsample <- function(x, train){
   
-  indices_L <- vector(mode = 'list', length = length(x$indx_train))
-  indices_L <- lapply(indices_L, \(x)
-                      setNames(vector(mode = 'numeric', 2), c('analysis', 'assessment')))
+  indices_L <- lapply(
+    vector(mode = 'list', length = length(x$indx_train)), 
+    \(x) setNames(vector(mode = 'numeric', 2), c('analysis', 'assessment'))
+    )
   
   for (i in seq_along(indices_L)){
     indices_L[[i]]['analysis'] = sapply(x$indx_train, unlist)[i] 
