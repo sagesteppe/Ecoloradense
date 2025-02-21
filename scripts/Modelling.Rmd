@@ -48,7 +48,6 @@ distOrder_PAratio_simulator(
 
 ```
 
-
 # playing with count prediction 
 
 ```{r Partition data and clean for modelling}
@@ -65,8 +64,6 @@ train_split = 0.8; p2proc = '../data/spatial/processed'
 rast_dat <- rastReader(paste0('dem_', resolution), p2proc) 
 
 r <- rast('../results/suitability_maps/1arc-Iteration1-PA1:3.3DO:0-Pr.tif')
-names(rast_dat)
-
 
 df <- dplyr::bind_cols(
   ct, 
@@ -95,11 +92,11 @@ df <- dplyr::bind_cols(
 # mute the effect. 
 
 twinning_dat <- df |>
-  mutate( # this algo probably rescales too, but we'll just feed em in to be sure. 
+  mutate( # this algo PROBABLY rescales too, but we'll just feed em in to be sure. 
     x = scales::rescale(st_coordinates(df)[,1]), # the stats doc is rich the tech 
     y = scales::rescale(st_coordinates(df)[,2]),  # not so much 
     Prsnc = scales::rescale(Prsnc_All)
-  )|>
+  ) |>
   sf::st_drop_geometry() |>
   select(Prsnc, y, x)
 
@@ -109,16 +106,10 @@ train <- df[-indx,]
 test  <- df[indx,]
 
 train.sf <- sf::st_as_sf(train, coords = c('Longitude', 'Latitude'), crs = 32613)
-indices_knndm <- CAST::knndm(
+indices_knndm_CAST <- CAST::knndm(
   train.sf,
   rast_dat,
-  k=10)
-
-indices_knndm <- spatialsample::spatial_nndm_cv(
-  train.sf,
-  st_as_sfc(st_bbox(rast_dat))
-)
-
+  k = 10)
 
 rm(ct, indx, twinning_dat)
 ```
@@ -141,8 +132,7 @@ preds <- train %>%
   sf::st_drop_geometry()
 
 arith_mean <- test %>% 
-  select(Observed = Prsnc_All, Lctn_bb) |>
-  sf::st_drop_geometry()
+  select(Observed = Prsnc_All, Lctn_bb) 
 
 mean_preds <- left_join(arith_mean, preds, by = 'Lctn_bb')
 Metrics::mae(mean_preds$Observed, mean_preds$Predicted)
@@ -161,7 +151,7 @@ The use of kriging interpolation, where we simple smooth averages out between th
 
 krig_preds <- data.frame(
     'Observed' = test$Prsnc_All, 
-    'Predicted' = gstat::krige(Prsnc_All ~ 1, train, newdata = test)$var1.pred,
+    'Predicted' = gstat::krige(Prsnc_All ~ 1, train.sf, newdata = test)$var1.pred,
     'Pr.suit' = test$Pr.SuitHab
 )
 
@@ -176,12 +166,12 @@ Metrics::mae(krig_preds$Observed, krig_preds$Predicted)
 
 
 ```{r Split data for modelling}
+
 train <- sf::st_drop_geometry(train) |>
   select(-Lctn_bb)
-test  <- rsample::testing(data_split)
+test  <- st_drop_geometry(test)
 
 rec <- recipes::recipe(Prsnc_All ~ ., data = train) 
-rs <- rsample::bootstraps(train, times = 10)
 
 tune_gr <- parsnip::boost_tree( 
   mode = 'regression',
@@ -203,16 +193,22 @@ Here we will use recursive feature elimination to drop some variables from our d
 ctrl <- caret::rfeControl(
   functions = caret::treebagFuncs, 
   method = "cv", 
-  index = indices_knndm$indx_train,
+  index = indices_knndm_CAST$indx_train, # NEEDS THE CAST OBJECT... 
   allowParallel = TRUE)
+
+train <- st_drop_geometry(train)
 
 future::plan(multisession, workers = parallel::detectCores())
 rfProfile <- caret::rfe(
-  train[,2:ncol(train)], train$Prsnc_All,
+  x = train[,2:ncol(train)], y = train$Prsnc_All,
   rfeControl = ctrl, metric = 'MAE'
   )
 
 train <- select(train, all_of(c('Prsnc_All', predictors(rfProfile))))
+
+rec <- recipes::recipe(Prsnc_All ~ ., data = train) 
+indx_knndm_rs <- CAST2rsample(indices_knndm_CAST, train)
+
 ```
 
 As we can see from the table above, fewer variables work considerably better. 
@@ -231,20 +227,19 @@ future::plan(multisession, workers = parallel::detectCores())
 params_xg_poisson <- xgb_poisson |>
       tune::tune_grid(
         rec,
-        resamples = indices_knndm$indx_train,
+        resamples = indx_knndm_rs,
         metrics = yardstick::metric_set(yardstick::mae), 
         grid = xgb_poisson_gr
       )
 
 best_xg_pois <- tune::select_best(params_xg_poisson, metric = "mae")
-
 xg_poisson <- xgb_poisson |>
   tune::finalize_model(best_xg_pois) |>
   fit(Prsnc_All ~ ., data = train)
 
 xbg_pois_preds <- data.frame(
     'Observed' = test$Prsnc_All, 
-    'Predicted' = stats::predict(xgb_pois_fit, new_data = test),
+    'Predicted' = stats::predict(xg_poisson, new_data = test),
     'Pr.suit' = test$Pr.SuitHab
 )
 
@@ -252,7 +247,7 @@ ggplot(data = xbg_pois_preds) +
   geom_point(aes(x = Observed, y = .pred, color = Pr.suit)) +
   theme(aspect.ratio = 1) 
 
-vip::vip(xgb_pois_fit)
+vip::vip(xg_poisson)
 Metrics::mae(xbg_pois_preds$Observed, xbg_pois_preds$.pred)
 
 rm(xgb_poisson, xgb_poisson_gr)
@@ -301,7 +296,9 @@ xbg_tweedie_preds <- data.frame(
 
 ggplot(data = xbg_tweedie_preds) + 
   geom_point(aes(x = Observed, y = .pred, color = Pr.suit)) +
-  theme(aspect.ratio = 1) 
+  theme(aspect.ratio = 1) +
+  geom_abline()
+
 
 vip::vip(xgb_tweedie_fit)
 Metrics::mae(xbg_tweedie_preds$Observed, xbg_tweedie_preds$.pred)
@@ -329,58 +326,6 @@ data.frame(
 ```
 
 
-
-
-
-```{r lightgbm}
-
-spatialsample::spatial_nndm_cv(
-  train.sf,
-  st_as_sfc(st_bbox(rast_dat)),
-)
-
-folds <- rsample::vfold_cv(train, v = 10)
-
-bt_mod <- boost_tree() |> 
-  set_engine(engine = "lightgbm") |> 
-  set_mode(mode = "regression") |> 
-  fit(
-    formula = Prsnc_All ~ ., 
-    data = train
-  )
-
-lightgbm_model <- parsnip::boost_tree(
-        mode = "regression",
-        min_n = tune(),
-        tree_depth = tune(),
-    ) %>%
-    set_engine("lightgbm", objective = "poisson", verbose=-1)
-
-lightgbm_params <- dials::parameters(
-        min_n(), 
-        tree_depth() 
-        )
-
-lgbm_grid <- dials::grid_space_filling(
-        lightgbm_params, 
-        size = 30)
-
-lgbm_wf <- workflows::workflow() %>%
-    workflows::add_model(lightgbm_model) %>% 
-    workflows::add_formula(Prsnc_All ~ .)
-
-future::plan(multisession, workers = parallel::detectCores())
-lgbm_tuned <- tune::tune_grid(
-    object = lgbm_wf,
-    resamples = folds,
-    grid = lgbm_grid,
-    metrics = yardstick::metric_set(yardstick::mae),
-    control = tune::control_grid(verbose = FALSE)
-)
-
-best_param <- tune::select_best(model_params, metric = "mae")
-```
-
 Try with mboost
 
 ```{r try with gbm3}
@@ -404,8 +349,7 @@ trainControl <- trainControl(method="repeatedcv", number=10, repeats = 5)
     'Predicted' = predict(gbm_model, newdata=test, type="raw"), 
     'Pr.suit' = test$Pr.SuitHab
 )
-  
-  
+
 Metrics::mae(gbm_pred$Observed, gbm_pred$Predicted)
 Metrics::rmse(gbm_pred$Observed, gbm_pred$Predicted)
 
