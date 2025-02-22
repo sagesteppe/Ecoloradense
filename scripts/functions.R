@@ -727,3 +727,293 @@ CAST2rsample <- function(x, train){
   splits <- lapply(indices_L, rsample::make_splits, data = train)
   rsample::manual_rset(splits, paste('Split', 1:length(x$indx_train)))
 }
+
+
+
+#' split data into test, and train, and generate CV folds too. 
+splitData <- function(df){
+  
+  # We will create three columns for our data, which can then be used
+  # to separate the data sets into two sets, where the longitude, latitude, and response
+  # variables are almost identical - like twins. Basically, we have a problem 
+  # which makes splitting along the outcome variable, not an ideal choice. If you 
+  # remember, the southern Cocheotopa Dome (CD) population has drastically higher 
+  # counts of plants than the populations near CB, 10x individuals
+  # not being uncommon! So when we 'split' our data, what we end up with is a gradient
+  # which is actually a mix of CB:CD and then quickly just becomes CD. So our independent
+  # test set isn't really what we see across the species, rather it's evaluating two
+  # distinct components. 
+  
+  # fortunately for these predictions we are only including the plot level data and 
+  # some 'near' absences. so we can try and 'ameliorate' this split gradients using
+  # three steps: rescale longitude and latitude from 0:1, and do the same with our
+  # counts. When we then 'combine' the three data sets, on paper, we should get
+  # be able to incorporate a SMIDGE of each of these aspects to the split. Although
+  # we will not entirely remove the CD area having more plants, I think we will slightly
+  # mute the effect. 
+  
+  twinning_dat <- df |>
+    dplyr::mutate( # this algo PROBABLY rescales too, but we'll just feed em in to be sure. 
+      x = scales::rescale(st_coordinates(df)[,1]), # the stats doc is rich the tech 
+      y = scales::rescale(st_coordinates(df)[,2]),  # not so much 
+      Prsnc = scales::rescale(Prsnc_All)
+    ) |>
+    sf::st_drop_geometry() |>
+    dplyr::select(Prsnc, y, x)
+  
+  indx <- twinning::twin(twinning_dat, r=5)
+  
+  train <- df[-indx,]
+  test  <- df[indx,]
+  
+  # now that we have our training data, and our test data that we will compare our
+  # final model predictions too, we need cross validation folds for model selection, 
+  # hyperparameter tuning and to fit our model. 
+  
+  # We will use a spatial CV structure for this. Because we don't have that many
+  # records to parse through we'll use nndm - but more on that later. 
+  
+  # the spatial CV will use the entire area of prediction when determining layouts
+  # in space. Predicting XGBoost is pretty intense, and we really only have count
+  # data from pretty limited areas. Let's restrict our predictions to adjacent areas
+  # because the models will be saved, someone could re predict them in the future if
+  # they wanted further testing. 
+  
+  km <- kmeans( df[,c('Longitude', 'Latitude')] |> sf::st_drop_geometry(),
+                2, iter.max = 10, nstart = 1)
+  df$Cluster <- km$cluster
+  
+  clusts <- split(df, f = df$Cluster)
+  bbs <- lapply(clusts, \(x) sf::st_union(x) |>
+                  sf::st_transform(5070) |>
+                  sf::st_buffer(5000) |>
+                  sf::st_bbox() |>
+                  sf::st_as_sfc()
+  ) |>
+    dplyr::bind_rows() |>
+    t() |>
+    sf::st_as_sfc(crs=5070) |>
+    sf::st_union()
+  
+  train.sf <- sf::st_as_sf(train, coords = c('Longitude', 'Latitude'), crs = 32613)
+  indices_nndm_CAST <- CAST::nndm(
+    train.sf,
+    sf::st_transform(bbs, sf::st_crs(train.sf)),
+    samplesize = 1000)
+  
+  return(
+    list(
+      nndm_indices = indices_nndm_CAST, 
+      train = train, 
+      test = test,
+      train.sf = train.sf
+    )
+  )
+}
+
+#' fit poisson xgboost models to the data
+#' 
+#' @param rec a tidymodels recipe 
+#' @param cv a cross validation structure, such as from `rsample` or `CAST`.  
+#' @param train data split
+#' @param test data split
+#' @param tune_gr tuning grid. 
+poiss <- function(rec, cv, train, test, tune_gr){
+  
+  xgb_poisson <- tune_gr |>
+    parsnip::set_engine("xgboost", objective = "count:poisson") 
+  
+  xgb_poisson_gr <- xgb_poisson |>
+    tune::extract_parameter_set_dials() |>
+    dials::grid_regular(levels = 3)
+  
+  future::plan(multisession, workers = parallel::detectCores())
+  params_xg_poisson <- xgb_poisson |>
+    finetune::tune_race_anova(
+      rec,
+      metrics = yardstick::metric_set(yardstick::mae), 
+      resamples = cv,
+      grid = xgb_poisson_gr
+    )
+  
+  best_xg_pois <- tune::select_best(params_xg_poisson, metric = "mae")
+  xg_poisson <- xgb_poisson |>
+    tune::finalize_model(best_xg_pois) |>
+    fit(Prsnc_All ~ ., data = train)
+  
+  preds <- data.frame(
+    'Observed' = test$Prsnc_All, 
+    'Predicted' = stats::predict(xg_poisson, new_data = test),
+    'Pr.suit' = test$Pr.SuitHab
+  )
+  preds <- setNames(preds, c('Observed', 'Predicted', 'Pr.suit'))
+  
+  return(
+    list(
+      Model = xg_poisson, 
+      Predictions = preds
+    )
+  )
+}
+
+#' fit tweedie models to the data
+#' 
+#' @param rec a tidymodels recipe 
+#' @param cv a cross validation structure, such as from `rsample` or `CAST`.  
+#' @param train data split
+#' @param test data split
+#' @param tune_gr tuning grid. 
+tweed <- function(rec, cv, train, test, tune_gr){
+  
+  xgb_tweedie_model <- tune_gr |>
+    parsnip::set_engine("xgboost", objective = "reg:tweedie")
+  
+  xgb_tweedie_gr <- xgb_tweedie_model |> 
+    tune::extract_parameter_set_dials() |> 
+    dials::grid_regular(levels = 3)
+  
+  future::plan(multisession, workers = parallel::detectCores()) 
+  xbg_tweedie_params <- xgb_tweedie_model |> 
+    finetune::tune_race_anova(
+      rec,
+      resamples = cv,
+      metrics = yardstick::metric_set(yardstick::mae), 
+      grid = xgb_tweedie_gr
+    )
+  
+  best_param_tweedie <- tune::select_best(xbg_tweedie_params, metric = "mae")
+  
+  xgb_tweedie_mod <- xgb_tweedie_model |>
+    tune::finalize_model(best_param_tweedie)
+  
+  xgb_tweedie_fit <- xgb_tweedie_mod %>% 
+    fit(Prsnc_All ~ ., data = train)
+  
+  preds <- data.frame(
+    'Observed' = test$Prsnc_All, 
+    'Predicted' = stats::predict(xgb_tweedie_fit, new_data = test),
+    'Pr.suit' = test$Pr.SuitHab
+  )
+  preds <- setNames(preds, c('Observed', 'Predicted', 'Pr.suit'))
+  
+  
+  return(
+    list(
+      Model = xgb_tweedie_fit, 
+      Predictions = preds
+    )
+  )
+}
+
+#' calculate some summary values about the regression models 
+mets <- function(x){
+  data.frame(
+    Metric = c('MAE', 'MSE', 'RMSE'),
+    Value = c(
+      MAE  = Metrics::mae(x$Observed, x$Predicted),
+      MSE  = Metrics::mse(x$Observed, x$Predicted),
+      RMSE = Metrics::rmse(x$Observed, x$Predicted)
+    )
+  )
+}
+
+#' Estimate the number of plants per raster cell. 
+#'
+#' @description
+#' @param x Data frame of occurrences.
+#' @param bn Character. base filename which will unambigiously identify the objects saved from 
+#' this function (the model, an evaluation table, variable selection object).
+densityModeller <- function(x, bn){
+  
+  # split the data into train/test and spatial CV. 
+  dsplit <- splitData(x)
+  
+  train <- dsplit$train
+  test <- dsplit$test
+  nndm_indices <- dsplit$nndm_indices
+  train.sf <- dsplit$train.sf
+  
+  ##############       both null models are calculated up here    ##############
+  # arithmetic means by population . A null model. 
+  preds <- train |>
+    dplyr::group_by(Lctn_bb) |>
+    dplyr::summarize(Predicted = mean(Prsnc_All)) |>
+    sf::st_drop_geometry()
+  
+  arith_mean <- test |> 
+    dplyr::select(Observed = Prsnc_All, Lctn_bb) 
+  mean_preds <- dplyr::left_join(arith_mean, preds, by = 'Lctn_bb')
+  
+  # kriging interpolation, a spatial null model. 
+  krig_preds <- data.frame(
+    'Observed' = test$Prsnc_All, 
+    'Predicted' = gstat::krige(Prsnc_All ~ 1, train.sf, newdata = test)$var1.pred,
+    'Pr.suit' = test$Pr.SuitHab
+  )
+  
+  # this was the grouping variable required for the arith mean, we drop it now. 
+  train <- sf::st_drop_geometry(train) |>
+    select(-Lctn_bb)
+  test <- sf::st_drop_geometry(test)
+  
+  # feature selection 
+  ctrl <- caret::rfeControl(
+    functions = caret::treebagFuncs,
+    method = "cv", 
+    index = nndm_indices$indx_train,  
+    allowParallel = TRUE)
+  
+  train <- sf::st_drop_geometry(train)
+  
+  future::plan(multisession, workers = parallel::detectCores())
+  rfProfile <- caret::rfe(
+    x = train[,2:ncol(train)], y = train$Prsnc_All,
+    rfeControl = ctrl, metric = 'MAE')
+  
+  train <- dplyr::select(train, all_of(c('Prsnc_All', predictors(rfProfile))))
+  
+  rec <- recipes::recipe(Prsnc_All ~ ., data = train) 
+  rs <- rsample::bootstraps(train, 10)
+  indx_nndm_rs <- CAST2rsample(nndm_indices, train)
+  
+  # now define a tuning grid for xgboost 
+  tune_gr <- parsnip::boost_tree( 
+    mode = 'regression',
+    trees = tune(),
+    tree_depth = tune(),
+    min_n = tune(), 
+    loss_reduction = tune(),
+    learn_rate = tune(),
+    stop_iter = tune()
+  )
+  
+  # tune hyperparameters and fit all models 
+  poiss_spat_cv <- poiss(rec, indx_nndm_rs, train, test, tune_gr)
+  poiss_cv <- poiss(rec, rs, train, test, tune_gr)
+  tweedie_spat_cv <- tweed(rec, indx_nndm_rs, train, test, tune_gr)
+  tweedie_cv <- tweed(rec, rs, train, test, tune_gr)
+  
+  # now calculate the evaluation statistics. 
+  namev <- c('Arithmatic Mean', 'Kriging',
+             'XGB Poisson Spat.', 'XGB Poisson', 'XBG Tweedie Spat.',  'XGB Tweedie')
+  mods <- list(mean_preds, krig_preds, poiss_spat_cv$Predictions, poiss_cv$Predictions, 
+               tweedie_spat_cv$Predictions, tweedie_cv$Predictions)
+  
+  metrrs <- lapply(mods, mets) |> 
+    dplyr::bind_rows() |> 
+    dplyr::mutate(Model = rep(namev, each = 3), .before = 1) 
+  
+  # now we will save the models, evaluation table, and information, note we 
+  # also save the variable selection object for AOA calculation
+  
+  fp <- file.path('..', 'results', 'CountModels')
+  write.csv(metrrs, file.path(fp, 'tables', paste0(bn, '.csv')), row.names = FALSE)
+  saveRDS(rfProfile, file.path(fp, 'modelsTune', paste0(bn, '.rda')))
+  
+  saveRDS(poiss_spat_cv, file.path(fp, 'models', paste0(bn, '-poisson_spat.rda')))
+  saveRDS(poiss_cv, file.path(fp, 'models', paste0(bn, '-poisson.rda')))
+  saveRDS(tweedie_spat_cv, file.path(fp, 'models', paste0(bn, '-tweedie_spat.rda')))
+  saveRDS(tweedie_cv, file.path(fp, 'models', paste0(bn, '-tweedie.rda')))
+  
+}
+

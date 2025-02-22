@@ -4,7 +4,7 @@ author: "steppe"
 output: html_document
 ---
 
-```{r}
+```{r, warning = F, message = F}
 library(sf)
 library(tidyverse)
 library(terra)
@@ -70,6 +70,7 @@ df <- dplyr::bind_cols(
   dplyr::select(terra::extract(rast_dat, ct), -ID), 
   Pr.SuitHab = terra::extract(r, ct)$X1
 ) |> 
+  filter(Lctn_bb != 'PABA') |>
   mutate(Prsnc_All = Prsnc_J + Prsnc_M, .before = 1) |>
   tidyr::drop_na() |>
   select(-Prsnc_J, -Prsnc_M)
@@ -81,396 +82,27 @@ Rather the abundance seemed random within populations, and between - with the ex
 
 The null hypothesis for estimating population sizes will be the use of the arithmetic mean per populations. 
 
-```{r arithmetic mean of counts per population}
-
-# this isn't a perfect comparison, because the locations more reflect how I hiked
-# rather than a population. i.e. all visits in a day, unless i went back to truck
-# between them were lumped into a single 'location'. so we can't report these values
-# in the end. 
-
-preds <- train |>
-  dplyr::group_by(Lctn_bb) |>
-  dplyr::summarize(Predicted = mean(Prsnc_All)) |>
-  sf::st_drop_geometry()
-
-arith_mean <- test |> 
-  dplyr::select(Observed = Prsnc_All, Lctn_bb) 
-
-mean_preds <- dplyr::left_join(arith_mean, preds, by = 'Lctn_bb')
-Metrics::mae(mean_preds$Observed, mean_preds$Predicted)
-```
 
 The use of kriging interpolation, where we simple smooth averages out between the plots, will be our null hypothesis for any spatial estimates of population size. 
-
-```{r idw data}
-
-krig_preds <- data.frame(
-    'Observed' = test$Prsnc_All, 
-    'Predicted' = gstat::krige(Prsnc_All ~ 1, train.sf, newdata = test)$var1.pred,
-    'Pr.suit' = test$Pr.SuitHab
-)
-
-Metrics::mae(krig_preds$Observed, krig_preds$Predicted)
-```
-
-
-```{r Split data for modelling}
-
-train <- sf::st_drop_geometry(train) |>
-  select(-Lctn_bb)
-test  <- st_drop_geometry(test)
-
-tune_gr <- parsnip::boost_tree( 
-  mode = 'regression',
-  trees = tune(),
-  tree_depth = tune(),
-  min_n = tune(), 
-  loss_reduction = tune(),
-  learn_rate = tune(),
-  stop_iter =tune()
-)
-
-```
 
 While random forests are relatively robust against the presence of uninformative features, gradient boosting methods are less so.
 Here we will use recursive feature elimination to drop some variables from our data set. 
 
-```{r Feature Selection}
-
-ctrl <- caret::rfeControl(
-  functions = caret::treebagFuncs,
-  method = "cv", 
-  index = indices_nndm_CAST$indx_train,  
-  allowParallel = TRUE)
-
-train <- sf::st_drop_geometry(train)
-
-future::plan(multisession, workers = parallel::detectCores())
-rfProfile <- caret::rfe(
-  x = train[,2:ncol(train)], y = train$Prsnc_All,
-  rfeControl = ctrl, metric = 'MAE'
-  )
-
-train <- dplyr::select(train, all_of(c('Prsnc_All', predictors(rfProfile))))
-
-rec <- recipes::recipe(Prsnc_All ~ ., data = train) 
-rs <- rsample::resamples(train, 10)
-indx_nndm_rs <- CAST2rsample(indices_nndm_CAST, train)
-```
 
 As we can see from the table above, fewer variables work considerably better. 
 We reduce the mean absolute error by nearly half a plant per quadrant! 
 
 Tweedie needs to be allowed to explore the hyperparameters more than poisson. 
 
-```{r xgboost with tweedie distribution, eval = F}
-
-#' split data into test, and train, and generate CV folds too. 
-modelCount <- function(df){
-  
-  # We will create three columns for our data, which can then be used
-  # to separate the data sets into two sets, where the longitude, latitude, and response
-  # variables are almost identical - like twins. Basically, we have a problem 
-  # which makes splitting along the outcome variable, not an ideal choice. If you 
-  # remember, the southern Cocheotopa Dome (CD) population has drastically higher 
-  # counts of plants than the populations near CB, 10x individuals
-  # not being uncommon! So when we 'split' our data, what we end up with is a gradient
-  # which is actually a mix of CB:CD and then quickly just becomes CD. So our independent
-  # test set isn't really what we see across the species, rather it's evaluating two
-  # distinct components. 
-
-  # fortunately for these predictions we are only including the plot level data and 
-  # some 'near' absences. so we can try and 'ameliorate' this split gradients using
-  # three steps: rescale longitude and latitude from 0:1, and do the same with our
-  # counts. When we then 'combine' the three data sets, on paper, we should get
-  # be able to incorporate a SMIDGE of each of these aspects to the split. Although
-  # we will not entirely remove the CD area having more plants, I think we will slightly
-  # mute the effect. 
-
-  twinning_dat <- df |>
-    dplyr::mutate( # this algo PROBABLY rescales too, but we'll just feed em in to be sure. 
-      x = scales::rescale(st_coordinates(df)[,1]), # the stats doc is rich the tech 
-      y = scales::rescale(st_coordinates(df)[,2]),  # not so much 
-      Prsnc = scales::rescale(Prsnc_All)
-    ) |>
-    sf::st_drop_geometry() |>
-    dplyr::select(Prsnc, y, x)
-
-  indx <- twinning::twin(twinning_dat, r=5)
-
-  train <- df[-indx,]
-  test  <- df[indx,]
-
-  # now that we have our training data, and our test data that we will compare our
-  # final model predictions too, we need cross validation folds for model selection, 
-  # hyperparameter tuning and to fit our model. 
-
-  # We will use a spatial CV structure for this. Because we don't have that many
-  # records to parse through we'll use nndm - but more on that later. 
-
-  # the spatial CV will use the entire area of prediction when determining layouts
-  # in space. Predicting XGBoost is pretty intense, and we really only have count
-  # data from pretty limited areas. Let's restrict our predictions to adjacent areas
-  # because the models will be saved, someone could re predict them in the future if
-  # they wanted further testing. 
-
-  km <- kmeans( df[,c('Longitude', 'Latitude')] |> sf::st_drop_geometry(),
-    2, iter.max = 10, nstart = 1)
-  df$Cluster <- km$cluster
-
-  clusts <- split(df, f = df$Cluster)
-  bbs <- lapply(clusts, \(x) sf::st_union(x) |>
-    sf::st_transform(5070) |>
-    sf::st_buffer(5000) |>
-    sf::st_bbox() |>
-    sf::st_as_sfc()
-  ) |>
-    dplyr::bind_rows() |>
-    t() |>
-    sf::st_as_sfc(crs=5070) |>
-    sf::st_union()
-
-
-  train.sf <- sf::st_as_sf(train, coords = c('Longitude', 'Latitude'), crs = 32613)
-  indices_nndm_CAST <- CAST::knndm(
-    train.sf,
-    sf::st_transform(bbs, sf::st_crs(train.sf)))
-  
-  return(
-    list(
-      nndm_indices = indices_nndm_CAST, 
-      train = train, 
-      test = test
-    )
-  )
-}
-
-#' fit poisson xgboost models to the data
-#' 
-#' @param rec a tidymodels recipe 
-#' @param cv a cross validation structure, such as from `rsample` or `CAST`.  
-poiss <- function(rec, cv){
-  
-  xgb_poisson <- tune_gr |>
-  parsnip::set_engine("xgboost", objective = "count:poisson") 
-
-  xgb_poisson_gr <- xgb_poisson |>
-    tune::extract_parameter_set_dials() |>
-    dials::grid_regular(levels = 3)
-
-  future::plan(multisession, workers = parallel::detectCores())
-  params_xg_poisson <- xgb_poisson |>
-        finetune::tune_race_anova(
-          rec,
-          metrics = yardstick::metric_set(yardstick::mae), 
-          resamples = cv,
-          grid = xgb_poisson_gr
-        )
-
-  best_xg_pois <- tune::select_best(params_xg_poisson, metric = "mae")
-  xg_poisson <- xgb_poisson |>
-    tune::finalize_model(best_xg_pois) |>
-    fit(Prsnc_All ~ ., data = train)
-
-  preds <- data.frame(
-      'Observed' = test$Prsnc_All, 
-      'Predicted' = stats::predict(xg_poisson, new_data = test),
-      'Pr.suit' = test$Pr.SuitHab
-  )
-  
-  return(
-    list(
-      Model = xgb_tweedie_fit, 
-      Predictions = preds
-    )
-  )
-}
-
-#' fit tweedie models to the data
-#' 
-#' @param rec a tidymodels recipe 
-#' @param cv a cross validation structure, such as from `rsample` or `CAST`.  
-tweed <- function(rec, cv){
-  
-  xgb_tweedie_model <- tune_gr |>
-      parsnip::set_engine("xgboost", objective = "reg:tweedie")
-
-  xgb_tweedie_gr <- xgb_tweedie_model |> 
-    tune::extract_parameter_set_dials() |> 
-    dials::grid_regular(levels = 3)
-  
-  future::plan(multisession, workers = parallel::detectCores()) 
-  xbg_tweedie_params <- xgb_tweedie_model |> 
-        finetune::tune_race_anova(
-          rec,
-          resamples = cv,
-          metrics = yardstick::metric_set(yardstick::mae), 
-          grid = xgb_tweedie_gr
-        )
-
-  best_param_tweedie <- tune::select_best(xbg_tweedie_params, metric = "mae")
-
-  xgb_tweedie_mod <- xgb_tweedie_model |>
-    tune::finalize_model(best_param_tweedie)
-
-  xgb_tweedie_fit <- xgb_tweedie_mod %>% 
-    fit(Prsnc_All ~ ., data = train)
-
-  preds <- data.frame(
-      'Observed' = test$Prsnc_All, 
-      'Predicted' = stats::predict(xgb_tweedie_fit, new_data = test),
-      'Pr.suit' = test$Pr.SuitHab
-  )
-  
-  return(
-    list(
-      Model = xgb_tweedie_fit, 
-      Predictions = preds
-    )
-  )
-}
-
-```
 
 
 
 ```{r}
 
-#' split data into test, and train, and generate CV folds too. 
-modelCount <- function(df){
-  
-  # We will create three columns for our data, which can then be used
-  # to separate the data sets into two sets, where the longitude, latitude, and response
-  # variables are almost identical - like twins. Basically, we have a problem 
-  # which makes splitting along the outcome variable, not an ideal choice. If you 
-  # remember, the southern Cocheotopa Dome (CD) population has drastically higher 
-  # counts of plants than the populations near CB, 10x individuals
-  # not being uncommon! So when we 'split' our data, what we end up with is a gradient
-  # which is actually a mix of CB:CD and then quickly just becomes CD. So our independent
-  # test set isn't really what we see across the species, rather it's evaluating two
-  # distinct components. 
+densityModeller(df, bn = '1arc-Iteration1-PA1:3.3')
 
-  # fortunately for these predictions we are only including the plot level data and 
-  # some 'near' absences. so we can try and 'ameliorate' this split gradients using
-  # three steps: rescale longitude and latitude from 0:1, and do the same with our
-  # counts. When we then 'combine' the three data sets, on paper, we should get
-  # be able to incorporate a SMIDGE of each of these aspects to the split. Although
-  # we will not entirely remove the CD area having more plants, I think we will slightly
-  # mute the effect. 
+mod <- readRDS(file.path(fp, 'modelsTune', '1arc-Iteration1-PA1:3.3-tweedie.rda'))
 
-  twinning_dat <- df |>
-    dplyr::mutate( # this algo PROBABLY rescales too, but we'll just feed em in to be sure. 
-      x = scales::rescale(st_coordinates(df)[,1]), # the stats doc is rich the tech 
-      y = scales::rescale(st_coordinates(df)[,2]),  # not so much 
-      Prsnc = scales::rescale(Prsnc_All)
-    ) |>
-    sf::st_drop_geometry() |>
-    dplyr::select(Prsnc, y, x)
-
-  indx <- twinning::twin(twinning_dat, r=5)
-
-  train <- df[-indx,]
-  test  <- df[indx,]
-
-  # now that we have our training data, and our test data that we will compare our
-  # final model predictions too, we need cross validation folds for model selection, 
-  # hyperparameter tuning and to fit our model. 
-
-  # We will use a spatial CV structure for this. Because we don't have that many
-  # records to parse through we'll use nndm - but more on that later. 
-
-  # the spatial CV will use the entire area of prediction when determining layouts
-  # in space. Predicting XGBoost is pretty intense, and we really only have count
-  # data from pretty limited areas. Let's restrict our predictions to adjacent areas
-  # because the models will be saved, someone could re predict them in the future if
-  # they wanted further testing. 
-
-  km <- kmeans( df[,c('Longitude', 'Latitude')] |> sf::st_drop_geometry(),
-    2, iter.max = 10, nstart = 1)
-  df$Cluster <- km$cluster
-
-  clusts <- split(df, f = df$Cluster)
-  bbs <- lapply(clusts, \(x) sf::st_union(x) |>
-    sf::st_transform(5070) |>
-    sf::st_buffer(5000) |>
-    sf::st_bbox() |>
-    sf::st_as_sfc()
-  ) |>
-    dplyr::bind_rows() |>
-    t() |>
-    sf::st_as_sfc(crs=5070) |>
-    sf::st_union()
-
-
-  train.sf <- sf::st_as_sf(train, coords = c('Longitude', 'Latitude'), crs = 32613)
-  indices_nndm_CAST <- CAST::knndm(
-    train.sf,
-    sf::st_transform(bbs, sf::st_crs(train.sf)))
-  
-  return(
-    list(
-      nndm_indices = indices_nndm_CAST, 
-      train = train, 
-      test = test
-    )
-  )
-}
-```
-
-
-
-
-
-
-
-
-
-Make a table of results 
-```{r}
-
-data.frame(
-  Model = c('Arithmetic Mean', 'Kriging', 'XGB Poisson', 'XGB Tweedie'), 
-  MAE = c(
-    Metrics::mae(mean_preds$Observed, mean_preds$Predicted),
-    Metrics::mae(krig_preds$Observed, krig_preds$Predicted),
-    Metrics::mae(xbg_pois_preds$Observed, xbg_pois_preds$.pred),
-    Metrics::mae(xbg_tweedie_preds$Observed, xbg_tweedie_preds$.pred)
-    ), 
-  RMSE = c(
-    Metrics::rmse(mean_preds$Observed, mean_preds$Predicted),
-    Metrics::rmse(krig_preds$Observed, krig_preds$Predicted),
-    Metrics::rmse(xbg_pois_preds$Observed, xbg_pois_preds$.pred),
-    Metrics::rmse(xbg_tweedie_preds$Observed, xbg_tweedie_preds$.pred)
-  )
-)
-
-```
-
-
-
-```{r}
-
-#' Estimate the number of plants per raster cell. 
-#'
-#' @description
-#' @param x a dataframe of occurrences
-#' @param 
-
-densityModeller <- function(x){
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-}
 
 
 ```
