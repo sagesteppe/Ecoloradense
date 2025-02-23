@@ -731,7 +731,13 @@ CAST2rsample <- function(x, train){
 
 
 #' split data into test, and train, and generate CV folds too. 
-splitData <- function(df){
+#' @param dataframe which for modelling
+#' @param bn file basename, this fn will strip out the resolution prefix and search for 
+#' an existing file, and load the index from disk if found. Otherwise perform twinning, 
+#' this is to be extra sure that each set of models us using at the least, the same test 
+#' and train split (which should be accomplished alone by using the u1 argument to `twin`), 
+#' but given how long hyperparam tuning takes we want to be extra sure. 
+splitData <- function(df, fp, bn){
   
   # We will create three columns for our data, which can then be used
   # to separate the data sets into two sets, where the longitude, latitude, and response
@@ -751,17 +757,25 @@ splitData <- function(df){
   # be able to incorporate a SMIDGE of each of these aspects to the split. Although
   # we will not entirely remove the CD area having more plants, I think we will slightly
   # mute the effect. 
+  f <- file.path(fp, 'test_data', paste0(twin_indx, '-', gsub('-I.*$', '', bn), '.txt'))
   
-  twinning_dat <- df |>
-    dplyr::mutate( # this algo PROBABLY rescales too, but we'll just feed em in to be sure. 
-      x = scales::rescale(st_coordinates(df)[,1]), # the stats doc is rich the tech 
-      y = scales::rescale(st_coordinates(df)[,2]),  # not so much 
-      Prsnc = scales::rescale(Prsnc_All)
-    ) |>
-    sf::st_drop_geometry() |>
-    dplyr::select(Prsnc, y, x)
-  
-  indx <- twinning::twin(twinning_dat, r=5)
+  if(!file.exists(f)){
+    
+    twinning_dat <- df |>
+      dplyr::mutate( # this algo PROBABLY rescales too, but we'll just feed em in to be sure. 
+        x = scales::rescale(st_coordinates(df)[,1]), # the stats doc is rich the tech 
+        y = scales::rescale(st_coordinates(df)[,2]),  # not so much 
+        Prsnc = scales::rescale(Prsnc_All)
+      ) |>
+      sf::st_drop_geometry() |>
+      dplyr::select(Prsnc, y, x)
+    
+    indx <- twinning::twin(twinning_dat, r=5, u1 = 2)
+    cat(indx, file = f)
+    
+  } else {
+    indx <- as.numeric(unlist(strsplit(readLines('twin_indix.txt', warn = FALSE), ' ')))
+  }
   
   train <- df[-indx,]
   test  <- df[indx,]
@@ -921,9 +935,10 @@ mets <- function(x){
 #'
 #' @description
 #' @param x Data frame of occurrences.
-#' @param bn Character. base filename which will unambigiously identify the objects saved from 
+#' @param fp base file path to directory to save contents. 
+#' @param bn Character. base filename which will unambiguously identify the objects saved from 
 #' this function (the model, an evaluation table, variable selection object).
-densityModeller <- function(x, bn){
+densityModeller <- function(x, bn, fp){
   
   # split the data into train/test and spatial CV. 
   dsplit <- splitData(x)
@@ -987,7 +1002,10 @@ densityModeller <- function(x, bn){
     stop_iter = tune()
   )
   
-  # tune hyperparameters and fit all models 
+  # tune hyperparameters and fit all models  - the hyperparam tuning on occassion
+  # is super slow, and may crash so we want to write to disk as they are completed.
+  if(missing(fp)){fp <- file.path('..', 'results', 'CountModels')}
+  
   f <- file.path(fp, 'models', paste0(bn, '-poisson_spat.rda'))
   if(!file.exists(f)){
     poiss_spat_cv <- poiss(rec, indx_nndm_rs, train, test, tune_gr)
@@ -1007,7 +1025,7 @@ densityModeller <- function(x, bn){
   } else {tweedie_spat_cv <- readRDS(f)}
 
   f <- file.path(fp, 'models', paste0(bn, '-tweedie.rda'))
-  if(!file.exists(f)){
+  if(!file.exists(f)){x
     tweedie_cv <- tweed(rec, rs, train, test, tune_gr)
     saveRDS(tweedie_cv, f)
   } else {tweedie_cv <- readRDS(f)}
@@ -1025,10 +1043,8 @@ densityModeller <- function(x, bn){
   # now we will save the models, evaluation table, and information, note we 
   # also save the variable selection object for AOA calculation
   
-  fp <- file.path('..', 'results', 'CountModels')
   write.csv(metrrs, file.path(fp, 'tables', paste0(bn, '.csv')), row.names = FALSE)
   saveRDS(rfProfile, file.path(fp, 'modelsTune', paste0(bn, '.rda')))
-  
   
 }
 
