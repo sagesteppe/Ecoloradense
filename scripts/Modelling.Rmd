@@ -52,28 +52,44 @@ distOrder_PAratio_simulator(
 
 ```{r Partition data and clean for modelling}
 
-# note that we have already multiplied these values out so that they went from a 
-# 3x3m quadrat to the number of
+p <- '/media/steppe/hdd/EriogonumColoradenseTaxonomy/results/suitability_maps'
+f <- list.files(p, pattern = '-Pr.tif')
 
-ct <- st_read('../data/Data4modelling/30m-count-iter1.gpkg', quiet = TRUE) |>
-  select(Prsnc_M, Prsnc_J, Lctn_bb)
-
-# extract independent variables to data set . 
-resolution = "1arc"
-train_split = 0.8; p2proc = '../data/spatial/processed'
-rast_dat <- rastReader(paste0('dem_', resolution), p2proc) 
-
-r <- rast('../results/suitability_maps/1arc-Iteration1-PA1:3.6DO:0-Pr.tif')
-
-df <- dplyr::bind_cols(
-  ct, 
-  dplyr::select(terra::extract(rast_dat, ct), -ID), 
-  Pr.SuitHab = terra::extract(r, ct)$X1
-) |> 
-  filter(Lctn_bb != 'PABA') |>
-  mutate(Prsnc_All = Prsnc_J + Prsnc_M, .before = 1) |>
-  tidyr::drop_na() |>
-  select(-Prsnc_J, -Prsnc_M)
+#' fit xgboosted models to predict plant count per space density. 
+#' @param f a vector of predicted suitable habitat rasters to use for input. 
+wrapper <- function(x){
+  
+  res_string <- switch(res,
+                      "3m" = "3m",
+                      "10m" = "1-3arc",
+                      "30m" = "1arc",
+                      "90m" = "3arc",
+                      stop("Input to `res` invalid. Need be one of: 3, 10, 30, 90")
+  )
+  
+  ct <- sf::st_read(
+    file.path('..', 'data', 'Data4modelling', paste0(res_string, '-count-iter1.gpkg')
+              ), quiet = TRUE
+    ) |>
+  dplyr::select(Prsnc_M, Prsnc_J, Lctn_bb)
+  
+  p2proc = '../data/spatial/processed'
+  rast_dat <- rastReader(paste0('dem_', res_string), p2proc) 
+  
+  r <- terra::rast(file.path('..', 'results', 'suitability_maps', x))
+  df <- dplyr::bind_cols(
+   ct, 
+    dplyr::select(terra::extract(rast_dat, ct), -ID), 
+    Pr.SuitHab = terra::extract(r, ct)$X1
+  ) |> 
+    filter(Lctn_bb != 'PABA') |>
+    mutate(Prsnc_All = Prsnc_J + Prsnc_M, .before = 1) |>
+    tidyr::drop_na() |>
+    select(-Prsnc_J, -Prsnc_M)
+  
+  densityModeller(df, fp = '../results/CountModels', bn = gsub('DO.*$', '', x))
+  
+}
 
 ```
 
@@ -88,7 +104,6 @@ The use of kriging interpolation, where we simple smooth averages out between th
 While random forests are relatively robust against the presence of uninformative features, gradient boosting methods are less so.
 Here we will use recursive feature elimination to drop some variables from our data set. 
 
-
 As we can see from the table above, fewer variables work considerably better. 
 We reduce the mean absolute error by nearly half a plant per quadrant! 
 
@@ -96,7 +111,7 @@ Tweedie needs to be allowed to explore the hyperparameters more than poisson.
 
 
 ```{r}
-densityModeller(df, bn = '1arc-Iteration1-PA1:3.6')
+densityModeller(df, fp = '../results/CountModels', bn = '1arc-Iteration1-PA1:3.6')
 ```
 
 

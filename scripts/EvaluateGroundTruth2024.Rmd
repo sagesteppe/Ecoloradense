@@ -202,7 +202,6 @@ DIRTY |>
   # not because I recorded coordinates, I just recopied the nav to coords in the field. 
 
 cleaned <- bind_rows(
-  
   toclean |>
     group_by(ID) |> 
     mutate(n = n()) |> 
