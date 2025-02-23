@@ -58,3 +58,6 @@ test_data/
 suitability_maps.zip/
 suitability_maps.zip
 evaluations/
+modelsTune/
+models/
+
