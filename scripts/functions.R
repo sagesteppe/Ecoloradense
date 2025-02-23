@@ -757,7 +757,7 @@ splitData <- function(df, fp, bn){
   # be able to incorporate a SMIDGE of each of these aspects to the split. Although
   # we will not entirely remove the CD area having more plants, I think we will slightly
   # mute the effect. 
-  f <- file.path(fp, 'test_data', paste0(twin_indx, '-', gsub('-I.*$', '', bn), '.txt'))
+  f <- file.path(fp, 'test_data', paste0('twin_indx-', gsub('-I.*$', '', bn), '.txt'))
   
   if(!file.exists(f)){
     
@@ -774,7 +774,7 @@ splitData <- function(df, fp, bn){
     cat(indx, file = f)
     
   } else {
-    indx <- as.numeric(unlist(strsplit(readLines('twin_indix.txt', warn = FALSE), ' ')))
+    indx <- as.numeric(unlist(strsplit(readLines(f, warn = FALSE), ' ')))
   }
   
   train <- df[-indx,]
@@ -941,7 +941,7 @@ mets <- function(x){
 densityModeller <- function(x, bn, fp){
   
   # split the data into train/test and spatial CV. 
-  dsplit <- splitData(x)
+  dsplit <- splitData(x, fp = fp, bn = bn)
   
   train <- dsplit$train
   test <- dsplit$test
@@ -1005,26 +1005,27 @@ densityModeller <- function(x, bn, fp){
   # tune hyperparameters and fit all models  - the hyperparam tuning on occassion
   # is super slow, and may crash so we want to write to disk as they are completed.
   if(missing(fp)){fp <- file.path('..', 'results', 'CountModels')}
+  saveRDS(rfProfile, file.path(fp, 'modelsTune', paste0(bn, '.rda')))
   
-  f <- file.path(fp, 'models', paste0(bn, '-poisson_spat.rda'))
+  f <- file.path(fp, 'models', paste0(bn, '-poisson_spat.rds'))
   if(!file.exists(f)){
     poiss_spat_cv <- poiss(rec, indx_nndm_rs, train, test, tune_gr)
     saveRDS(poiss_spat_cv, f)
   } else {poiss_spat_cv <- readRDS(f)}
   
-  f <- file.path(fp, 'models', paste0(bn, '-poisson.rda'))
+  f <- file.path(fp, 'models', paste0(bn, '-poisson.rds'))
   if(!file.exists(f)){
     poiss_cv <- poiss(rec, rs, train, test, tune_gr)
     saveRDS(poiss_cv, f)
   } else {poiss_cv <- readRDS(f)}
   
-  f <- file.path(fp, 'models', paste0(bn, '-tweedie_spat.rda'))
+  f <- file.path(fp, 'models', paste0(bn, '-tweedie_spat.rds'))
   if(!file.exists(f)){
     tweedie_spat_cv <- tweed(rec, indx_nndm_rs, train, test, tune_gr)
     saveRDS(tweedie_spat_cv, f)
   } else {tweedie_spat_cv <- readRDS(f)}
 
-  f <- file.path(fp, 'models', paste0(bn, '-tweedie.rda'))
+  f <- file.path(fp, 'models', paste0(bn, '-tweedie.rds'))
   if(!file.exists(f)){x
     tweedie_cv <- tweed(rec, rs, train, test, tune_gr)
     saveRDS(tweedie_cv, f)
@@ -1044,7 +1045,6 @@ densityModeller <- function(x, bn, fp){
   # also save the variable selection object for AOA calculation
   
   write.csv(metrrs, file.path(fp, 'tables', paste0(bn, '.csv')), row.names = FALSE)
-  saveRDS(rfProfile, file.path(fp, 'modelsTune', paste0(bn, '.rda')))
   
 }
 
