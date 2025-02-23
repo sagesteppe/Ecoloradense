@@ -59,11 +59,12 @@ f <- list.files(p, pattern = '-Pr.tif')
 #' @param f a vector of predicted suitable habitat rasters to use for input. 
 wrapper <- function(x){
   
+  res <- gsub('-I.*$', '', x)
   res_string <- switch(res,
                       "3m" = "3m",
-                      "10m" = "1-3arc",
-                      "30m" = "1arc",
-                      "90m" = "3arc",
+                      "1-3arc" = "10m",
+                      "1arc" = "30m",
+                      "3arc" = "90m",
                       stop("Input to `res` invalid. Need be one of: 3, 10, 30, 90")
   )
   
@@ -74,8 +75,8 @@ wrapper <- function(x){
   dplyr::select(Prsnc_M, Prsnc_J, Lctn_bb)
   
   p2proc = '../data/spatial/processed'
-  rast_dat <- rastReader(paste0('dem_', res_string), p2proc) 
-  
+  rast_dat <- rastReader(paste0('dem_', res), p2proc) 
+
   r <- terra::rast(file.path('..', 'results', 'suitability_maps', x))
   df <- dplyr::bind_cols(
    ct, 
@@ -90,6 +91,8 @@ wrapper <- function(x){
   densityModeller(df, fp = '../results/CountModels', bn = gsub('DO.*$', '', x))
   
 }
+
+lapply(f, wrapper)
 
 ```
 
