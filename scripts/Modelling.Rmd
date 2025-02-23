@@ -63,7 +63,7 @@ resolution = "1arc"
 train_split = 0.8; p2proc = '../data/spatial/processed'
 rast_dat <- rastReader(paste0('dem_', resolution), p2proc) 
 
-r <- rast('../results/suitability_maps/1arc-Iteration1-PA1:3.3DO:0-Pr.tif')
+r <- rast('../results/suitability_maps/1arc-Iteration1-PA1:3.6DO:0-Pr.tif')
 
 df <- dplyr::bind_cols(
   ct, 
@@ -95,16 +95,8 @@ We reduce the mean absolute error by nearly half a plant per quadrant!
 Tweedie needs to be allowed to explore the hyperparameters more than poisson. 
 
 
-
-
 ```{r}
-
-densityModeller(df, bn = '1arc-Iteration1-PA1:3.3')
-
-mod <- readRDS(file.path(fp, 'modelsTune', '1arc-Iteration1-PA1:3.3-tweedie.rda'))
-
-
-
+densityModeller(df, bn = '1arc-Iteration1-PA1:3.6')
 ```
 
 

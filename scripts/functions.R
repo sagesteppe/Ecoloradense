@@ -988,10 +988,29 @@ densityModeller <- function(x, bn){
   )
   
   # tune hyperparameters and fit all models 
-  poiss_spat_cv <- poiss(rec, indx_nndm_rs, train, test, tune_gr)
-  poiss_cv <- poiss(rec, rs, train, test, tune_gr)
-  tweedie_spat_cv <- tweed(rec, indx_nndm_rs, train, test, tune_gr)
-  tweedie_cv <- tweed(rec, rs, train, test, tune_gr)
+  f <- file.path(fp, 'models', paste0(bn, '-poisson_spat.rda'))
+  if(!file.exists(f)){
+    poiss_spat_cv <- poiss(rec, indx_nndm_rs, train, test, tune_gr)
+    saveRDS(poiss_spat_cv, f)
+  } else {poiss_spat_cv <- readRDS(f)}
+  
+  f <- file.path(fp, 'models', paste0(bn, '-poisson.rda'))
+  if(!file.exists(f)){
+    poiss_cv <- poiss(rec, rs, train, test, tune_gr)
+    saveRDS(poiss_cv, f)
+  } else {poiss_cv <- readRDS(f)}
+  
+  f <- file.path(fp, 'models', paste0(bn, '-tweedie_spat.rda'))
+  if(!file.exists(f)){
+    tweedie_spat_cv <- tweed(rec, indx_nndm_rs, train, test, tune_gr)
+    saveRDS(tweedie_spat_cv, f)
+  } else {tweedie_spat_cv <- readRDS(f)}
+
+  f <- file.path(fp, 'models', paste0(bn, '-tweedie.rda'))
+  if(!file.exists(f)){
+    tweedie_cv <- tweed(rec, rs, train, test, tune_gr)
+    saveRDS(tweedie_cv, f)
+  } else {tweedie_cv <- readRDS(f)}
   
   # now calculate the evaluation statistics. 
   namev <- c('Arithmatic Mean', 'Kriging',
@@ -1010,10 +1029,6 @@ densityModeller <- function(x, bn){
   write.csv(metrrs, file.path(fp, 'tables', paste0(bn, '.csv')), row.names = FALSE)
   saveRDS(rfProfile, file.path(fp, 'modelsTune', paste0(bn, '.rda')))
   
-  saveRDS(poiss_spat_cv, file.path(fp, 'models', paste0(bn, '-poisson_spat.rda')))
-  saveRDS(poiss_cv, file.path(fp, 'models', paste0(bn, '-poisson.rda')))
-  saveRDS(tweedie_spat_cv, file.path(fp, 'models', paste0(bn, '-tweedie_spat.rda')))
-  saveRDS(tweedie_cv, file.path(fp, 'models', paste0(bn, '-tweedie.rda')))
   
 }
 
