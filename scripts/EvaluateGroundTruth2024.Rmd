@@ -24,13 +24,13 @@ gt2024 <- st_read('../data/GroundTruthing/Iteration1Pts.shp', quiet = T)
 # we'll just create the data sets at different resolutions right now... 
 # these are final for count data - no historic records have these attributes.
 rt <- '../data/spatial/processed' 
-st_write(subset_pts(x = gt2024, res = 3, root = rt, mode = 'Count'), 
+st_write(subset_pts(x = gt2024, res = 3, root = rt, mode = 'Count'), # 607
   '../data/Data4modelling/3m-count-iter1.gpkg', append = F)
-st_write(subset_pts(x = gt2024, res = 10, root = rt, mode = 'Count'), 
+st_write(subset_pts(x = gt2024, res = 10, root = rt, mode = 'Count'), # 605
   '../data/Data4modelling/10m-count-iter1.gpkg', append = F)
-st_write(subset_pts(x = gt2024, res = 30, root = rt, mode = 'Count'), 
+st_write(subset_pts(x = gt2024, res = 30, root = rt, mode = 'Count'), # 571
   '../data/Data4modelling/30m-count-iter1.gpkg', append = F)
-st_write(subset_pts(x = gt2024, res = 90, root = rt, mode = 'Count'), 
+st_write(subset_pts(x = gt2024, res = 90, root = rt, mode = 'Count'), # 443
   '../data/Data4modelling/90m-count-iter1.gpkg', append = F)
 rm(gt2024, rt)
 ```
@@ -39,7 +39,7 @@ rm(gt2024, rt)
 
 These are just the historic records. 
 
-```{r iteration 0}
+```{r iteration 0, eval = F}
 hist_occ_data <- st_read('../data/collections/occurrences_coloradense/occurrences.shp', quiet = T) %>% 
     mutate(
       Presenc = 1,
