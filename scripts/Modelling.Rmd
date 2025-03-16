@@ -78,10 +78,11 @@ wrapper <- function(x){
   rast_dat <- rastReader(paste0('dem_', res), p2proc) 
 
   r <- terra::rast(file.path('..', 'results', 'suitability_maps', x))
+  
   df <- dplyr::bind_cols(
    ct, 
     dplyr::select(terra::extract(rast_dat, ct), -ID), 
-    Pr.SuitHab = terra::extract(r, ct)$X1
+    Pr.SuitHab = terra::extract(r, ct)[,2]
   ) |> 
     filter(Lctn_bb != 'PABA') |>
     mutate(Prsnc_All = Prsnc_J + Prsnc_M, .before = 1) |>
@@ -92,7 +93,7 @@ wrapper <- function(x){
   
 }
 
-lapply(f, wrapper)
+lapply(f[1], wrapper)
 
 ```
 
@@ -101,17 +102,7 @@ Rather the abundance seemed random within populations, and between - with the ex
 
 The null hypothesis for estimating population sizes will be the use of the arithmetic mean per populations. 
 
-
 The use of kriging interpolation, where we simple smooth averages out between the plots, will be our null hypothesis for any spatial estimates of population size. 
-
-While random forests are relatively robust against the presence of uninformative features, gradient boosting methods are less so.
-Here we will use recursive feature elimination to drop some variables from our data set. 
-
-As we can see from the table above, fewer variables work considerably better. 
-We reduce the mean absolute error by nearly half a plant per quadrant! 
-
-Tweedie needs to be allowed to explore the hyperparameters more than poisson. 
-
 
 ```{r}
 densityModeller(df, fp = '../results/CountModels', bn = '1arc-Iteration1-PA1:3.6')

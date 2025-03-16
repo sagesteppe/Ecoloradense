@@ -615,13 +615,10 @@ subset_pts <- function(x, res, root, mode){
   x['RasterCell'] <- terra::extract(rasta, x, cells = TRUE)$cell
   RC <- split(x, f = x$RasterCell) 
   
-  if(mode=='Presence'){
     # if there are multiple points per cell, 1st) discard the absences (if applicable)
     # 2) randomly sample out one of the presences.  
     
     select_rec <- function(x){
-      # if only presenc==0 | presenc==1, sample randomly. 
-      # if both presenc==0 and presenc==1 co-exist, sample from presenc==1, 
       if(nrow(x)>1){
         if(all(x$Presenc==0) | all(x$Presenc==1) == TRUE){
           # remove the historic record if present. 
@@ -643,7 +640,6 @@ subset_pts <- function(x, res, root, mode){
     }
     RC <- lapply(RC, select_rec)
     
-  } else { # if mode == 'Count'
     # area cell, area quadrant * mean plants per life stage. 
     
     countR <- function(x){
@@ -654,8 +650,7 @@ subset_pts <- function(x, res, root, mode){
     }
 
     # let's train the models on the raw count data,not the transformed values. 
-#    RC <- lapply(RC, countR)
-  }
+
   dplyr::bind_rows(RC) |>
     dplyr::arrange(OBJECT) |>
     dplyr::select(-RasterCell) |>
@@ -978,9 +973,7 @@ densityModeller <- function(x, bn, fp){
     index = nndm_indices$indx_train,  
     allowParallel = TRUE)
   
-  train <- sf::st_drop_geometry(train)
-  
-  future::plan(multisession, workers = parallel::detectCores())
+  future::plan(future::multisession, workers = parallel::detectCores())
   rfProfile <- caret::rfe(
     x = train[,2:ncol(train)], y = train$Prsnc_All,
     rfeControl = ctrl, metric = 'MAE')
@@ -1005,7 +998,7 @@ densityModeller <- function(x, bn, fp){
   # tune hyperparameters and fit all models  - the hyperparam tuning on occassion
   # is super slow, and may crash so we want to write to disk as they are completed.
   if(missing(fp)){fp <- file.path('..', 'results', 'CountModels')}
-  saveRDS(rfProfile, file.path(fp, 'modelsTune', paste0(bn, '.rda')))
+  saveRDS(rfProfile, file.path(fp, 'modelsTune', paste0(bn, '.rds')))
   
   f <- file.path(fp, 'models', paste0(bn, '-poisson_spat.rds'))
   if(!file.exists(f)){
