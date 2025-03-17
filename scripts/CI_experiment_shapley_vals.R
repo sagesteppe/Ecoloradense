@@ -55,7 +55,6 @@ rf <- randomForest(medv ~ ., data = Boston, ntree = 10)
 X <- Boston[which(names(Boston) != "medv")]
 predictor <- Predictor$new(rf, data = X, y = Boston$medv)
 
-
 shapley <- Shapley$new(predictor, x.interest = X[1, ], sample.size = 50)
 shapley$plot()
 
