@@ -93,7 +93,8 @@ wrapper <- function(x){
   
 }
 
-lapply(f[1], wrapper)
+2:10
+lapply(f[11], wrapper)
 
 ```
 
@@ -104,8 +105,6 @@ The null hypothesis for estimating population sizes will be the use of the arith
 
 The use of kriging interpolation, where we simple smooth averages out between the plots, will be our null hypothesis for any spatial estimates of population size. 
 
-```{r}
-densityModeller(df, fp = '../results/CountModels', bn = '1arc-Iteration1-PA1:3.6')
-```
+
 
 
