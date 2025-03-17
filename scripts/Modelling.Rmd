@@ -135,13 +135,6 @@ predictor <- Predictor$new(
   predict.function = predict.fun
   )
 
-library(kernelshap)
-s <- kernelshap(fit, X = test_dat) 
-sv <- shapviz(s)
-sv_importance(sv, kind = "bee")
-sv_dependence(sv, v = colnames(iris[, -1]))
-
-
 # this doess not work... 
 shapley <- Shapley$new(predictor, x.interest = test) 
 
@@ -154,6 +147,22 @@ plot(int_out)
 prsuit_int <- Interaction$new(predictor, feature = "Pr.SuitHab", grid.size = 15)
 plot(prsuit_int)
 
+########3 try to get shap with a different package. 
+library(kernelshap)
+library(shapviz)
+
+s <- kernelshap::kernelshap(mod, X = test_dat) 
+sv <- shapviz::shapviz(s)
+shapviz::sv_importance(sv, kind = "bee") +
+  theme_bw()
+
+shapviz::sv_importance(sv, kind = "bar") +
+  theme_bw()
+
+shapviz::sv_dependence(sv, v = colnames(test_dat[, -1]))
+
+shapviz::sv_waterfall(sv) +
+  theme(axis.text = element_text(size = 11))
 ```
 
 
