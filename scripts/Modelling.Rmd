@@ -89,7 +89,7 @@ wrapper <- function(x){
     tidyr::drop_na() |>
     select(-Prsnc_J, -Prsnc_M)
   
-  densityModeller(df, fp = '../results/CountModels', bn = gsub('DO.*$', '', x))
+ # densityModeller(df, fp = '../results/CountModels', bn = gsub('DO.*$', '', x))
   
 }
 
@@ -104,6 +104,58 @@ Rather the abundance seemed random within populations, and between - with the ex
 The null hypothesis for estimating population sizes will be the use of the arithmetic mean per populations. 
 
 The use of kriging interpolation, where we simple smooth averages out between the plots, will be our null hypothesis for any spatial estimates of population size. 
+
+```{r}
+library(iml)
+library(xgboost) 
+d_w_vars <- wrapper('1-3arc-Iteration1-PA1:2.7DO:0-Pr.tif')
+
+mod <- readRDS('../results/CountModels/models/1-3arc-Iteration1-PA1:2.7-tweedie.rds')$Model
+vars <- as.character(attr(mod[["preproc"]][["terms"]], 'variables')) # fns will run on all 
+vars <- vars[2:length(vars)] # vars even if not in model - but produce null wts as expected. 
+
+test_indices <- as.numeric(
+  read.delim(
+    '../results/CountModels/test_data/twin_indx-1-3arc.txt', header = F, sep = ' ')
+  )
+test_dat <- d_w_vars[test_indices,] |>
+  select(all_of(vars)) |>
+  st_drop_geometry()
+
+predict.fun <- function(object, newdata){
+  newData_x = xgb.DMatrix(data.matrix(newdata), missing = NA)
+  results<-predict(mod, newData_x)
+}
+
+subby <- test[which(names(test) != "Prsnc_All")]
+predictor <- Predictor$new(
+  model = mod,
+  data = subby, 
+  y = test_dat$Prsnc_All, 
+  predict.function = predict.fun
+  )
+
+library(kernelshap)
+s <- kernelshap(fit, X = test_dat) 
+sv <- shapviz(s)
+sv_importance(sv, kind = "bee")
+sv_dependence(sv, v = colnames(iris[, -1]))
+
+
+# this doess not work... 
+shapley <- Shapley$new(predictor, x.interest = test) 
+
+private$sampler$feature.names
+
+# these both run   
+int_out <- Interaction$new(predictor, grid.size = 10)
+plot(int_out)
+
+prsuit_int <- Interaction$new(predictor, feature = "Pr.SuitHab", grid.size = 15)
+plot(prsuit_int)
+
+```
+
 
 
 
