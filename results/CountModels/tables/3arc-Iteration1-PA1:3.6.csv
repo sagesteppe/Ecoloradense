@@ -1,0 +1,19 @@
+"Model","Metric","Value"
+"Arithmatic Mean","MAE",NA
+"Arithmatic Mean","MSE",NA
+"Arithmatic Mean","RMSE",NA
+"Kriging","MAE",9.90179325488451
+"Kriging","MSE",405.404919733794
+"Kriging","RMSE",20.1346695958437
+"XGB Poisson Spat.","MAE",5.79255904596357
+"XGB Poisson Spat.","MSE",291.661347359496
+"XGB Poisson Spat.","RMSE",17.0780955425216
+"XGB Poisson","MAE",5.77841574730105
+"XGB Poisson","MSE",174.051387877506
+"XGB Poisson","RMSE",13.1928536669481
+"XBG Tweedie Spat.","MAE",5.60121408809591
+"XBG Tweedie Spat.","MSE",275.776163703089
+"XBG Tweedie Spat.","RMSE",16.6065096785294
+"XGB Tweedie","MAE",5.76539871843913
+"XGB Tweedie","MSE",185.799323629792
+"XGB Tweedie","RMSE",13.6308225588111
