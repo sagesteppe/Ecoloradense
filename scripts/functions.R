@@ -662,7 +662,7 @@ subset_pts <- function(x, res, root, mode){
 #' @description This function helps subset the input data (x) to combinations of distOrders- where
 #' points within x distance of the raster tile resolution are removed, and PAratios the ratio
 #' of presence to absence points - which is used to control the excess of absence points. 
-#' @param x an sf/dataframe/tibble. All potential records which could be used for modelling
+#' @param x an sf/data frame/tibble. All potential records which could be used for modelling
 #' @param distOrder Numeric. The multiple of the resolution to remove near absences by. One of: 0, 1, 2, 4, 8 etc.
 #' @param PAratio Numeric. The denominator of the ratio, Presence is always 1, so 1.5 would indicate
 #' 100 presence records and 150 absence records. 
@@ -722,8 +722,6 @@ CAST2rsample <- function(x, train){
   splits <- lapply(indices_L, rsample::make_splits, data = train)
   rsample::manual_rset(splits, paste('Split', 1:length(x$indx_train)))
 }
-
-
 
 #' split data into test, and train, and generate CV folds too. 
 #' @param dataframe which for modelling
@@ -930,7 +928,7 @@ mets <- function(x){
 #' @description
 #' @param x Data frame of occurrences.
 #' @param fp base file path to directory to save contents. 
-#' @param bn Character. base filename which will unambiguously identify the objects saved from 
+#' @param bn Character. base file name which will unambiguously identify the objects saved from 
 #' this function (the model, an evaluation table, variable selection object).
 densityModeller <- function(x, bn, fp){
   
@@ -943,7 +941,7 @@ densityModeller <- function(x, bn, fp){
   train.sf <- dsplit$train.sf
   
   ##############       both null models are calculated up here    ##############
-  # arithmetic means by population . A null model. 
+  # arithmetic means by population. A null model. 
   preds <- train |>
     dplyr::group_by(Lctn_bb) |>
     dplyr::summarize(Predicted = mean(Prsnc_All)) |>
@@ -960,22 +958,29 @@ densityModeller <- function(x, bn, fp){
     'Pr.suit' = test$Pr.SuitHab
   )
   
-  # this was the grouping variable required for the arith mean, we drop it now. 
+  # this was the grouping variable required for the arithmetic mean, we drop it now. 
   train <- sf::st_drop_geometry(train) |>
     select(-Lctn_bb)
   test <- sf::st_drop_geometry(test)
   
   # feature selection 
-  ctrl <- caret::rfeControl(
-    functions = caret::treebagFuncs,
-    method = "cv", 
-    index = nndm_indices$indx_train,  
-    allowParallel = TRUE)
-  
-  future::plan(future::multisession, workers = parallel::detectCores())
-  rfProfile <- caret::rfe(
-    x = train[,2:ncol(train)], y = train$Prsnc_All,
-    rfeControl = ctrl, metric = 'MAE')
+  if(!file.exists(file.path(fp, 'modelsTune', paste0(bn, '.rds')))){
+    
+    ctrl <- caret::rfeControl(
+      functions = caret::treebagFuncs,
+      method = "cv", 
+      index = nndm_indices$indx_train,  
+      allowParallel = TRUE)
+    
+    future::plan(future::multisession, workers = parallel::detectCores())
+    rfProfile <- caret::rfe(
+      x = train[,2:ncol(train)], y = train$Prsnc_All,
+      rfeControl = ctrl, metric = 'MAE')
+    
+    saveRDS(rfProfile, file.path(fp, 'modelsTune', paste0(bn, '.rds')))
+  } else {
+    rfProfile <- readRDS(file.path(fp, 'modelsTune', paste0(bn, '.rds'))) 
+  }
   
   train <- dplyr::select(train, all_of(c('Prsnc_All', predictors(rfProfile))))
   
@@ -983,7 +988,7 @@ densityModeller <- function(x, bn, fp){
   rs <- rsample::bootstraps(train, 10)
   indx_nndm_rs <- CAST2rsample(nndm_indices, train)
   
-  # now define a tuning grid for xgboost 
+  # now define a tuning grid for trees.  
   tune_gr <- parsnip::boost_tree( 
     mode = 'regression',
     trees = tune(),
@@ -994,11 +999,10 @@ densityModeller <- function(x, bn, fp){
     stop_iter = tune()
   )
   
-  # tune hyperparameters and fit all models  - the hyperparam tuning on occassion
+  # tune hyper parameters and fit all models  - the hyper param tuning on occasion
   # is super slow, and may crash so we want to write to disk as they are completed.
   if(missing(fp)){fp <- file.path('..', 'results', 'CountModels')}
-  saveRDS(rfProfile, file.path(fp, 'modelsTune', paste0(bn, '.rds')))
-  
+
   f <- file.path(fp, 'models', paste0(bn, '-poisson_spat.rds'))
   if(!file.exists(f)){
     poiss_spat_cv <- poiss(rec, indx_nndm_rs, train, test, tune_gr)
@@ -1023,11 +1027,25 @@ densityModeller <- function(x, bn, fp){
     saveRDS(tweedie_cv, f)
   } else {tweedie_cv <- readRDS(f)}
   
+  tune_gr <- parsnip::boost_tree(
+    mode = 'regression',
+    trees = tune(),
+    min_n = tune(),
+    tree_depth = tune(),
+  )
+  
+  f <- file.path(fp, 'models', paste0(bn, '-lgbm-poisson_spat.rds'))
+  if(!file.exists(f)){
+    lgbm_cv <- gbs(rec, indx_nndm_rs, train, test, tune_gr, mode = 'regression', metric = 'mae',
+                     engine = 'lightgbm', objective = 'poisson', resp = 'Prsnc_All')
+    saveRDS(lgbm_cv, f)
+  } else {lgbm_cv <- readRDS(f)}
+  
   # now calculate the evaluation statistics. 
-  namev <- c('Arithmatic Mean', 'Kriging',
-             'XGB Poisson Spat.', 'XGB Poisson', 'XBG Tweedie Spat.',  'XGB Tweedie')
+  namev <- c('Arithmetic Mean', 'Kriging',
+             'XGB Poisson Spat.', 'XGB Poisson', 'XBG Tweedie Spat.',  'XGB Tweedie', 'LGBM Poisson Spat.')
   mods <- list(mean_preds, krig_preds, poiss_spat_cv$Predictions, poiss_cv$Predictions, 
-               tweedie_spat_cv$Predictions, tweedie_cv$Predictions)
+               tweedie_spat_cv$Predictions, tweedie_cv$Predictions, lgbm_cv$Predictions)
   
   metrrs <- lapply(mods, mets) |> 
     dplyr::bind_rows() |> 
