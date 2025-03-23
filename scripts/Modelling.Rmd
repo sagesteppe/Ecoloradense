@@ -15,6 +15,7 @@ library(ranger)
 library(lightgbm)
 library(future)
 library(dials)
+library(tune)
 library(finetune)
 source('functions.R')
 set.seed(23)
@@ -89,10 +90,71 @@ wrapper <- function(x){
     tidyr::drop_na() |>
     select(-Prsnc_J, -Prsnc_M)
   
-  #densityModeller(df, fp = '../results/CountModels', bn = gsub('DO.*$', '', x))
+  densityModeller(df, fp = '../results/CountModels', bn = gsub('DO.*$', '', x))
   
 }
 
+wrapper(f[1])
+
+```
+
+
+```{r}
+
+#' fit tweedie models to the data
+#' 
+#' @param rec a tidymodels recipe 
+#' @param cv a cross validation structure, such as from `rsample` or `CAST`.  
+#' @param train data split
+#' @param test data split
+#' @param response Character string. Name of the column holding the response variable. 
+#' @param tune_gr tuning grid.
+#' @param mode Character. Argument to `parsnip::boost_tree` mode, defaults to 'regression'. 
+#' @param engine Character. Argument to `parsnip::set_engine`, engine. 
+#' @param objective Character. Argument to `parsnip::set_engine`, objective.  
+#' @param levels Numeric. Argument to `dials::grid_regular`  
+#' @param metric Character. Evaluation metric for the model passed onto `yardstick::metric_set`
+gbs <- function(rec, cv, train, test, resp, tune_gr, mode, engine, objective, levels, metric){
+  
+  if(missing(levels)){levels <-3}
+
+  model <- parsnip::set_engine(tune_gr, engine = engine, objective = objective)
+  
+  gr <- model |>
+    tune::extract_parameter_set_dials() |>
+    dials::grid_regular(levels = levels)
+  
+  future::plan(multisession, workers = parallel::detectCores())
+  params <- model |> 
+    finetune::tune_race_anova(
+      rec,
+      resamples = cv,
+      metrics = yardstick::metric_set(yardstick::mae), 
+      grid = gr
+    )
+  
+  best_param <- tune::select_best(params, metric = metric)
+  
+  final_model <- model |>
+    tune::finalize_model(best_param)
+  
+  fit <- final_model %>% 
+    workflows::fit(Prsnc_All ~ ., data = train)
+  
+  preds <- data.frame(
+    'Observed' = test[[resp]], 
+    'Predicted' = stats::predict(fit, new_data = test),
+    'Pr.suit' = test[[Pr.SuitHab]]
+  ) |>
+    setNames(c('Observed', 'Predicted', 'Pr.suit'))
+ 
+  return(
+    list(
+      Model = fit, 
+      Predictions = preds
+    )
+  )
+}
 ```
 
 Modelling count data has not been very successful, nor did the field work really develop any strong insights on what drives the abundance of the plants. 
@@ -161,87 +223,3 @@ shapviz::sv_dependence(sv, v = colnames(test_dat[, -1]))
 shapviz::sv_waterfall(sv) +
   theme(axis.text = element_text(size = 11))
 ```
-
-
-```{r}
-
-
-
-mode = 'regression'
-engine = 'lightgbm'
-objective = 'reg:poisson'
-#' fit tweedie models to the data
-#' 
-#' @param rec a tidymodels recipe 
-#' @param cv a cross validation structure, such as from `rsample` or `CAST`.  
-#' @param train data split
-#' @param test data split
-#' @param tune_gr tuning grid. 
-#' @param mode Character. Argument to parsnip::boost_tree mode, defaults to 'regression'. 
-#' @param engine Character. Argument to parsnip::set_engine, engine. 
-#' @param objective Character. Argument to parsnip::set_engine, objective.  
-#' @param levels Numeric. Argument to dials::grid_regular  
-gbs <- function(rec, cv, train, test, tune_gr, mode, engine, objective, levels){
-  
-  if(missing(levels)){levels <-3}
-  tune_gr <- parsnip::boost_tree( 
-    mode = mode,
-    mtry = integer(),
-    trees = tune(),
-    tree_depth = tune(),
-    min_n = tune(), 
-    loss_reduction = tune(),
-    learn_rate = tune()
-  )
-  
-  model <- parsnip::set_engine(tune_gr, engine = engine, objective = objective)
-  
-  xgb_tweedie_gr <- model |>
-    tune::extract_parameter_set_dials() |>
-    dials::grid_regular(levels = levels)
-  
-}
-
-
-
-
-xgb_tweedie_gr <- lgbm_poisson_model |>
-  tune::extract_parameter_set_dials() |>
-  dials::grid_regular(levels = 3)
-
-future::plan(multisession, workers = parallel::detectCores())
-
-params_xg_poisson <- lgbm_poisson_gr |>
-      finetune::tune_race_anova(
-        rec,
-        resamples = rs,
-        metrics = yardstick::metric_set(yardstick::mae), 
-        grid = gr
-      )
-
-best_param_tweedie <- tune::select_best(params_xg_poisson, metric = "mae")
-
-lgbm_poisson_model <- lgbm_poisson_model |>
-  tune::finalize_model(best_param_tweedie)
-
-lgbm_poisson_fit <- lgbm_poisson_model %>% 
-  fit(Prsnc_All ~ ., data = train)
-
-preds <- data.frame(
-  'Observed' = test$Prsnc_All, 
-  'Predicted' = stats::predict(lgbm_poisson_fit, new_data = test),
-  'Pr.suit' = test$Pr.SuitHab
-)
-preds <- setNames(preds, c('Observed', 'Predicted', 'Pr.suit'))
-
-  return(
-    list(
-      Model = lgbm_poisson_fit, 
-      Predictions = preds
-    )
-  )
-
-```
-
-
-
