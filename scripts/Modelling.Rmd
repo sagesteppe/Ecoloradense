@@ -29,7 +29,8 @@ f <- file.path(p, list.files(p))
 Model presence for iteration 0, that is historic records only. 
 
 Model presence for iteration 1, both the historic and 2024 ground truth data. 
-```{r, eval = F}
+
+```{r Run all models, eval = F}
 
 abs <- st_read('../data/Data4modelling/iter1-pa.gpkg')
 m30 <- sf::st_read("../data/Data4modelling/10m-presence-iter1.gpkg") %>% 
@@ -41,7 +42,7 @@ m30 <- bind_rows(m30, abs)
 m30 <- filter(m30, st_is(m30, "POINT")) |>
   select(Occurrence)
 
-distOrder_PAratio_simulator(
+distOrder_PAratio_simulator( # this does all the presence absence modelling. = bad function name
   x = m30, distOrder = 0, PAratio = 3.0,
   resolution = 10, iteration = 1, se_prediction = FALSE,
   train_split = 0.9, p2proc = '../data/spatial/processed'
@@ -51,116 +52,20 @@ distOrder_PAratio_simulator(
 
 # playing with count prediction 
 
+
 ```{r Partition data and clean for modelling}
 
 p <- '/media/steppe/hdd/EriogonumColoradenseTaxonomy/results/suitability_maps'
 f <- list.files(p, pattern = '-Pr.tif')
 
-#' fit xgboosted models to predict plant count per space density. 
-#' @param f a vector of predicted suitable habitat rasters to use for input. 
-wrapper <- function(x){
-  
-  res <- gsub('-I.*$', '', x)
-  res_string <- switch(res,
-                      "3m" = "3m",
-                      "1-3arc" = "10m",
-                      "1arc" = "30m",
-                      "3arc" = "90m",
-                      stop("Input to `res` invalid. Need be one of: 3, 10, 30, 90")
-  )
-  
-  ct <- sf::st_read(
-    file.path('..', 'data', 'Data4modelling', paste0(res_string, '-count-iter1.gpkg')
-              ), quiet = TRUE
-    ) |>
-  dplyr::select(Prsnc_M, Prsnc_J, Lctn_bb)
-  
-  p2proc = '../data/spatial/processed'
-  rast_dat <- rastReader(paste0('dem_', res), p2proc) 
-
-  r <- terra::rast(file.path('..', 'results', 'suitability_maps', x))
-  
-  df <- dplyr::bind_cols(
-   ct, 
-    dplyr::select(terra::extract(rast_dat, ct), -ID), 
-    Pr.SuitHab = terra::extract(r, ct)[,2]
-  ) |> 
-    filter(Lctn_bb != 'PABA') |>
-    mutate(Prsnc_All = Prsnc_J + Prsnc_M, .before = 1) |>
-    tidyr::drop_na() |>
-    select(-Prsnc_J, -Prsnc_M)
-  
-  densityModeller(df, fp = '../results/CountModels', bn = gsub('DO.*$', '', x))
-  
-}
-
-wrapper(f[1])
-
+lapply(f[8:11], wrapper)
 ```
 
-
-```{r}
-
-#' fit tweedie models to the data
-#' 
-#' @param rec a tidymodels recipe 
-#' @param cv a cross validation structure, such as from `rsample` or `CAST`.  
-#' @param train data split
-#' @param test data split
-#' @param response Character string. Name of the column holding the response variable. 
-#' @param tune_gr tuning grid.
-#' @param mode Character. Argument to `parsnip::boost_tree` mode, defaults to 'regression'. 
-#' @param engine Character. Argument to `parsnip::set_engine`, engine. 
-#' @param objective Character. Argument to `parsnip::set_engine`, objective.  
-#' @param levels Numeric. Argument to `dials::grid_regular`  
-#' @param metric Character. Evaluation metric for the model passed onto `yardstick::metric_set`
-gbs <- function(rec, cv, train, test, resp, tune_gr, mode, engine, objective, levels, metric){
-  
-  if(missing(levels)){levels <-3}
-
-  model <- parsnip::set_engine(tune_gr, engine = engine, objective = objective)
-  
-  gr <- model |>
-    tune::extract_parameter_set_dials() |>
-    dials::grid_regular(levels = levels)
-  
-  future::plan(multisession, workers = parallel::detectCores())
-  params <- model |> 
-    finetune::tune_race_anova(
-      rec,
-      resamples = cv,
-      metrics = yardstick::metric_set(yardstick::mae), 
-      grid = gr
-    )
-  
-  best_param <- tune::select_best(params, metric = metric)
-  
-  final_model <- model |>
-    tune::finalize_model(best_param)
-  
-  fit <- final_model %>% 
-    workflows::fit(Prsnc_All ~ ., data = train)
-  
-  preds <- data.frame(
-    'Observed' = test[[resp]], 
-    'Predicted' = stats::predict(fit, new_data = test),
-    'Pr.suit' = test[[Pr.SuitHab]]
-  ) |>
-    setNames(c('Observed', 'Predicted', 'Pr.suit'))
- 
-  return(
-    list(
-      Model = fit, 
-      Predictions = preds
-    )
-  )
-}
-```
 
 Modelling count data has not been very successful, nor did the field work really develop any strong insights on what drives the abundance of the plants. 
 Rather the abundance seemed random within populations, and between - with the exception of Cocheotopa where plants were much smaller and incredibly more abundant than elsewhere. 
 
-The null hypothesis for estimating population sizes will be the use of the arithmetic mean per populations. 
+The null hypothesis for estimating population sizes will be the arithmetic mean per populations. 
 
 The use of kriging interpolation, where we simple smooth averages out between the plots, will be our null hypothesis for any spatial estimates of population size. 
 
@@ -168,7 +73,11 @@ The use of kriging interpolation, where we simple smooth averages out between th
 library(iml)
 library(xgboost) 
 d_w_vars <- wrapper('1-3arc-Iteration1-PA1:2.7DO:0-Pr.tif')
+```
 
+
+
+```{r}
 mod <- readRDS('../results/CountModels/models/1-3arc-Iteration1-PA1:2.7-tweedie.rds')$Model
 vars <- as.character(attr(mod[["preproc"]][["terms"]], 'variables')) # fns will run on all 
 vars <- vars[2:length(vars)] # vars even if not in model - but produce null wts as expected. 
@@ -177,8 +86,9 @@ test_indices <- as.numeric(
   read.delim(
     '../results/CountModels/test_data/twin_indx-1-3arc.txt', header = F, sep = ' ')
   )
+
 test_dat <- d_w_vars[test_indices,] |>
-  select(all_of(vars)) |>
+  select(any_of(vars)) |>
   st_drop_geometry()
 
 predict.fun <- function(object, newdata){
@@ -194,7 +104,7 @@ predictor <- Predictor$new(
   predict.function = predict.fun
   )
 
-# this doess not work... 
+# this does not work... 
 shapley <- Shapley$new(predictor, x.interest = test) 
 
 private$sampler$feature.names

@@ -1031,7 +1031,7 @@ densityModeller <- function(x, bn, fp){
     mode = 'regression',
     trees = tune(),
     min_n = tune(),
-    tree_depth = tune(),
+    tree_depth = tune()
   )
   
   f <- file.path(fp, 'models', paste0(bn, '-lgbm-poisson_spat.rds'))
@@ -1047,9 +1047,9 @@ densityModeller <- function(x, bn, fp){
   mods <- list(mean_preds, krig_preds, poiss_spat_cv$Predictions, poiss_cv$Predictions, 
                tweedie_spat_cv$Predictions, tweedie_cv$Predictions, lgbm_cv$Predictions)
   
-  metrrs <- lapply(mods, mets) |> 
+  metrrs <- lapply(mods, mets) |>
     dplyr::bind_rows() |> 
-    dplyr::mutate(Model = rep(namev, each = 3), .before = 1) 
+    dplyr::mutate(Model = rep(namev, each = 3), .before = 1)
   
   # now we will save the models, evaluation table, and information, note we 
   # also save the variable selection object for AOA calculation
@@ -1058,3 +1058,95 @@ densityModeller <- function(x, bn, fp){
   
 }
 
+#' fit tweedie models to the data
+#' 
+#' @param rec a tidymodels recipe 
+#' @param cv a cross validation structure, such as from `rsample` or `CAST`.  
+#' @param train data split
+#' @param test data split
+#' @param response Character string. Name of the column holding the response variable. Unquoted. 
+#' @param tune_gr tuning grid.
+#' @param mode Character. Argument to `parsnip::boost_tree` mode, defaults to 'regression'. 
+#' @param engine Character. Argument to `parsnip::set_engine`, engine. 
+#' @param objective Character. Argument to `parsnip::set_engine`, objective.  
+#' @param levels Numeric. Argument to `dials::grid_regular`  
+#' @param metric Character. Evaluation metric for the model passed onto `yardstick::metric_set`
+gbs <- function(rec, cv, train, test, resp, tune_gr, mode, engine, objective, levels, metric){
+  
+  if(missing(levels)){levels <-3}
+  
+  model <- parsnip::set_engine(tune_gr, engine = engine, objective = objective)
+  
+  gr <- model |>
+    tune::extract_parameter_set_dials() |>
+    dials::grid_regular(levels = levels)
+  
+  future::plan(multisession, workers = parallel::detectCores()/2)
+  params <- model |>
+    finetune::tune_race_anova(
+      rec,
+      resamples = cv,
+      metrics = yardstick::metric_set(yardstick::mae),
+      grid = gr
+    )
+  
+  best_param <- tune::select_best(params, metric = metric)
+  
+  final_model <- model |>
+    tune::finalize_model(best_param)
+  
+  fit <- final_model %>%
+    workflows::fit(Prsnc_All ~ ., data = train)
+  
+  preds <- data.frame(
+    'Observed' = test[[resp]], 
+    'Predicted' = stats::predict(fit, new_data = test),
+    'Pr.suit' = test[['Pr.SuitHab']]
+  ) |>
+    setNames(c('Observed', 'Predicted', 'Pr.suit'))
+  
+  return(
+    list(
+      Model = fit, 
+      Predictions = preds
+    )
+  )
+}
+
+#' fit xgboosted models to predict plant count per space density. 
+#' @param f a vector of predicted suitable habitat rasters to use for input. 
+wrapper <- function(x){
+  
+  res <- gsub('-I.*$', '', x)
+  res_string <- switch(res,
+                       "3m" = "3m",
+                       "1-3arc" = "10m",
+                       "1arc" = "30m",
+                       "3arc" = "90m",
+                       stop("Input to `res` invalid. Need be one of: 3, 10, 30, 90")
+  )
+  
+  ct <- sf::st_read(
+    file.path('..', 'data', 'Data4modelling', paste0(res_string, '-count-iter1.gpkg')
+    ), quiet = TRUE
+  ) |>
+    dplyr::select(Prsnc_M, Prsnc_J, Lctn_bb)
+  
+  p2proc = '../data/spatial/processed'
+  rast_dat <- rastReader(paste0('dem_', res), p2proc) 
+  
+  r <- terra::rast(file.path('..', 'results', 'suitability_maps', x))
+  
+  df <- dplyr::bind_cols(
+    ct, 
+    dplyr::select(terra::extract(rast_dat, ct), -ID), 
+    Pr.SuitHab = terra::extract(r, ct)[,2]
+  ) |> 
+    filter(Lctn_bb != 'PABA') |>
+    mutate(Prsnc_All = Prsnc_J + Prsnc_M, .before = 1) |>
+    tidyr::drop_na() |>
+    select(-Prsnc_J, -Prsnc_M)
+  
+  densityModeller(df, fp = '../results/CountModels', bn = gsub('DO.*$', '', x))
+  
+}
