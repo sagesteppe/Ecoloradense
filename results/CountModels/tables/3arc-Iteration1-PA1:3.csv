@@ -1,7 +1,7 @@
 "Model","Metric","Value"
-"Arithmatic Mean","MAE",NA
-"Arithmatic Mean","MSE",NA
-"Arithmatic Mean","RMSE",NA
+"Arithmetic Mean","MAE",NA
+"Arithmetic Mean","MSE",NA
+"Arithmetic Mean","RMSE",NA
 "Kriging","MAE",9.90179325488451
 "Kriging","MSE",405.404919733794
 "Kriging","RMSE",20.1346695958437
@@ -17,3 +17,6 @@
 "XGB Tweedie","MAE",6.40101235286262
 "XGB Tweedie","MSE",244.639028259657
 "XGB Tweedie","RMSE",15.6409407728454
+"LGBM Poisson Spat.","MAE",5.69144759293303
+"LGBM Poisson Spat.","MSE",203.33458624252
+"LGBM Poisson Spat.","RMSE",14.2595436898423
