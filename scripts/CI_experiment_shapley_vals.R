@@ -2,8 +2,8 @@ library(xgboost)
 library(iml)
 library(tidyverse)
 
-#setwd('/home/sagesteppe/Documents/Ecoloradense/scripts')
-setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
+setwd('/home/sagesteppe/Documents/Ecoloradense/scripts')
+#setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
 mod <- readRDS('../results/CountModels/models/1-3arc-Iteration1-PA1_2.7-poisson_spat.rds')
 
 test_indices <- as.numeric(
@@ -11,7 +11,7 @@ test_indices <- as.numeric(
     '../results/CountModels/test_data/twin_indx-1-3arc.txt', header = F, sep = ' ')
   )
 
-train_dat <- sf::st_read('../data/Data4modelling/10m-count-iter1.gpkg')[test_indices,] |>
+test_dat <- sf::st_read('../data/Data4modelling/10m-count-iter1.gpkg')[test_indices,] |>
   rowwise() |>
   mutate(Prsnc_All = sum(Prsnc_M, Prsnc_J)) |>
   select(Prsnc_All)
@@ -26,9 +26,8 @@ train_dat <- sf::st_read('../data/Data4modelling/10m-count-iter1.gpkg')[test_ind
 
 rm(test_indices, rast_vals)
 # Calculate SHAP values for a single observation 
+
 shapley <- Shapley$new(predictor, x.interest = tdat[1, ]) 
-
-
 
 
 mod <- readRDS('../results/CountModels/models/1-3arc-Iteration1-PA1:2.7-tweedie.rds')$Model
