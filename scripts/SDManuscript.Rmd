@@ -1,32 +1,37 @@
 ---
-title: Predicting, habitat suitability, occupancy, and census sizes of a rare plant species using iterative adaptive niche based sampling 
-author: "| Reed Clark Benkendorf$^1$^[Correspondence: rbenkendorf@chicagobotanic.org], Jeremie B. Fant$^1$$^,$$^2$, Sophie Taddeo$^3$ \n|  $^1$ Chicago Botanic Garden, Glencoe, Illinois 60022, USA  \n|  $^2$ Plant Biology and Conservation, Northwestern University, Evanston, Illinois 60208, USA \n|  $^3$ Department of Environmental and Ocean Sciences, University of San Diego, San Diego, California 92110, USA"
+title: "Predicting habitat suitability, occupancy, and census size, of a rare plant using iterative adaptive niche based sampling"
+author: |
+  Reed Clark Benkendorf$^{1}$, Jeremie B. Fant$^{1,2}$, Sophie Taddeo$^{3}$  
+  $^{1}$ Chicago Botanic Garden, Glencoe, Illinois 60022, USA  
+  $^{2}$ Plant Biology and Conservation, Northwestern University, Evanston, Illinois 60208, USA  
+  $^{3}$ Department of Environmental and Ocean Sciences, University of San Diego, San Diego, California 92110, USA  
 abstract: |
   \noindent  
   1)  
   2)  
   3)  
   4)  
-keywords: species distribution model, occupancy, census size estimates, 
+keywords: ["species distribution model", "occupancy", "census size estimates"]
 orcid: |
- Reed Benkendorf https://orcid.org/0000-0003-3110-6687  
- Jeremie Fant https://orcid.org/0000-0001-9276-1111  
- Sophie Taddeo https://orcid.org/0000-0002-7789-1417  
-output:
+  Reed Benkendorf https://orcid.org/0000-0003-3110-6687  
+  Jeremie Fant https://orcid.org/0000-0001-9276-1111  
+  Sophie Taddeo https://orcid.org/0000-0002-7789-1417  
+output: 
   pdf_document: 
     latex_engine: xelatex
-  toc: no
+    toc: false
+    fig_caption: true
   word_document: default
 csl: "../citations/methods-in-ecology-and-evolution.csl"
-bibliography: ../citations/citations.bib
-link-citations: yes
-fig_caption: yes
-always_allow_html: yes
+bibliography: "../citations/citations.bib"
+link-citations: true
+always_allow_html: true
 header-includes:
-- \usepackage{endfloat}
-- \usepackage{setspace}\doublespacing
-- \usepackage{lineno}
-- \linenumbers
+  - \usepackage{endfloat}
+  - \usepackage{setspace}
+  - \doublespacing
+  - \usepackage{lineno}
+  - \linenumbers
 ---
 
 ```{r setup, include=FALSE}
@@ -60,7 +65,7 @@ Recently, considerable headway has been made in generating statistically robust 
 However, ENM's are rarely ground verified, and even more seldom at landscape scales [@a2022species].
 Hence, most of our knowledge about producing ENM's rely on simulated species and data, especially at spatial resolutions considered relatively coarse to practitioners.  
 An historic complication with the implementation and interpretation of ENM's is a mismatch between the spatial resolution of the independent variables available to model the species fundamental niche and the factors governing the true distribution of populations - the realized niche [@carscadden2020niche; @chauvier2022resolution; @lembrechts2019incorporating]. 
-Recent papers have had mixed results regarding the effects of imprecisely mapped occurrence data on ENM predictions, with indications that models generated in more heterogenous environments, and at finer resolutions (e.g. ca. 3 arc-second relate to 10 arc-minutes (~14.5 km) at 38*)) suffer minor decreases in model performance [@graham2008influence; @smith2023including] with real species, while increasing error in mapping has drastic effects on model predictions with virtually simulated species [@gabor2022positional].  
+Recent papers have had mixed results regarding the effects of imprecisely mapped occurrence data on ENM predictions, with indications that models generated in more heterogenous environments, and at finer resolutions (e.g. ca. 3 arc-second relate to 10 arc-minutes (~14.5 km) at 38$^\circ$)) suffer minor decreases in model performance [@graham2008influence; @smith2023including] with real species, while increasing error in mapping has drastic effects on model predictions with virtually simulated species [@gabor2022positional].  
 A further mismatch of resolution is the year in which data on geographic localities were obtained and current conditions which allow for positive population growth [@bracken2022maximizing]. 
 Historic occurrence data may now represent conditions which are inhospitable to the maintenance of populations, or may even represent populations which even then were simply sinks from more robust populations [@bracken2022maximizing]; using these records may decrease model performance. 
 Collecting data on whether areas are favorable to continued recruitment of individuals from the soil seed bank, are perhaps more astute than whether long-lived individuals persist.  
@@ -176,7 +181,7 @@ Occupancy scores for each of these points were then calculated using (whiteboxto
 
 ### Plant Density  
 
-Plant density was modelled using five methods, a generalized linear model (GLM) with a poisson error distribution and spatial autocorrelation structures, spAbundance, Random Forest and XgBoost regression. 
+Plant density was modelled using five methods, focusing on a comparison of spatial and non-spatial cross-validation methods. 
 
 ```{r Regression of Plant Density Observed and Predicted}
 
