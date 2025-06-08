@@ -1,0 +1,124 @@
+---
+title: "Subset suitable areas into patches"
+author: "Reed Benkendorf"
+date: "2025-06-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(terra)
+library(tidyverse)
+library(landscapemetrics)
+```
+
+Raw suitability rasters have to be masked three times, in two different styles. 
+First they will be masked via the different binary thresholds suggested by dismo, and then each patch will be tagged as either being in the Area of inference of outside of it (T/F). 
+We will also calculate a variety of patch metrics for each patch. 
+
+```{r}
+p_suit <- file.path('..', 'results', 'suitability_maps')
+
+f_suit <- file.path(p_suit, list.files(p_suit, pattern = 'Pr'))
+f_aoa <- file.path(p_suit, list.files(p_suit, pattern = 'AOA'))
+
+p_thresh <- file.path('..', 'results', 'threshold_masks')
+f_thresh <- file.path(p_thresh, list.files(p_thresh))
+
+
+input <- lapply(
+  list(f_suit, f_aoa, f_thresh),
+  \ (x) data.frame(
+    filepath = x,
+    version = gsub('-thresh.*$|-Pr.*$|-AOA.*$', '', basename(x)))
+  ) %>%
+  purrr::reduce(inner_join, by = "version") %>%
+  setNames( c('Pr', 'version', 'AOA', 'thresholds')) |>
+  relocate(version, .before = 1)
+
+rm(p_suit, f_suit, p_thresh, f_aoa, f_thresh)
+```
+
+
+```{r}
+
+patchAttributes <- function(x){
+  
+  pr <- terra::rast(x[['Pr']])
+  aoa <- terra::rast(x[['AOA']])
+  threshs <- terra::rast(x[['thresholds']])
+  
+  # will iterate through each of the options. 
+  evals <- data.frame(
+    eval = c('spec_sens', 'equal_sens_spec', 'sensitivity'),
+    layer = 1:3
+  )
+  
+  threshs <- terra::mask(threshs, aoa, maskvalues = 0)
+  
+  calcs <- vector(mode = 'list', length = 3)
+  names(calcs) <- evals$eval 
+  landscape <- terra::rast(
+    terra::ext(pr), 
+    resolution=terra::res(pr), 
+    crs = terra::crs(pr), 
+    nlyrs = 3
+    )
+  
+#  landscape <- vector(mode = 'list', length = 3)
+  
+  for(i in seq_along(evals$eval)){
+
+    calcs[[i]] <- landscapemetrics::calculate_lsm(
+      threshs[[i]], 
+      what = c("lsm_p_area",  "lsm_p_enn", "lsm_p_cai", "lsm_p_para", "lsm_p_frac"), 
+      neighbourhood = 4, directions = 8) |>
+      dplyr::select(id, metric, value) 
+    
+  }
+
+  landscape <- landscapemetrics::get_patches(threshs, directions = 8)
+  calcs <- dplyr::bind_rows(calcs, .id = 'evals')
+
+  # kind of strange object, we'll just brute force it back to a happy terra object
+  landscape <- c(
+    landscape$layer_2$class_1,
+    landscape$layer_2$class_1,
+    landscape$layer_3$class_1
+  )
+  names(landscape) <- evals$eval
+  
+  write.csv(
+    calcs,
+    file = file.path('..', 'results', 'patch_summaries', paste0(x[['version']][1], '-patches.csv')),
+    row.names = F
+    )
+  
+  writeRaster(
+    landscape, overwrite = TRUE,
+    filename = file.path('..', 'results', 'patches', paste0(x[['version']][1], 'patches.tif'))
+    )
+  
+  # now make a table noting which patches are occupied and which are unoccupied. 
+  pres <- terra::vect(file.path('..', 'data', 'Data4modelling', '3m-presence-iter1.gpkg'))
+  occ_patches <- terra::extract(landscape, pres) |>
+    dplyr::select(-ID) |>
+    tidyr::pivot_longer(everything(), values_to = 'patch', names_to = 'threshold') |>
+    dplyr::distinct(patch, threshold, .keep_all = TRUE) |>
+    tidyr::drop_na() |>
+    dplyr::arrange(threshold, patch)
+  
+  write.csv(
+    occ_patches, 
+    file = file.path('..', 'results', 'patch_summaries', paste0(x[['version']][1], '-occupied.csv')),
+    row.names = FALSE)
+  
+}
+
+lapply(split(input, f = 1:2), patchAttributes)
+```
+
+
