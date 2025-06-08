@@ -61,4 +61,5 @@ evaluations/
 modelsTune/
 models/
 patches/
+threshold_masks/
 
