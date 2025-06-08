@@ -61,14 +61,13 @@ patchAttributes <- function(x){
   
   calcs <- vector(mode = 'list', length = 3)
   names(calcs) <- evals$eval 
+  
   landscape <- terra::rast(
     terra::ext(pr), 
     resolution=terra::res(pr), 
     crs = terra::crs(pr), 
     nlyrs = 3
     )
-  
-#  landscape <- vector(mode = 'list', length = 3)
   
   for(i in seq_along(evals$eval)){
 
@@ -94,13 +93,11 @@ patchAttributes <- function(x){
   write.csv(
     calcs,
     file = file.path('..', 'results', 'patch_summaries', paste0(x[['version']][1], '-patches.csv')),
-    row.names = F
-    )
+    row.names = F)
   
   writeRaster(
     landscape, overwrite = TRUE,
-    filename = file.path('..', 'results', 'patches', paste0(x[['version']][1], 'patches.tif'))
-    )
+    filename = file.path('..', 'results', 'patches', paste0(x[['version']][1], 'patches.tif')))
   
   # now make a table noting which patches are occupied and which are unoccupied. 
   pres <- terra::vect(file.path('..', 'data', 'Data4modelling', '3m-presence-iter1.gpkg'))
@@ -116,9 +113,35 @@ patchAttributes <- function(x){
     file = file.path('..', 'results', 'patch_summaries', paste0(x[['version']][1], '-occupied.csv')),
     row.names = FALSE)
   
+  # finally we grab aggregate data on the predicted probability per each patch. We will 
+  # gather the 'max', '25th quartile', '50th quartile' and '75th quartile' for each 
+  
+    pr <- terra::rast(x[['Pr']])
+    pr <- terra::mask(pr, aoa, maskvalues = 0)
+    
+    central <- vector(mode = 'list', length = 3)
+    pr_summaries <- vector(mode = 'list', length = 3)
+    for(i in seq_along(evals$eval)){
+      pr_sub <- terra::mask(pr, threshs[[i]], maskvalues = 0)
+      mn <- terra::zonal(pr_sub,  landscape[[i]], fun = 'mean', na.rm = TRUE)
+      mdn <- terra::zonal(pr_sub,  landscape[[i]], fun = 'median', na.rm = TRUE)
+      
+      central[[i]] <- setNames(
+        data.frame(cbind(mn, mdn[,2], evals = evals$eval[[i]])),
+        c('patchID', 'mean', 'median', 'evals'))
+    }
+    central <- dplyr::bind_rows(central)
+      
+    write.csv(
+      central, 
+      file = file.path('..', 'results', 'patch_summaries', paste0(x[['version']][1], '-cntrlTend.csv')),
+      row.names = FALSE)
+    
 }
 
-lapply(split(input, f = 1:2), patchAttributes)
+
+ob1 <- lapply(split(input, f = 1:2), patchAttributes)
+
 ```
 
 
