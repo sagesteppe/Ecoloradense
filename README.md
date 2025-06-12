@@ -1,4 +1,24 @@
-## Iterative Adaptive Modelling - a test with Eriogonum coloradense
+## Eriogonum coloradense occurrence data set
+
+These data were collected in the Summer of 2024. 
+The goals for sample design were to: 
+  1) Revisit all known *E. coloradense* populations - allowing statistical inference to be made to the species. 
+  2) Collect tissue from more than 15 (preferably 20 individuals) per population visited
+  3) Ideally do this in one season
+
+goals were not meet - however I came quite close. 
+
+The data set was intended for use in exploring landscape genomics studies; in particular the effects of topographic isolation on plant population differentiation since a tentatively recent glacial event. 
+A core aspect of this is understanding the isolation of populations, effective population census size, and -leaning out on a branch - reconstructing at historic time intervals habitat suitability and distances between patches. 
+
+The way these data were collected allowed for optimization of species distribution models (ecological niche models). 
+Facets of SDM's which present research opportunities around this time include: using predicted habitat suitability as  variate to use in predicting plant density. 
+Using high resolution independent variables which could allow for spatially explicit SDM predictions to be thresheld to the boundaries of a population. 
+And finally providing some directional metrics to help prioritize field campaigns which seek to discover new plant populations using the results of SDMs. 
+
+Additional questions relating to the use of block (& spatial) cross-validation, and the effects of sample size and independent variable resolution on modelling efforts, are readily possible with the data set too - given the very high number of occurrences. 
+
+### Iterative Adaptive Modelling 
 
 Goals:
 
