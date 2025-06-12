@@ -42,106 +42,63 @@ input <- lapply(
 rm(p_suit, f_suit, p_thresh, f_aoa, f_thresh)
 ```
 
+```{r}
+lapply(split(input, f = 1:nrow(input)), patchAttributes)
+```
+
+
+## Tag euclidean distances between patches. 
+
+we also want to know how far apart the patches are in terms of euclidean space. 
+However, many of the patches are quite large, and the patches are numerous. 
+Calculating across all cells of the raster which are deemed suitable habitat would thus be cost prohibitive. 
+To reduce the compuational expense we will apply a couple approaches which will make this a somewhat cheapened heuristic. 
+
+Using terra we will extract the boundaries of patches - making it so that we do not have to calculate the interior of patches - which by definition need to be colonized through a border cell. 
+We will then cluster cells along the borders - to a resultion of 90m. 
+Hence the 3arc dataset will remain native resolution, and the 1 arc will have 1 in 3 cells from a window chosen, and 1/3 arc have one in nine cells be selected for calculations of distance between occupied and unoccupied patches. 
 
 ```{r}
 
-patchAttributes <- function(x){
-  
-  pr <- terra::rast(x[['Pr']])
-  aoa <- terra::rast(x[['AOA']])
-  threshs <- terra::rast(x[['thresholds']])
-  
-  # will iterate through each of the options. 
-  evals <- data.frame(
-    eval = c('spec_sens', 'equal_sens_spec', 'sensitivity'),
-    layer = 1:3
-  )
-  
-  threshs <- terra::mask(threshs, aoa, maskvalues = 0)
-  
-  calcs <- vector(mode = 'list', length = 3)
-  names(calcs) <- evals$eval 
-  
-  landscape <- terra::rast(
-    terra::ext(pr), 
-    resolution=terra::res(pr), 
-    crs = terra::crs(pr), 
-    nlyrs = 3
-    )
-  
-  for(i in seq_along(evals$eval)){
+#' @param x a path to rasters (layers) of classified patches (with IDS)
+#' @param y a csv designating patches as occupied or unoccupied 
+patchesDistances <- function(x){
 
-    calcs[[i]] <- landscapemetrics::calculate_lsm(
-      threshs[[i]], 
-      what = c("lsm_p_area",  "lsm_p_enn", "lsm_p_cai", "lsm_p_para", "lsm_p_frac"), 
-      neighbourhood = 4, directions = 8) |>
-      dplyr::select(id, metric, value) 
-    
-  }
-
-  landscape <- landscapemetrics::get_patches(threshs, directions = 8)
-  calcs <- dplyr::bind_rows(calcs, .id = 'evals')
-
-  # kind of strange object, we'll just brute force it back to a happy terra object
-  landscape <- c(
-    landscape$layer_2$class_1,
-    landscape$layer_2$class_1,
-    landscape$layer_3$class_1
-  )
-  names(landscape) <- evals$eval
+  patches <- terra::rast(x)
+  patch_lkp <- read.csv()
   
-  write.csv(
-    calcs,
-    file = file.path('..', 'results', 'patch_summaries', paste0(x[['version']][1], '-patches.csv')),
-    row.names = F)
+  patches_borders <- terra::boundaries(patches, directions = 8)
   
-  writeRaster(
-    landscape, overwrite = TRUE,
-    filename = file.path('..', 'results', 'patches', paste0(x[['version']][1], 'patches.tif')))
+  # and from these let's take a sample - 
   
-  # now make a table noting which patches are occupied and which are unoccupied. 
-  pres <- terra::vect(file.path('..', 'data', 'Data4modelling', '3m-presence-iter1.gpkg'))
-  occ_patches <- terra::extract(landscape, pres) |>
-    dplyr::select(-ID) |>
-    tidyr::pivot_longer(everything(), values_to = 'patch', names_to = 'threshold') |>
-    dplyr::distinct(patch, threshold, .keep_all = TRUE) |>
-    tidyr::drop_na() |>
-    dplyr::arrange(threshold, patch)
+  terra::spatSample(each = TRUE, method = 'stratified')
   
-  write.csv(
-    occ_patches, 
-    file = file.path('..', 'results', 'patch_summaries', paste0(x[['version']][1], '-occupied.csv')),
-    row.names = FALSE)
   
-  # finally we grab aggregate data on the predicted probability per each patch. We will 
-  # gather the 'max', '25th quartile', '50th quartile' and '75th quartile' for each 
-  
-    pr <- terra::rast(x[['Pr']])
-    pr <- terra::mask(pr, aoa, maskvalues = 0)
-    
-    central <- vector(mode = 'list', length = 3)
-    pr_summaries <- vector(mode = 'list', length = 3)
-    for(i in seq_along(evals$eval)){
-      pr_sub <- terra::mask(pr, threshs[[i]], maskvalues = 0)
-      mn <- terra::zonal(pr_sub,  landscape[[i]], fun = 'mean', na.rm = TRUE)
-      mdn <- terra::zonal(pr_sub,  landscape[[i]], fun = 'median', na.rm = TRUE)
-      
-      central[[i]] <- setNames(
-        data.frame(cbind(mn, mdn[,2], evals = evals$eval[[i]])),
-        c('patchID', 'mean', 'median', 'evals'))
-    }
-    central <- dplyr::bind_rows(central)
-      
-    write.csv(
-      central, 
-      file = file.path('..', 'results', 'patch_summaries', paste0(x[['version']][1], '-cntrlTend.csv')),
-      row.names = FALSE)
-    
 }
 
 
-ob1 <- lapply(split(input, f = 1:2), patchAttributes)
+
+library(terra)
+# stratified
+rr <- rast(ncol=10, nrow=10, names="stratum")
+set.seed(1)
+values(rr) <- round(runif(ncell(rr), 1, 3))
+# Define the number of points to sample per stratum
+n_points_per_stratum <- c(1, 2, 3)  # Adjust as needed
+
+
+samps<-spatSample(rr, 2, "stratified", xy=TRUE)
+
+s <- spatSample(rr, size = n_points_per_stratum, "stratified", as.points=TRUE, each=TRUE)
+plot(rr, plg=list(title="raster"))
+plot(s, 1, add=TRUE, plg=list(x=185, y=1, title="points"), col=rainbow(5))
+
+
+# Define the number of points to sample per stratum
+n_points_per_stratum <- c(1, 2, 3)  # Adjust as needed
+
+# Perform stratified sampling
+samples <- spatSample(r, size = n_points_per_stratum, method = "stratified", xy = TRUE)
 
 ```
-
 

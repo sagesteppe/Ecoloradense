@@ -1150,3 +1150,98 @@ wrapper <- function(x){
   densityModeller(df, fp = '../results/CountModels', bn = gsub('DO.*$', '', x))
   
 }
+
+
+patchAttributes <- function(x){
+  
+  pr <- terra::rast(x[['Pr']])
+  aoa <- terra::rast(x[['AOA']])
+  threshs <- terra::rast(x[['thresholds']])
+  
+  # will iterate through each of the options. 
+  evals <- data.frame(
+    eval = c('spec_sens', 'equal_sens_spec', 'sensitivity'),
+    layer = 1:3
+  )
+  
+  threshs <- terra::mask(threshs, aoa, maskvalues = 0)
+  
+  calcs <- vector(mode = 'list', length = 3)
+  names(calcs) <- evals$eval 
+  
+  landscape <- terra::rast(
+    terra::ext(pr), 
+    resolution=terra::res(pr), 
+    crs = terra::crs(pr), 
+    nlyrs = 3
+  )
+  
+  for(i in seq_along(evals$eval)){
+    
+    calcs[[i]] <- landscapemetrics::calculate_lsm(
+      threshs[[i]], 
+      what = c("lsm_p_area",  "lsm_p_enn", "lsm_p_cai", "lsm_p_para", "lsm_p_frac"), 
+      neighbourhood = 4, directions = 8) |>
+      dplyr::select(id, metric, value) 
+    
+  }
+  
+  landscape <- landscapemetrics::get_patches(threshs, directions = 8)
+  calcs <- dplyr::bind_rows(calcs, .id = 'evals')
+  
+  # kind of strange object, we'll just brute force it back to a happy terra object
+  landscape <- c(
+    landscape$layer_2$class_1,
+    landscape$layer_2$class_1,
+    landscape$layer_3$class_1
+  )
+  names(landscape) <- evals$eval
+  
+  write.csv(
+    calcs,
+    file = file.path('..', 'results', 'patch_summaries', paste0(x[['version']][1], '-patches.csv')),
+    row.names = F)
+  
+  writeRaster(
+    landscape, overwrite = TRUE,
+    filename = file.path('..', 'results', 'patches', paste0(x[['version']][1], 'patches.tif')))
+  
+  # now make a table noting which patches are occupied and which are unoccupied. 
+  pres <- terra::vect(file.path('..', 'data', 'Data4modelling', '3m-presence-iter1.gpkg'))
+  occ_patches <- terra::extract(landscape, pres) |>
+    dplyr::select(-ID) |>
+    tidyr::pivot_longer(everything(), values_to = 'patch', names_to = 'threshold') |>
+    dplyr::distinct(patch, threshold, .keep_all = TRUE) |>
+    tidyr::drop_na() |>
+    dplyr::arrange(threshold, patch)
+  
+  write.csv(
+    occ_patches, 
+    file = file.path('..', 'results', 'patch_summaries', paste0(x[['version']][1], '-occupied.csv')),
+    row.names = FALSE)
+  
+  # finally we grab aggregate data on the predicted probability per each patch. We will 
+  # gather the 'max', '25th quartile', '50th quartile' and '75th quartile' for each 
+  
+  pr <- terra::rast(x[['Pr']])
+  pr <- terra::mask(pr, aoa, maskvalues = 0)
+  
+  central <- vector(mode = 'list', length = 3)
+  pr_summaries <- vector(mode = 'list', length = 3)
+  for(i in seq_along(evals$eval)){
+    pr_sub <- terra::mask(pr, threshs[[i]], maskvalues = 0)
+    mn <- terra::zonal(pr_sub,  landscape[[i]], fun = 'mean', na.rm = TRUE)
+    mdn <- terra::zonal(pr_sub,  landscape[[i]], fun = 'median', na.rm = TRUE)
+    
+    central[[i]] <- setNames(
+      data.frame(cbind(mn, mdn[,2], evals = evals$eval[[i]])),
+      c('patchID', 'mean', 'median', 'evals'))
+  }
+  central <- dplyr::bind_rows(central)
+  
+  write.csv(
+    central, 
+    file = file.path('..', 'results', 'patch_summaries', paste0(x[['version']][1], '-cntrlTend.csv')),
+    row.names = FALSE)
+  
+}

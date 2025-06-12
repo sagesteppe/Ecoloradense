@@ -6,7 +6,7 @@ The goals for sample design were to:
   2) Collect tissue from more than 15 (preferably 20 individuals) per population visited
   3) Ideally do this in one season
 
-goals were not meet - however I came quite close. 
+goals were not meet - however I came quite close. check the data for deats.  
 
 The data set was intended for use in exploring landscape genomics studies; in particular the effects of topographic isolation on plant population differentiation since a tentatively recent glacial event. 
 A core aspect of this is understanding the isolation of populations, effective population census size, and -leaning out on a branch - reconstructing at historic time intervals habitat suitability and distances between patches. 
@@ -19,6 +19,8 @@ And finally providing some directional metrics to help prioritize field campaign
 Additional questions relating to the use of block (& spatial) cross-validation, and the effects of sample size and independent variable resolution on modelling efforts, are readily possible with the data set too - given the very high number of occurrences. 
 
 ### Iterative Adaptive Modelling 
+
+beneath needs update re-validation ~~~ Jun 12 2025 ~~~
 
 Goals:
 
