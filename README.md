@@ -31,3 +31,31 @@ Goals:
 5) Compare the results of a Mature plant presence versus a Juvenile plant presence model, are the important  variables similar? Are patch sizes similar? 
 6) Simulate the effects of sample size on model performance using the data set generated after both rounds of field sampling. 
 7) Simulate the effects of occurrence record geolocation accuracy on model performance using the data set generated after both rounds of field sampling. 
+
+
+```geojson
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": 1,
+      "properties": {
+        "ID": 0
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [  #  extent
+              [-107.3328,38.00338],
+              [-105.5631,38.00338],
+              [-105.5631,39.545],
+              [-107.3328,39.545],
+              [-107.3328,38.00338]
+          ]
+        ]
+      }
+    }
+  ]
+}
+```
