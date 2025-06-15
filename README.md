@@ -43,9 +43,8 @@ These include:
 
 ```mermaid
 graph TD;
-    Assess/nEriogonumColoradense/nObservations-->GenerateAbsences;
+    Assess<br>EriogonumColoradense<br>Observations-->Generate<br>Absences;
     Download/nUpperGunnison/nIndependentVariables-->processHighResolutionPredictors;
-    B-->D;
     conceptualImageData-->ConceptualFigure;
     ConceptualFigure-->Manuscript;
 ```
