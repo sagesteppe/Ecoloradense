@@ -34,12 +34,19 @@ Goals:
 
 ## Workflow
 
+Many scripts are used, they can be separated into a few modules. 
+These include 'data prep' which focuses on historic data, and generating independent variables. 
+These steps were followed up by planning field work, '' and ''. 
+'Modelling' includes cleaning the newly field collected data 'cleanFieldData.Rmd', 
+'Writing' includes both the 'conceptualImageData' and 'Manuscript'
+
 ```mermaid
 graph TD;
-    Assess/nEriogonumColoradense/nObservations-->GenerateAbsences;
-    Download/nUpperGunnison/nIndependentVariables-->processHighResolutionPredictors
+    Assess/nEriogonum Coloradense/nObservations-->GenerateAbsences;
+    Download/nUpperGunnison/nIndependentVariables-->processHighResolutionPredictors;
     B-->D;
-    C-->D;
+    conceptualImageData-->ConceptualFigure;
+    ConceptualFigure-->Manuscript;
 ```
 
 ## Domain
