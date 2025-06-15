@@ -63,3 +63,4 @@ models/
 patches/
 threshold_masks/
 patch_summaries/
+patch_distances/

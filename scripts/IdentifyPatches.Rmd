@@ -42,7 +42,7 @@ input <- lapply(
 rm(p_suit, f_suit, p_thresh, f_aoa, f_thresh)
 ```
 
-```{r}
+```{r, eval = F}
 lapply(split(input, f = 1:nrow(input)), patchAttributes)
 ```
 
@@ -60,76 +60,27 @@ Hence the 3arc dataset will remain native resolution, and the 1 arc will have 1 
 
 ```{r}
 
-#' @param x a path to rasters (layers) of classified patches (with IDS)
-#' @param y a csv designating patches as occupied or unoccupied 
+#' @param x the model run to focus on (e.g. '3arc-Iteration1-PA1_3.3DO_0' )
 patchesDistances <- function(x){
 
-  patches <- terra::rast(x)
-  patch_lkp <- read.csv()
+  base <- file.path('..', 'results')
   
-  # simplify the patches - we will extract only the borders of the polygons as 
-  # any migration event would have to pass through these. 
+  patches <- terra::rast( file.path(base, 'patches',  paste0(x, 'patches.tif')))
+  patch_lkp <- read.csv( file.path(base,  'patch_summaries', paste0(x, '-occupied.csv'))) 
   
-  patch_borders <- terra::boundaries(patches, directions = 8)
-  patch_borders <- terra::as.lines(patch_borders) |> 
-    sf::st_as_sf()
-  
-  # now convert these lines into segments less than or (equal to) 90m in length #
-  
-  # from each segment sample one point along the lines length - near the center. 
-  
-  # we will also focus on calculating a subset of distances between patches known to 
-  # be occupied and patches not known to be occupied. We will separate the data set 
-  # into the occupied and unoccupied patches. 
-  
-  
-  # calculate all distances from each of these points to to our focal occupied polygons #
-  
-  
+  message('beginning ', x)
+  # Repeat the function for each layer in the stack.
+  for (i in 1:dim(patches)[3]){
+    
+    patch_lkp <- patch_lkp[ patch_lkp$threshold==names(patches)[i], ]
+    patchDist(patches[[i]], patch_lkp_sub, r_name = x, thresh_type = names(patches)[i])
+    message('Distances for layer ', i, ' complete.')
+    
+  }
+
 }
 
-library(terra)
-library(sf)
-library(spData)
-library(tidyverse)
-
-grain = rast(system.file("raster/grain.tif", package = "spData"))
-crs(grain)  <- 'epsg:32613'
-grain <- disagg(grain, 4)
-plot(grain)
-
-grain_patches <- patches(grain, values = TRUE)
-plot(grain_patches)
-
-grain_poly = as.polygons(grain_patches) |> 
-  st_as_sf()
-
-plot(grain_poly)
-
-# no bueno 
-grain_lines = as.lines(grain_patches) |>
-  st_as_sf() 
-plot(grain_lines)
-
-grain_lines_sf <- as.polygons(grain_patches) |> 
-  st_as_sf() #|>
-  st_cast('MULTILINESTRING') |>
-  st_cast('LINESTRING')
-
-plot(grain_lines_sf)
-
-segs <- stplanr::line_segment(grain_lines_sf, segment_length =  1.5, use_rsgeo = TRUE) |>
-  group_by(grain) |>
-  mutate(ID = 1:n(), .before = geometry)
-
-pts <- st_point_on_surface(segs)
-
-focal_pts <- filter(pts, grain == 7)
-nf_pts<- filter(pts, grain != 7)
-
-st_distance(focal_pts, nf_pts)
-st_distance( st_union(focal_pts), nf_pts, which = 'Haussdorff')
-
+patchesDistances(x = '3arc-Iteration1-PA1_3.3DO_0')
 
 ```
 
