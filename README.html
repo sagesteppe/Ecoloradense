@@ -412,11 +412,22 @@ field sampling.</li>
 </div>
 <div id="workflow" class="section level2">
 <h2>Workflow</h2>
+<p>Many scripts are used, they can be separated into a few modules.
+These include ‘data prep’ which focuses on cleaning historic data
+‘Assess Eriogonum coloradense Observations’, and generating independent
+variables ‘Download Upper Gunnison Independent Variables’ and ‘process
+High Resolution Predictors’ along with the ‘NDSI download’ and ‘NVDI
+download’ scripts.<br />
+These steps were followed up by planning field work, ’’ and ’‘.
+’Modelling’ includes cleaning the newly field collected data ‘clean
+Field Data.Rmd’, ‘Writing’ includes both the ‘conceptual ImageData’ and
+‘Manuscript’</p>
 <pre class="mermaid"><code>graph TD;
-    Assess/nEriogonumColoradense/nObservations--&gt;GenerateAbsences;
-    Download/nUpperGunnison/nIndependentVariables--&gt;processHighResolutionPredictors
+    Assess/nEriogonum Coloradense/nObservations--&gt;GenerateAbsences;
+    Download/nUpperGunnison/nIndependentVariables--&gt;processHighResolutionPredictors;
     B--&gt;D;
-    C--&gt;D;</code></pre>
+    conceptualImageData--&gt;ConceptualFigure;
+    ConceptualFigure--&gt;Manuscript;</code></pre>
 </div>
 <div id="domain" class="section level2">
 <h2>Domain</h2>

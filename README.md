@@ -35,14 +35,14 @@ Goals:
 ## Workflow
 
 Many scripts are used, they can be separated into a few modules. 
-These include 'data prep' which focuses on historic data, and generating independent variables. 
+These include 'data prep' which focuses on cleaning historic data 'Assess Eriogonum coloradense Observations', and generating independent variables 'Download Upper Gunnison Independent Variables' and 'process High Resolution Predictors' along with the 'NDSI download' and 'NVDI download' scripts.  
 These steps were followed up by planning field work, '' and ''. 
-'Modelling' includes cleaning the newly field collected data 'cleanFieldData.Rmd', 
-'Writing' includes both the 'conceptualImageData' and 'Manuscript'
+'Modelling' includes cleaning the newly field collected data 'clean Field Data.Rmd', 
+'Writing' includes both the 'conceptual ImageData' and 'Manuscript'
 
 ```mermaid
 graph TD;
-    Assess/nEriogonum Coloradense/nObservations-->GenerateAbsences;
+    Assess/nEriogonumColoradense/nObservations-->GenerateAbsences;
     Download/nUpperGunnison/nIndependentVariables-->processHighResolutionPredictors;
     B-->D;
     conceptualImageData-->ConceptualFigure;
