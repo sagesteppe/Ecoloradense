@@ -36,8 +36,8 @@ Goals:
 
 ```mermaid
 graph TD;
-    AssessEriogonumColoradenseObservations-->GenerateAbsences;
-    DownloadUpperGunnisonIndependentVariables-->processHighResolutionPredictors
+    Assess\nEriogonumColoradense\nObservations-->GenerateAbsences;
+    Download\nUpperGunnison\nIndependentVariables-->processHighResolutionPredictors
     B-->D;
     C-->D;
 ```
