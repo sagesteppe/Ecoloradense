@@ -32,6 +32,19 @@ Goals:
 6) Simulate the effects of sample size on model performance using the data set generated after both rounds of field sampling. 
 7) Simulate the effects of occurrence record geolocation accuracy on model performance using the data set generated after both rounds of field sampling. 
 
+## Workflow
+
+```mermaid
+graph TD;
+    AssessEriogonumColoradenseObservations-->GenerateAbsences;
+    DownloadUpperGunnisonIndependentVariables-->processHighResolutionPredictors
+    B-->D;
+    C-->D;
+```
+
+## Domain
+
+The area of analysis is roughly 10 miles out from a minimum convex hull which can encapsulate all known occurrences. 
 
 ```geojson
 {
@@ -59,3 +72,4 @@ Goals:
   ]
 }
 ```
+

@@ -408,6 +408,20 @@ data set generated after both rounds of field sampling.</li>
 model performance using the data set generated after both rounds of
 field sampling.</li>
 </ol>
+</div>
+</div>
+<div id="workflow" class="section level2">
+<h2>Workflow</h2>
+<pre class="mermaid"><code>graph TD;
+    AssessEriogonumColoradenseObservations--&gt;GenerateAbsences;
+    DownloadUpperGunnisonIndependentVariables--&gt;processHighResolutionPredictors
+    B--&gt;D;
+    C--&gt;D;</code></pre>
+</div>
+<div id="domain" class="section level2">
+<h2>Domain</h2>
+<p>The area of analysis is roughly 10 miles out from a minimum convex
+hull which can encapsulate all known occurrences.</p>
 <pre class="geojson"><code>{
   &quot;type&quot;: &quot;FeatureCollection&quot;,
   &quot;features&quot;: [
@@ -420,7 +434,7 @@ field sampling.</li>
       &quot;geometry&quot;: {
         &quot;type&quot;: &quot;Polygon&quot;,
         &quot;coordinates&quot;: [
-          [  #  extent
+          [
               [-107.3328,38.00338],
               [-105.5631,38.00338],
               [-105.5631,39.545],
@@ -432,7 +446,6 @@ field sampling.</li>
     }
   ]
 }</code></pre>
-</div>
 </div>
 
 
