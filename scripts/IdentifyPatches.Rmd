@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(terra)
 library(tidyverse)
 library(landscapemetrics)
+source('functions.R')
 ```
 
 Raw suitability rasters have to be masked three times, in two different styles. 
@@ -60,27 +61,62 @@ Hence the 3arc dataset will remain native resolution, and the 1 arc will have 1 
 
 ```{r}
 
+
+f <- read.csv(
+  file.path('..', 'results', 'patch_summaries', '1-3arc-Iteration1-PA1:3DO:0-patches.csv')
+) |> filter(metric == 'area')
+
+table(f$value)
+
 #' @param x the model run to focus on (e.g. '3arc-Iteration1-PA1_3.3DO_0' )
 patchesDistances <- function(x){
 
   base <- file.path('..', 'results')
   
   patches <- terra::rast( file.path(base, 'patches',  paste0(x, 'patches.tif')))
-  patch_lkp <- read.csv( file.path(base,  'patch_summaries', paste0(x, '-occupied.csv'))) 
+  patch_lkp <- read.csv( file.path(base, 'patch_summaries', paste0(x, 'occupied.csv'))) 
   
-  message('beginning ', x)
+  # calculating on the 1/3 arc 10m patches is computationally too intensive. 
+  
+  if(grepl('1-3arc-', x)){
+    patch_areas <- read.csv( file.path(base, 'patch_summaries', paste0(x, 'patches.csv'))) 
+    patch_areas <- patch_areas[patch_areas$metric=='area',]
+  }
+
+  
+  message('beginning: ', x)
   # Repeat the function for each layer in the stack.
   for (i in 1:dim(patches)[3]){
     
-    patch_lkp <- patch_lkp[ patch_lkp$threshold==names(patches)[i], ]
-    patchDist(patches[[i]], patch_lkp_sub, r_name = x, thresh_type = names(patches)[i])
+    thr_name <- names(patches)[i]
+    
+    if(grepl('1-3arc-', x)){ # remove 10x10m 'patches' or flecks from the finest res dataset.
+      # it has roughly 0.45 Mi records
+      patch_areas_sub <- patch_areas[patch_areas$eval==thr_name & patch_areas$value > 0.02, 'id']
+      msk <- terra::ifel(patches[[i]] %in% patch_areas_sub, patches[[i]], NA)
+      patches[[i]] <- terra::mask(patches[[i]], msk)
+      
+      patch_lkp_sub <- patch_lkp[ patch_lkp$threshold==thr_name & patch_lkp$patch %in% patch_areas_sub, ]
+      message('High resolution data detected, removed ' , length(patch_areas_sub), ' flecks.')
+      flush.console()
+    } else {
+      patch_lkp_sub <- patch_lkp[ patch_lkp$threshold==thr_name, ]
+    }
+ 
+    patchDist(patches[[i]], patch_lkp_sub, r_name = x, thresh_type = thr_name)
     message('Distances for layer ', i, ' complete.')
+    flush.console()
+    gc()
     
   }
 
 }
 
-patchesDistances(x = '3arc-Iteration1-PA1_3.3DO_0')
+unix::rlimit_all()
 
+f <- gsub('patches.tif', '',  list.files('../results/patches'))
+lapply(f[3], patchesDistances)
+
+# need to go back and finish 3 !!!
 ```
 

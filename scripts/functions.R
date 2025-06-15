@@ -1354,8 +1354,8 @@ patchDist <- function(x, patch_lkp, r_name, thresh_type){
   fp <- file.path('..', 'results', 'patch_distances')
   
   r_name <- paste0(r_name, '-', thresh_type)
-  write.csv(min_dist, file.path(fp, paste0(r_name, '-MinDist.csv')), row.names = F)
-  write.csv(mean_dist_all_patches, file.path(fp, paste0(r_name, '-MeanDist.csv')), row.names = F)
-  write.csv(d_long, file.path(fp, paste0(r_name, '-Distances.csv')), row.names = F)
+  write.csv(min_dist, file.path(fp, paste0(r_name, 'MinDist.csv')), row.names = F)
+  write.csv(mean_dist_all_patches, file.path(fp, paste0(r_name, 'MeanDist.csv')), row.names = F)
+  write.csv(d_long, file.path(fp, paste0(r_name, 'Distances.csv')), row.names = F)
   
 }
