@@ -16,6 +16,7 @@ library(sf)
 library(terra)
 
 setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
+setwd('~/Documents/Ecoloradense/scripts')
 
 # first we will create a domain for all analysis. The 'closest' this bounding box is to a known 
 # occurrence is 10 miles. The furthest distances vary. 
