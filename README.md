@@ -88,14 +88,17 @@ graph TD
     DownloadUpperGunnisonIndependentVariables --> processHighResolutionPredictors
     NDSIDownload --> processHighResolutionPredictors
     NVDIDownload --> processHighResolutionPredictors
+    AssessEriogonumColoradenseObservations --> FindTrailsForFieldGroundTruthing
     FindTrailsForFieldGroundTruthing --> EvaluateGroundTruth2024
     EvaluateGroundTruth2024 --> cleanFieldData
     cleanFieldData --> Modelling
     Modelling --> makeThresholdRasterMasks
     makeThresholdRasterMasks --> IdentifyPatches
+    processHighResolutionPredictors --> Modelling
     Modelling --> IdentifyPatches
     Modelling --> ExperimentShapleyVals
     Modelling --> Manuscript
+    ExperimentShapleyVals --> Manuscript
     IdentifyPatches --> Manuscript
     cleanFieldData --> IdentifyPatches
     ConceptualImageData --> ConceptualFigure
