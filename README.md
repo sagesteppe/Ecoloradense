@@ -42,15 +42,6 @@ These include:
 - **writing** includes both the '*conceptual Image Data*' & '*Conceptual Figure*' and '*Manuscript*'
 
 ```mermaid
-graph TD;
-    AssessEriogonumColoradenseObservations-->GenerateAbsences;
-    Download/nUpperGunnison/nIndependentVariables-->processHighResolutionPredictors;
-    conceptualImageData-->ConceptualFigure;
-    ConceptualFigure-->Manuscript;
-```
-
-
-```mermaid
 %%{init: {"themeVariables": {"subgraphBorderRadius": "5px"}}}%%
 graph TD
     %% Data Prep Subgraph
@@ -89,7 +80,7 @@ graph TD
     %% Connections
     AssessEriogonumColoradenseObservations --> DownloadUpperGunnisonIndependentVariables
     DownloadUpperGunnisonIndependentVariables --> processHighResolutionPredictors
-    NDSIDownload --> NVDIDownload
+    NDSIDownload --> processHighResolutionPredictors
     NVDIDownload --> processHighResolutionPredictors
     FindTrailsForFieldGroundTruthing --> EvaluateGroundTruth2024
     EvaluateGroundTruth2024 --> cleanFieldData
