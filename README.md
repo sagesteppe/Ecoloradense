@@ -38,7 +38,7 @@ Many scripts are used, they can be separated into a few modules.
 These include:  
 - **data prep** which focuses on cleaning historic data '*Assess Eriogonum coloradense Observations*', and generating independent variables '*Download Upper Gunnison Independent Variables*' and '*process High Resolution Predictors*' along with the '*NDSI download*' and '*NVDI download*' scripts.  
 - **field work** includes both planning, '*Find Trails For Field Ground Truthing*' ,  and cleaning the field data '*Evaluate Ground Truth 2024*', '*clean Field Data*'
-- **modelling** includes ... '*Identify Patches*', '*make threshold raster masks*'
+- **modelling** includes ... '*Identify Patches*', '*make threshold raster masks*', '*Experiment Shapley Vals*'. 
 - **writing** includes both the '*Conceptual Image Data*' & '*Conceptual Figure*' and '*Manuscript*'
 
 ```mermaid
@@ -73,6 +73,7 @@ graph TD
         Modelling
         IdentifyPatches
         makeThresholdRasterMasks
+        ExperimentShapleyVals
     end
 
     %% Writing Subgraph
@@ -93,6 +94,9 @@ graph TD
     Modelling --> makeThresholdRasterMasks
     makeThresholdRasterMasks --> IdentifyPatches
     Modelling --> IdentifyPatches
+    Modelling --> ExperimentShapleyVals
+    Modelling --> Manuscript
+    IdentifyPatches --> Manuscript
     cleanFieldData --> IdentifyPatches
     ConceptualImageData --> ConceptualFigure
     ConceptualFigure --> Manuscript
