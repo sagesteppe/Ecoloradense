@@ -78,7 +78,6 @@ graph TD
     end
 
     %% Connections
-    AssessEriogonumColoradenseObservations --> DownloadUpperGunnisonIndependentVariables
     DownloadUpperGunnisonIndependentVariables --> processHighResolutionPredictors
     NDSIDownload --> processHighResolutionPredictors
     NVDIDownload --> processHighResolutionPredictors
@@ -86,7 +85,7 @@ graph TD
     EvaluateGroundTruth2024 --> cleanFieldData
     cleanFieldData --> IdentifyPatches
     IdentifyPatches --> makeThresholdRasterMasks
-    makeThresholdRasterMasks --> ConceptualFigure
+    ConceptualImageData --> ConceptualFigure
     ConceptualFigure --> Manuscript
 ```
 
