@@ -97,6 +97,7 @@ graph TD
     IdentifyPatches --> makeThresholdRasterMasks
     makeThresholdRasterMasks --> ConceptualFigure
     ConceptualFigure --> Manuscript
+```
 
 ## Domain
 
