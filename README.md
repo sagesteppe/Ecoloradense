@@ -49,6 +49,54 @@ graph TD;
     ConceptualFigure-->Manuscript;
 ```
 
+
+%%{init: {"themeVariables": {"subgraphBorderRadius": "5px"}}}%%
+graph TD
+    %% Data Prep Subgraph
+    subgraph DataPrep["Data Prep"]
+        direction LR
+        AssessEriogonumColoradenseObservations
+        DownloadUpperGunnisonIndependentVariables
+        processHighResolutionPredictors
+        NDSIDownload
+        NVDIDownload
+    end
+
+    %% Field Work Subgraph
+    subgraph FieldWork["Field Work"]
+        direction LR
+        FindTrailsForFieldGroundTruthing
+        EvaluateGroundTruth2024
+        cleanFieldData
+    end
+
+    %% Modeling Subgraph
+    subgraph Modeling["Modeling"]
+        direction LR
+        IdentifyPatches
+        makeThresholdRasterMasks
+    end
+
+    %% Writing Subgraph
+    subgraph Writing["Writing"]
+        direction LR
+        conceptualImageData
+        ConceptualFigure
+        Manuscript
+    end
+
+    %% Connections
+    AssessEriogonumColoradenseObservations --> DownloadUpperGunnisonIndependentVariables
+    DownloadUpperGunnisonIndependentVariables --> processHighResolutionPredictors
+    NDSIDownload --> NVDIDownload
+    NVDIDownload --> processHighResolutionPredictors
+    FindTrailsForFieldGroundTruthing --> EvaluateGroundTruth2024
+    EvaluateGroundTruth2024 --> cleanFieldData
+    cleanFieldData --> IdentifyPatches
+    IdentifyPatches --> makeThresholdRasterMasks
+    makeThresholdRasterMasks --> ConceptualFigure
+    ConceptualFigure --> Manuscript
+
 ## Domain
 
 The area of analysis is roughly 10 miles out from a minimum convex hull which can encapsulate all known occurrences. 
