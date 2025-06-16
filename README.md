@@ -70,6 +70,7 @@ graph TD
     %% Modeling Subgraph
     subgraph Modeling["Modeling"]
         direction LR
+        Modelling
         IdentifyPatches
         makeThresholdRasterMasks
     end
@@ -88,8 +89,11 @@ graph TD
     NVDIDownload --> processHighResolutionPredictors
     FindTrailsForFieldGroundTruthing --> EvaluateGroundTruth2024
     EvaluateGroundTruth2024 --> cleanFieldData
+    cleanFieldData --> Modelling
+    Modelling --> makeThresholdRasterMasks
+    makeThresholdRasterMasks --> IdentifyPatches
+    Modelling --> IdentifyPatches
     cleanFieldData --> IdentifyPatches
-    IdentifyPatches --> makeThresholdRasterMasks
     ConceptualImageData --> ConceptualFigure
     ConceptualFigure --> Manuscript
 ```
