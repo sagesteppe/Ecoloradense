@@ -83,6 +83,11 @@ graph TD
         ConceptualFigure
         Manuscript
     end
+    
+    %% Functions Subgraph
+    subgraph Writing["Writing"]
+      functions
+    end
 
     %% Connections
     DownloadUpperGunnisonIndependentVariables --> processHighResolutionPredictors
@@ -103,6 +108,8 @@ graph TD
     cleanFieldData --> IdentifyPatches
     ConceptualImageData --> ConceptualFigure
     ConceptualFigure --> Manuscript
+    functions --> Modelling
+    functions --> IdentifyPatches
 ```
 
 ## Domain
