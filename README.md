@@ -85,7 +85,7 @@ graph TD
     end
     
     %% Functions Subgraph
-    subgraph Writing["Writing"]
+    subgraph Functions["Functions"]
       functions
     end
 
