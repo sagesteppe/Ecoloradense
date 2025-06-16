@@ -39,10 +39,15 @@ These include:
 - **data prep** which focuses on cleaning historic data '*Assess Eriogonum coloradense Observations*', and generating independent variables '*Download Upper Gunnison Independent Variables*' and '*process High Resolution Predictors*' along with the '*NDSI download*' and '*NVDI download*' scripts.  
 - **field work** includes both planning, '*Find Trails For Field Ground Truthing*' ,  and cleaning the field data '*Evaluate Ground Truth 2024*', '*clean Field Data*'
 - **modelling** includes ... '*Identify Patches*', '*make threshold raster masks*'
-- **writing** includes both the '*conceptual Image Data*' & '*Conceptual Figure*' and '*Manuscript*'
+- **writing** includes both the '*Conceptual Image Data*' & '*Conceptual Figure*' and '*Manuscript*'
 
 ```mermaid
-%%{init: {"themeVariables": {"subgraphBorderRadius": "5px"}}}%%
+%%{init: {'theme': 'base', 'themeVariables': {
+    'clusterBkg': '#e0f7fa', /* Light cyan for Data Prep */
+    'clusterBorder': '#00838f', /* Dark cyan border */
+    'clusterTitle': '#004d40', /* Dark teal title text */
+    'clusterText': '#004d40' /* Dark teal text */
+}}}%%
 graph TD
     %% Data Prep Subgraph
     subgraph DataPrep["Data Prep"]
@@ -72,7 +77,7 @@ graph TD
     %% Writing Subgraph
     subgraph Writing["Writing"]
         direction LR
-        conceptualImageData
+        ConceptualImageData
         ConceptualFigure
         Manuscript
     end
