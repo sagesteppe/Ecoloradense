@@ -14,7 +14,8 @@ dat <- bind_rows(dat, .id = 'parameters') |>
       str_detect(parameters, '1-3arc') ~ '1-3arc', 
       str_detect(parameters, '1arc') ~ '1arc', 
       str_detect(parameters, '3arc') ~ '3arc'
-    ))
+    )) |>
+  drop_na()
 
 f_lvls <- dat |>
   group_by(Model, Metric) |>
@@ -28,6 +29,9 @@ dat <- dat |>
   mutate(Model = factor(Model, levels = f_lvls))
 
 rm(p2tabs, f)
+
+
+# we also will add a 
 
 ggplot(dat, aes(x = Value, y = Model, color = Resolution)) + 
   facet_wrap(~Metric, scales = 'free_x') + 
