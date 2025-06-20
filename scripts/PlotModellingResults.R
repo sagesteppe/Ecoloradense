@@ -47,7 +47,7 @@ ggplot(suit, aes(x = Value, y = Model, color = Resolution)) +
     plot.title = element_text(hjust = 0.5)) + 
   labs(title = 'Evaluation metrics for count prediction models')
 
-head(suit)
+ggsave( file.path('..', 'figures', 'CountPredictions.png'), height = 6, width = 6)
 
 #####################################################
 
@@ -85,7 +85,9 @@ ksink <- ksink |>
     resolution = str_extract(run, '.*arc'), 
     PA_ratio = as.numeric(str_remove_all(str_extract(run, ':.*D'), ':|D')),
     metric = str_replace(metric, 'pr_auc', 'PR AUC'), 
-    metric = str_replace(metric, 'roc_auc', 'ROC AUC')
+    metric = str_replace(metric, 'roc_auc', 'ROC AUC'), 
+    metric = str_replace(metric, 'Neg Pred Value', 'Negative Pred. Value'),
+    metric = str_replace(metric, 'Neg Pred Value', 'Positive Pred. Value'),
   ) |>
   select(-run) |>
   filter(! metric %in% c(
@@ -112,8 +114,11 @@ ksink |>
     legend.background = element_rect(color = "grey75"),
     plot.title = element_text(hjust = 0.5)) + 
   labs(
-    title = 'Evaluation metrics for prediction of the probability of suitable habitat', 
+    title = 'Prediction of the probability of suitable habitat', 
     x = 'Estimate', y = 'Resolution')
+
+
+ggsave( file.path('..', 'figures', 'PrSuitPredictions.png'), height = 9, width = 6)
 
 # paradoxical results - may be due to overall decrease in independent variable
 # accuracy from native grain (1arc decrease), while 1-3 arc overcomes the limitation by 
