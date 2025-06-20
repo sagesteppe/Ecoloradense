@@ -1,0 +1,40 @@
+---
+title: "Maps of suitability and count modelling"
+author: "steppe"
+output: html_document
+---
+
+For an appendix - let's aim to put all preds of each type onto a single page. One page for probability of suitable habitat, and one page for counts. 
+
+```{r}
+library(terra)
+library(sf)
+```
+
+
+
+```{r}
+r <- rast(file.path('..', 'results', 'suitability_maps', '3arc-Iteration1-PA1_3.6DO_0-Pr.tif'))
+plot(r)
+```
+
+```{r create bounding boxes of focal areas}
+
+cb_bb <- as(raster::extent(3.1e5, 3.45e5, 4.31e6, 4.34e6), "SpatialPolygons")
+crs(cb_bb) <- crs(r)
+r_cb <- crop(r, cb_bb)
+plot(r_cb)
+
+cd_bb <- as(raster::extent(3.35e5, 3.575e5, 4.22e6, 4.24e6), "SpatialPolygons")
+crs(cd_bb) <- crs(r)
+r_cd <- crop(r, cd_bb)
+plot(r_cd)
+
+east_bb <- as(raster::extent(4.16e5, 4.35e5, 4.305e6, 4.315e6), "SpatialPolygons")
+crs(east_bb) <- crs(r)
+r_east <- crop(r, east_bb)
+plot(r_east)
+
+crop(r, cb_bb)
+```
+
