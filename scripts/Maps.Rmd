@@ -8,33 +8,114 @@ For an appendix - let's aim to put all preds of each type onto a single page. On
 
 ```{r}
 library(terra)
+library(tidyverse)
 library(sf)
 ```
 
 
 
 ```{r}
-r <- rast(file.path('..', 'results', 'suitability_maps', '3arc-Iteration1-PA1_3.6DO_0-Pr.tif'))
-plot(r)
+r_focal <- rast(file.path('..', 'results', 'suitability_maps', '3arc-Iteration1-PA1_3.6DO_0-Pr.tif'))
+plot(r_focal)
+crs(r_focal)
 ```
+
+
+```{r}
+path <- '/home/sagesteppe/Documents/Landcover/landcover'
+f <- list.files(path)
+
+f <- f[order(as.numeric(gsub('[a-z]|_|[.]', '', f)))]
+r <- rast(file.path(path, f))
+r <- crop(
+  r, 
+  terra::project(ext(r_focal), from = crs(r_focal), to = crs(r))
+  )
+
+lkp_tab <- data.frame(
+  class = c('Conifer Forest', 'blah1',
+            'Aspen Forest', 'Mixed Forest',
+            'Sagebrush', 'Meadows',
+            'Pastures & Farmland', 'blah2',
+            'Developed',  'Peristent Snow',
+            'Barren', 'Water'),
+  number = 1:12, 
+  colors = c(
+    '#023B0A', 'red',
+    '#709775',  '#1B512D',
+    '#E2D4BA', 'purple', 
+    '#95E06C', 'red',
+    '#8D8EA5', '#FFFBFE',
+    '#CBC0D3', '#37718E'
+    )
+)
+
+names(r) <- lkp_tab$class
+
+r <- subset(r,'blah1', negate= TRUE )
+r <- subset(r,'blah2', negate= TRUE )
+
+r_summary <- app(r, which.max) # give barren a bit more share. 
+r_summary <- ifel(r[['Barren']] > 10, which(names(r)=='Barren'), r_summary)
+
+lc_pal <- lkp_tab$colors
+lc_pal <- setNames(lkp_tab$colors, lkp_tab$class)
+
+r_summary <- as.data.frame(r_summary, xy = TRUE) |>
+  left_join(lkp_tab, by = c('which.max' = 'number')) |>
+  rename(class_numeric = which.max)
+
+ggplot() + 
+  geom_tile(data = r_summary, aes(x = x, y = y, fill = class)) + 
+  scale_fill_manual(values = lc_pal)
+```
+
 
 ```{r create bounding boxes of focal areas}
 
 cb_bb <- as(raster::extent(3.1e5, 3.45e5, 4.31e6, 4.34e6), "SpatialPolygons")
 crs(cb_bb) <- crs(r)
 r_cb <- crop(r, cb_bb)
-plot(r_cb)
 
 cd_bb <- as(raster::extent(3.35e5, 3.575e5, 4.22e6, 4.24e6), "SpatialPolygons")
 crs(cd_bb) <- crs(r)
 r_cd <- crop(r, cd_bb)
-plot(r_cd)
 
 east_bb <- as(raster::extent(4.16e5, 4.35e5, 4.305e6, 4.315e6), "SpatialPolygons")
 crs(east_bb) <- crs(r)
 r_east <- crop(r, east_bb)
-plot(r_east)
 
-crop(r, cb_bb)
+bbs <- vect(c(vect(cb_bb), vect(cd_bb), vect(east_bb)))
+r1 <- mask(r, vect(c(vect(cb_bb), vect(cd_bb), vect(east_bb))))
+
+plot(r1)
+
+bbs_sf <- st_as_sf(bbs)
+
+
+
+
+#' bb 
+drawRs <- function(x){
+ 
+  # load in raster
+  r <- terra::rast(file.path())
+  
+  # crop raster
+  cb_bb <- as(raster::extent(3.1e5, 3.45e5, 4.31e6, 4.34e6), "SpatialPolygons")
+  cd_bb <- as(raster::extent(3.35e5, 3.575e5, 4.22e6, 4.24e6), "SpatialPolygons")
+  east_bb <- as(raster::extent(4.16e5, 4.35e5, 4.305e6, 4.315e6), "SpatialPolygons")
+  crs(east_bb) <- crs(r) ; crs(cd_bb) <- crs(r) ; crs(cb_bb) <- crs(r)
+  r_cb <- crop(r, cb_bb); r_cd <- crop(r, cd_bb) ; r_east <- crop(r, east_bb)
+  
+  # convert from raster to tibbles for ggplotting 
+  
+  ggplot() + 
+    geom_sf()
+}
+
+
 ```
+
+
 
