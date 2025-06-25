@@ -19,9 +19,6 @@ library(tune)
 library(finetune)
 source('functions.R')
 set.seed(23)
-
-
-
 ```
 
 ```{r}
@@ -56,12 +53,12 @@ distOrder_PAratio_simulator( # this does all the presence absence modelling. = b
 # playing with count prediction 
 
 
-```{r Partition data and clean for modelling}
+```{r Partition data and clean for modelling, eval = F}
 
-p <- '/media/steppe/hdd/EriogonumColoradenseTaxonomy/results/suitability_maps'
+p <- '../results/suitability_maps'
 f <- list.files(p, pattern = '-Pr.tif')
 
-lapply(f[8:11], wrapper)
+lapply(f[11], wrapper)
 ```
 
 
@@ -75,19 +72,19 @@ The use of kriging interpolation, where we simple smooth averages out between th
 ```{r}
 library(iml)
 library(xgboost) 
-d_w_vars <- wrapper('1-3arc-Iteration1-PA1:2.7DO:0-Pr.tif')
+d_w_vars <- wrapper('3arc-Iteration1-PA1_3.3DO_0-Pr.tif')
 ```
 
 
-
 ```{r}
-mod <- readRDS('../results/CountModels/models/1-3arc-Iteration1-PA1:2.7-tweedie.rds')$Model
+
+mod <- readRDS('../results/CountModels/models/1-3arc-Iteration1-PA1_2.7-lgbm-poisson_spat.rds')$Model
 vars <- as.character(attr(mod[["preproc"]][["terms"]], 'variables')) # fns will run on all 
 vars <- vars[2:length(vars)] # vars even if not in model - but produce null wts as expected. 
 
 test_indices <- as.numeric(
   read.delim(
-    '../results/CountModels/test_data/twin_indx-1-3arc.txt', header = F, sep = ' ')
+    '../results/CountModels/test_data/twin_indx-3arc.txt', header = F, sep = ' ')
   )
 
 test_dat <- d_w_vars[test_indices,] |>
@@ -99,7 +96,7 @@ predict.fun <- function(object, newdata){
   results<-predict(mod, newData_x)
 }
 
-subby <- test[which(names(test) != "Prsnc_All")]
+subby <- test_dat[which(names(test_dat) != "Prsnc_All")]
 predictor <- Predictor$new(
   model = mod,
   data = subby, 
@@ -107,32 +104,160 @@ predictor <- Predictor$new(
   predict.function = predict.fun
   )
 
-# this does not work... 
-shapley <- Shapley$new(predictor, x.interest = test) 
-
-private$sampler$feature.names
-
-# these both run   
-int_out <- Interaction$new(predictor, grid.size = 10)
-plot(int_out)
-
-prsuit_int <- Interaction$new(predictor, feature = "Pr.SuitHab", grid.size = 15)
-plot(prsuit_int)
-
-######## try to get shap with a different package. 
-library(kernelshap)
-library(shapviz)
-
-s <- kernelshap::kernelshap(mod, X = test_dat) 
-sv <- shapviz::shapviz(s)
-shapviz::sv_importance(sv, kind = "bee") +
-  theme_bw()
-
-shapviz::sv_importance(sv, kind = "bar") +
-  theme_bw()
-
-shapviz::sv_dependence(sv, v = colnames(test_dat[, -1]))
-
-shapviz::sv_waterfall(sv) +
-  theme(axis.text = element_text(size = 11))
 ```
+
+```{r}
+library(DALEX)
+library(DALEXtra)
+train_dat <- d_w_vars[-test_indices,]
+
+explainer <- explain_tidymodels(
+  mod,
+  data = train_dat %>% select(-Prsnc_All) |> sf::st_drop_geometry(),
+  y = train_dat$Prsnc_All,
+  label = "tidy LightGBM"
+)
+
+pdp_ice <- model_profile(
+  explainer, 
+  variables = "Pr.SuitHab", 
+  N = 50,              # sample 50 ICE curves
+  center = TRUE,
+  type = 'partial',
+  grid_points = 40
+) 
+
+df_pdp <- pdp_ice$agr_profiles |>
+  janitor::clean_names() 
+
+df_ice <- pdp_ice$cp_profiles |>
+  janitor::clean_names()
+
+ggplot(df_pdp, aes(x = x, y = yhat, group = ids)) +
+  geom_line(data = df_ice, aes(x = pr_suit_hab), alpha = 0.4, color = "grey") +
+  geom_line(color = "steelblue", size = 1) + # pdp curve+
+  geom_rug(data = train_dat, aes(x = Pr.SuitHab), sides = "b", alpha = 0.3, inherit.aes = F) +
+  labs(
+    x = "Probability of Suitable Habitat",
+    y = "Predicted Plants per Cell",
+    title = "Number of plants predicted per raster cell"
+  ) +
+  theme_minimal()
+  
+```
+
+Accumulated local effects plots
+
+```{r}
+
+
+ale_prof <- model_profile(
+  explainer,                # your DALEX explainer
+  variables   = "Pr.SuitHab",
+  type        = "accumulated",  # <-- use ALE here
+  N           = 100,            # number of observations to sample
+  grid_points = 40,             # number of bins to split variable
+  center      = TRUE            # center effect at zero
+)
+
+plot(ale_prof) +
+  labs(
+    title = "Accumulated Local Effects (ALE) for Pr.SuitHab",
+    x     = "Pr.SuitHab",
+    y     = "ALE"
+  ) +
+  theme_minimal()
+
+
+
+# Prepare your data and prediction function
+dat <- as.data.frame(train_dat)
+pred_fun <- function(newdata) predict(explainer, newdata)
+
+custom_predict <- function(object, newdata, type = pred_type) {
+  predict(object, newdata, type = type)[[1]]
+}
+
+test_preds <- custom_predict(mod, dat, type = "numeric")
+str(test_preds)
+
+
+
+
+booster <- extract_fit_engine(mod)
+
+
+ale_pred <- function(object, newdata, type = "response") {
+  # Convert to clean data.frame/matrix first
+  df <- as.data.frame(newdata)
+  mat <- as.matrix(df)
+ # return(df)
+
+  preds <- predict(object, mat)
+  if (is.matrix(preds)) preds <- preds[,1]
+  as.numeric(preds)
+}
+
+rand_model_call <- "
+lightgbm::lgb.train(
+  params = your_params,
+  data = lightgbm::lgb.Dataset(
+    data = as.matrix(rand_data %>% select(-Prsnc_All)),
+    label = rand_data$Prsnc_All
+  ),
+  ...
+  # Note: 'random_variable' is included via the formula context above
+)
+"
+
+DSUB <- st_drop_geometry(dat) |> select(-geom)
+preds <- ale_pred(booster, st_drop_geometry(dat) |> select(-geom))
+str(preds)  #
+
+ale_pred(mod, st_drop_geometry(dat))
+
+ale_pd <- ale::ALEpDist(
+  model = booster,
+  data = st_drop_geometry(dat),           # e.g., df_train
+  y_col = "Prsnc_All",
+  pred_fun = ale_pred,
+  pred_type = "response",
+  random_model_call_string = rand_model_call,
+  rand_it = 500,
+  parallel = 0
+)
+
+ale::ALEpDist(
+  model = mod,
+  data = dat,
+  tree = booster, 
+  y_col = 'Prsnc_All',
+  pred_fun = custom_predict,
+  pred_type = 'numeric', 
+  random_model_call_string = 'lightGBM::lightgbm(
+    Prsnc_All ~ ., data = dat
+  )', 
+  # request all 1D ALE effects and only the carat:clarity 2D effect
+ # list(d1 = TRUE),
+  boot_it = 100
+)
+
+
+
+
+ale_out <- ale::ALE(
+  X           = dat,
+  model       = pred_fun,
+  x_cols      = "Pr.SuitHab",
+  grid_size   = 40,
+#  p_values    = "auto",    # enable bootstrap p-values & bands
+ # output      = c("data", "plots", "stats"),
+  boot_it     = 100,
+  parallel = 'all',
+  p_alpha     = c(0.01, 0.05)
+)
+
+# Plot with built-in confidence bands
+print(ale_out$plots$Pr.SuitHab)
+```
+

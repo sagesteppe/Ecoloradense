@@ -1147,6 +1147,9 @@ wrapper <- function(x){
     tidyr::drop_na() |>
     select(-Prsnc_J, -Prsnc_M)
   
+  ## this just here for playing wiht PDP plots!!!
+  return(df)
+  
   densityModeller(df, fp = '../results/CountModels', bn = gsub('DO.*$', '', x))
   
 }
