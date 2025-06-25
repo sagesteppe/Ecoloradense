@@ -29,7 +29,6 @@ rm(test_indices, rast_vals)
 
 shapley <- Shapley$new(predictor, x.interest = tdat[1, ]) 
 
-
 mod <- readRDS('../results/CountModels/models/1-3arc-Iteration1-PA1:2.7-tweedie.rds')$Model
 vars <- as.character(attr(mod[["preproc"]][["terms"]], 'variables')) # fns will run on all 
 vars <- vars[2:length(vars)] # vars even if not in model - but produce null wts as expected. 
