@@ -1,7 +1,7 @@
 ---
 title: "Predicting habitat suitability, occupancy, and census size, of a rare plant using iterative adaptive niche based sampling"
 author: |
-  Reed Clark Benkendorf$^{1}$, Jeremie B. Fant$^{1,2}$, Sophie Taddeo$^{3}$  
+  Reed Clark Benkendorf$^{1,2}$, Jeremie B. Fant$^{1,2}$, Sophie Taddeo$^{3}$  
   $^{1}$ Chicago Botanic Garden, Glencoe, Illinois 60022, USA  
   $^{2}$ Plant Biology and Conservation, Northwestern University, Evanston, Illinois 60208, USA  
   $^{3}$ Department of Environmental and Ocean Sciences, University of San Diego, San Diego, California 92110, USA  
@@ -50,106 +50,110 @@ library(caret) # general data partitioning
 library(pROC)
 ```
 
-
 # 1 | INTRODUCTION
+The effects of anthropogenic stressors, e.g., land use and climate change, have led to a global extinction crisis, with estimates that 20-45% of plant species are facing extinction [@bachman2024extinct; @brummitt2015green; @pimm2015many; @nic2020extinction].
+Determining which plant species to focus our conservation efforts (e.g., active restoration, preserve creation, *ex situ* collections) on requires an array of data that is seldom available to decision-makers [@heywood2017plant].
+These data generally outline simple biological and ecological parameters of species, useful for detailing their rarity and how their distributions relate to current and future anthropogenic stressors.
+Chief amongst these parameters are the geographic extent of occurrence (range), the distribution of suitable habitat, the occupancy of this habitat as well as the spacing of occupied patches, and the census size of individual (sub-)populations [@natural2001iucn; @faber2012natureserve; @usfws2016ssa].
+While these parameters are simple, characterizing them can be time-consuming, generally requiring extensive fieldwork and travel to field sites - hence they often require proxies or heuristics for estimation in conservation assessments [@juffe2016assessing; @bland2015cost; @pelletier2018predicting].
+Environmental niche models (ENMs or Species Distribution Models SDMs) have made enormous and respectable headway, respectively, in resolving the former two problems (extent, and occupancy) [@syfert2014using; @anderson2023integrating; @kass2021improving], however the historic mismatch between the resolution of variables governing species distributions and the data available to serve as predictors of environmental conditions have restricted the interpretation and implementation of these models in highly heterogeneous environments [@guisan2013predicting].
+Recent advances in remote sensing have enabled the generation of useful models in these generally biodiverse systems; further, these data offer promise for modeling additional population parameters (e.g., census size, population extent). 
+However, the utility and use of high-resolution data have rarely been ground-verified or reported upon [@chiffard2020anbs].
 
-The effects of anthropogenic stressors, e.g. land use and climate change, have lead to a global extinction crisis with estimates of the number of plant species facing extinction ranging from 20-40% (@brummitt2015green, @pimm2015many, @nic2020extinction). 
-Determining which plant species to focus our conservation efforts (e.g. active restoration, preserve creation, *ex situ* collections) on requires an array of data which seldom exist for decision makers (@heywood2017plant). 
-These data generally outline simple biological and ecological parameters of species useful for detailing there rarity and how it's distribution relates to current and future anthropogenic stressors. 
-Chief amongst these parameters, are the geographic extent of occurrence (range), the distribution of suitable habitat - the occupancy of this habitat as well as the spacing of occupied patches, and the census size of individual (sub-)populations [@natural2001iucn; @faber2012natureserve; @usfws2016ssa]. 
-While these parameters are relatively simple, characterizing them can be time consuming, generally requiring extensive field work and travel to field sites - hence they oftentimes require proxies or heuristics for estimation in conservation assessments (@juffe2016assessing, @bland2015cost, @pelletier2018predicting). 
-Environmental niche models (ENMs or Species Distribution Models SDMs) have made enormous and respectable headway, respectively, in resolving the former two problems (extent, and occupancy) (@syfert2014using, @anderson2023integrating, @kass2021improving), however the historic mismatch between the resolution of variables governing species distributions and the data available to serve as predictors of environmental conditions have restricted the interpretation and implementation of these models in highly heterogeneous environments (@guisan2013predicting). 
-Recent advances in remote-sensing technologies have allowed for the generation of useful models in these generally biodiverse systems, further these data offer promise to model additional population parameters (e.g. census size, population extents), however the utility and usage of high resolution have rarely been ground verified or ostensibly reported upon (@chiffard2020anbs). 
+Recently, considerable headway has been made in generating statistically robust environmental niche models (ENMs), spurred by advances in collecting high-resolution environmental data, computing power, digitization of natural history museum records, and the acquisition of citizen science records and statistical methods, especially downsampling [@markham2023review; @feldman2021trends].
+However, ENMs are rarely ground-verified, and even more seldom at landscape scales [@a2022species].
+Hence, most of our knowledge about producing ENMs relies on simulated species and data, and generally at spatial resolutions considered relatively coarse to practitioners.
+An historic complication with the implementation and interpretation of ENM's is a mismatch between the spatial resolution of the independent variables available to model the species' fundamental niche and the factors governing the true distribution of populations - the realized niche [@carscadden2020niche; @chauvier2022resolution; @lembrechts2019incorporating].
+Recent papers have had mixed results regarding the effects of imprecisely mapped occurrence data on ENM predictions, with indications that models generated in more heterogeneous environments, and at finer resolutions (e.g. ca. 3 arc-second to 10 arc-minutes (~14.5 km at 38$^\circ$) suffer minor decreases in model performance [@graham2008influence; @smith2023including] with real species, while increasing error in mapping has drastic effects on model predictions with virtually simulated species [@gabor2022positional]. 
+A further mismatch of resolution is the year in which data on geographic localities were obtained and current conditions, which allow for positive population growth [@bracken2022maximizing].
+Historic occurrence data may now reflect conditions inhospitable to population maintenance, or even represent populations that were simply sinks from more robust populations [@bracken2022maximizing]; using these records may decrease model performance.
+Collecting data on whether areas are favorable to continued recruitment from the soil seed bank is perhaps more pertinent than assessing whether long-lived individuals persist. 
 
-Recently, considerable headway has been made in generating statistically robust environmental niche models (ENM's) spirited by: recent advances in collecting high-resolution environmental data, compute power, digitization of natural history museum records and the acquisition of citizen science records, and statistical methods especially downsampling [@markham2023review; @feldman2021trends]. 
-However, ENM's are rarely ground verified, and even more seldom at landscape scales [@a2022species].
-Hence, most of our knowledge about producing ENM's rely on simulated species and data, especially at spatial resolutions considered relatively coarse to practitioners.  
-An historic complication with the implementation and interpretation of ENM's is a mismatch between the spatial resolution of the independent variables available to model the species fundamental niche and the factors governing the true distribution of populations - the realized niche [@carscadden2020niche; @chauvier2022resolution; @lembrechts2019incorporating]. 
-Recent papers have had mixed results regarding the effects of imprecisely mapped occurrence data on ENM predictions, with indications that models generated in more heterogenous environments, and at finer resolutions (e.g. ca. 3 arc-second relate to 10 arc-minutes (~14.5 km) at 38$^\circ$)) suffer minor decreases in model performance [@graham2008influence; @smith2023including] with real species, while increasing error in mapping has drastic effects on model predictions with virtually simulated species [@gabor2022positional].  
-A further mismatch of resolution is the year in which data on geographic localities were obtained and current conditions which allow for positive population growth [@bracken2022maximizing]. 
-Historic occurrence data may now represent conditions which are inhospitable to the maintenance of populations, or may even represent populations which even then were simply sinks from more robust populations [@bracken2022maximizing]; using these records may decrease model performance. 
-Collecting data on whether areas are favorable to continued recruitment of individuals from the soil seed bank, are perhaps more astute than whether long-lived individuals persist.  
+ENM models generally suffer from having few, often spatially biased, occurrence records as dependent variables, which often fail to characterize the ecological breadth of the species [@stolar2015accounting; @feeley2011keep].
+Accordingly, while many ENMs achieve high performance on small hold-out subsets, they are unlikely to detect many new populations during ground verification [@a2022species].
+To increase the number of presences and absences in sites that are relatively similar to those harboring presences, which can be used for training models, iterative adaptive-niche-based sampling (ANBS) has become increasingly employed [@guisan2006using].
+In ANBS cells with a high probability of occurrence or where models have higher prediction uncertainty, are preferentially visited.
+After each round of field visits, a new model is fit, incorporating both the original and the most recent data [@mondain2024adaptive].
+Using this process not only allows for the acquisition of a larger number of presences and absences, but also allows for verifying coordinate placement, confirming that historic points are still extent, reducing model uncertainty, and acquiring additional data such as census estimates and life stages [@stockwell2002effects; @wisz2008effects; @jansen2022stop].
+However, few studies have reported field-verified ANBS sampling efforts of plant species [@johnson2023field;; @borokini2023iterative; @zimmer2023field]. 
 
-ENM models generally suffer from having few, generally spatially biased, occurrence records to serve as dependent variables, which generally fail to characterize the ecological breadth of the species [@stolar2015accounting; @feeley2011keep]. 
-While many ENM's have high-performance metrics while tested on small subsets of hold-out data, they are unlikely to detect many new populations during ground verification (@a2022species). 
-To increase the number of presences, and absences in sites which are relatively similar to those harboring presences, which can be used for training models iterative adaptive-niche based sampling (ANBS) has become increasingly employed [@guisan2006using]. 
-In ANBS cells predicted to have high probabilities of occurrence, or where models have higher prediction uncertainty, are preferentially visited, and after each bout of field visits, a new model is fit incorporating the original data, plus the recently collected data (@mondain2024adaptive). 
-Using this process not only allows for the acquisition of a larger number of presences and absences, but also allows for verifying coordinate placement, that historic points are still extent, reducing model uncertainty, and for the acquisition of additional data such as census estimates and life stages [@stockwell2002effects; @wisz2008effects; @jansen2022stop]. 
-However, few studies have reported field verified ANBS sampling efforts of plant species [@johnson2023field;; @borokini2023iterative; @zimmer2023field].  
+An ENM predicts a single variable: the probability of suitable habitat for the taxon (taddeo2024grimes).
+Although in most conservation applications, the insight desired from an ENM is the species realized distribution (cite).
+The bridge between an ENM and a plant population's presence is related to the dispersal of propagules and the establishment of the population, rather than the distribution of the fundamental niche alone [@engler2009migclim].
+Calls - and significant progress have been made for better integration of SDM predictions with models of dispersal since the rise in popularity of ENMs [@guisan2005predicting, @franklin2010moving].
+Most of this progress focuses on the goal of 'connecting' currently suitable habitats to habitats predicted to be suitable under climate change scenarios [@engler2009migclim, @bocedi2014range].
+Accordingly, ground verification has not been conducted for them, nor has apparently much effort been made to improve ground verification for rare species...
+To assist practitioners in detecting new populations or extending the range of known populations, we propose modeling plant occupancy as a random variable that depends on distance from known occupied sites, the size and shape of the target site, and its relation to other suitable habitats. 
+In simple terms, these perspectives link habitat suitability to the tenets of island biogeography (CITE). 
+'Distance' may be defined as Euclidean (or Haversine for large distances), or as a least-cost distance reflecting a generalized surface which conveys the difficulty for seeds to travel between the nearest occupied sites and the site of interest [@etherington2016least].
+Landscape metrics postulated to relate to site occupancy include the patch metric Core Area Index, roughly reflecting the probability of a propagule arriving at a larger patch, and the class metrics proximity and contagion, both of which reflect aggregation among occupied sites. 
 
-An ENM predicts a single variable; the probability of suitable habitat for the taxon (taddeo2024grimes). 
-Although, in most conservation applications, the insight desired from an ENM is the species realized distribution (cite). 
-The bridge between an ENM and a plant populations presence is related to the dispersal of propagules and the establishment of the population, rather than distribution of the fundamental niche alone [@engler2009migclim]. 
-Calls - and significant progress, have been made for better integration of SDM predictions with models of dispersal since the rise in popularity of ENM's (@guisan2005predicting, @franklin2010moving). 
-Most of this progress focuses on the goal of 'connecting' currently suitable to habitat predicted to be suitable under climate change scenarios (@engler2009migclim, @bocedi2014range). 
-Accordingly, ground verification has not been made for them, nor has as much effort seemingly been made in attempting to simply improve ground-verification for rare species... 
-To assist practitioners in detecting new populations, or extending the range of currently known populations, we propose modelling plant occupancy as a random variable dependent on distance from sites known to be occupied, the size and shape of the target site, and it's relation to other suitable habitats.  
-In a simple sense these perspectives link habitat suitability with the tenets of island biogeography (@).  'Distance' may be defined as euclidean (or Haversine for large distances), or as a least-cost distance reflecting a generalized surface which conveys the difficulty for seeds to travel between the nearest occupied sites and the site of interest (@etherington2016least).  
-Landscape metrics postulated to relate to the occupancy at a site include the patch metrics Core Area Index, roughly reflecting the probability of a propagule arriving to a larger patch, and the class metrics proximity and contagion both of which reflect the aggregation between occupied sites.  
+Obtaining reliable estimates of plant population census sizes can be a time-intensive process requiring two pieces of information: 1) measurements of plant density and 2) population extent.
+Instead of directly determining either the population's boundaries or density, observers estimate population sizes; however, these estimates are often unreliable [@ReischChristoph2018Acom].
+Several promising field methods for acquiring density measurements have recently been developed [@rominger2019application; @krening2021sampling; @ermakova2021densities; @alfaro2019optimal; @schorr2013using] to estimate better effective population census size (*N*), as well as progress in the application of genomic methods to estimate effective population sizes (*N~e~*) (e.g. linkage disequilibrium) [@waples2024practical].
+However, these methods are focused on descriptive rather than predictive processes, estimating uncertainty in measurements *within* a population rather than across the species' range.
+We propose that estimates of plant density are best generated using methods that allow fitting statistical models incorporating spatial covariates and that predict estimates and measurements of uncertainty across gridded surfaces [@oliver2012population; @doser2022spabundance; @a2022species].
 
-Obtaining reliable estimates of plant population census sizes can be time intensive process because it requires two major pieces of information 1) measurements of plant density and 2) population extent. 
-In lieu of directly determining either the populations boundaries, or density, observers estimate population sizes, however these estimates are often unreliable (@ReischChristoph2018Acom). 
-Several promising field methods for acquiring density measurements have recently been developed [@rominger2019application; @krening2021sampling; @ermakova2021densities; @alfaro2019optimal; @schorr2013using] to better estimate effective population census size (*N*), as well as progress in the application of genomic methods to estimate effective population sizes (*N~e~*) (e.g. linkage disequilibrium) [@waples2024practical]. 
-However these methods are focused on descriptive, rather than predictive processes, where they focus on estimating the uncertainty in measurements *within* a population, rather than across the species range. 
-We propose that estimates of plant density are best generated via methods which allow for the fitting of statistical models, which can incorporate spatial covariates and predict estimates and measurements of uncertainty across gridded surfaces [@oliver2012population; @doser2022spabundance; @a2022species]. 
-
-```{r}
+```{r, out.width='100%', out.height='100%', fig.pos='p', fig.cap='figgy stardust'}
 knitr::include_graphics('../results/ConceptualFigure.png')
 ```
 
-Mapping the boundaries of a population is another time consuming, albeit essential task for realistic estimates of population census size.  
-Currently, population boundaries are implicitly delineated by practitioners walking distances beyond which gene flow between individuals should be minimal (e.g. 1km) searching for additional individuals, or via aerial imagery (@alma9955306914202441).  
-Many rare plant species are small and inconspicuous, and many taxa grow in small clustered groups in specific habitats, making detection via either method difficult (@chen2013imperfect, @condit2000spatial). 
-High resolution spatial data eventually offer an ability to determine the extent of individual populations via detection of the edges of suitable habitat. 
+Mapping the boundaries of a population is another time-consuming, albeit essential, task for realistic estimates of population census size.
+Currently, population boundaries are implicitly delineated by practitioners walking distances beyond which gene flow between individuals should be minimal (e.g., 1km), searching for additional individuals, or via aerial imagery [@alma9955306914202441].
+Many rare plant species are small and inconspicuous, and many taxa grow in small, clustered groups in specific habitats, making detection via either method difficult [@chen2013imperfect, @condit2000spatial].
+High-resolution spatial data eventually enable the determination of the extent of individual populations by detecting the edges of suitable habitat.
+
+Here, we 1) assess the status of historic occurrence records, 2) develop ENMs at three spatial resolutions; 
+3) estimate population census size using 3a) models of plant density 3b) and delineated population boundaries; 4) use connectivity analysis in an ANBS context to conduct field work to identify new occurrences. 
+Collectively, these steps all build from an ENM, and showcase its utility in serving as a variate and derived product for multiple facets of describing 
 
 # 2 | METHODS
 
-### Study Species & System 
-*Eriogonum coloradense* Small (Polygonaceae) is a synoecious mat forming perennial herb endemic to the Central Southern Rocky Mountains in Colorado, U.S.A. 
-It's known geographic range covers XX km^2^, with 26 formally described populations, and it is thought to occur across a range of elevation, slopes, aspects, soil types and habitats. 
-It's elevation range spans xx - xx m, and the major habitat types it's known from include: high elevation sagebrush steppe, sub-alpine grasslands, and alpine slopes. 
-It is considered an S3/G3 species by NatureServe, and a Tier 2 species by State Wildlife Action Plan by the Colorado Parks and Wildlife Service. 
+### Study Species & System
+*Eriogonum coloradense* Small (Polygonaceae) is a synoecious mat-forming perennial herb endemic to the Central Southern Rocky Mountains in Colorado, U.S.A.
+It's known geographic range covers XX km^2^, with 26 formally described populations, and it is thought to occur across a range of elevation, slopes, aspects, soil types, and habitats.
+Its elevation range spans xx - xx m, and the major habitat types it's known from include high-elevation sagebrush steppe, subalpine grasslands, and alpine slopes.
+It is considered an S3/G3 species by NatureServe and a Tier 2 species in the State Wildlife Action Plan by the Colorado Parks and Wildlife Service (cite).
 
-### Data Acqusition 
-Dependent data were gathered from iNaturalist (80 records) and the Consortium of Southern Rockies herbaria (131 records) (@soro2024, INATURALIST). 
-These data were manually reviewed and 16 herbarium records which had low geolocation quality, or which were geo-referenced to localities which did not match their herbarium labels were removed.  
+### Data Acquisition
+Dependent data were gathered from iNaturalist (80 records) and the Consortium of Southern Rockies herbaria (131 records) (@soro2024, INATURALIST).
+These data were manually reviewed, and 16 herbarium records with low geolocation quality or that were georeferenced to localities that did not match their herbarium labels were removed. 
 
-Digital Elevation Models at 3arc (type), and 1arc (type), and Digital Elevation Products at 1/3 arc, and 1m, resolution were acquired from the United States Geological Survey and clipped to the domain of analysis (a rectangle buffered 16km (10 mi). beyond any known population). 
-A 3m resolution digital elevation model, which is not available at a native resolution from the USGS for this area, was created by bilinear resampling of the 1m and 10m data. 
-1m resolution data were only available for roughly XX% of the domain (which contained %% of known populations), the remainder of the species domains 3m data was created by linear resampling of the 10m DEP, a comparison of these results in the overlapping region are present in appendix XX. 
-These elevation products were used to create all geomorphology data sets using whiteboxTools (@wu2022whitebox). 
-Vegetation cover data were made by combining the raster data into continuous covers: Forested, Shrub, and Herbaceous vegetation @tuanmu2014global.  
+Digital Elevation Models at 3 arc (type) and 1 arc (type), and Digital Elevation Products at 1/3 arc and 1m resolution were acquired from the United States Geological Survey and clipped to the analysis domain (a rectangle buffered 16km (10 mi) beyond any known population).
+A 3m-resolution digital elevation model, which is not available at native resolution from the USGS for this area, was created by bilinear resampling of the 1m and 10m data.
+1m-resolution data were available for roughly XX% of the domain (which contained %% of known populations); the remaining species domains' 3m data were created by linear resampling of the 10m DEP. A comparison of these results in the overlapping region is presented in Appendix XX.
+These elevation products were used to create all geomorphology data sets using whiteboxTools [@wu2022whitebox].
+Vegetation cover data were generated by combining raster data into continuous cover classes: Forested, Shrub, and Herbaceous [@tuanmu2014global]. 
 
-ClimateNA was used to create a data set at 3 arc-second resolution which then underwent simple bilinear interpolation to generate products at the finer resolutions (@wang2016locally). 
-Gray co-occurrence level matrices were produced using the glcm r package using 2023 NAIP aerial imagery, which underwent bilinear resampling to each resolution, using default setting but with windows of 5 in both directions (@zvoleff2020glcm). 
+ClimateNA was used to create a dataset at 3 arc-second resolution, which was then bilinearly interpolated to generate products at finer resolutions [@wang2016locally].
+Gray co-occurrence level matrices were produced with the glcm R package from 2023 NAIP aerial imagery, bilinearly resampled to the original resolution, using default settings with a window size of 5 in both directions [@zvoleff2020glcm].
 
 ### Ground Verification
+The first round of ground verification was carried out from June to September 2024.
+All pre-existing occurrence points were considered candidates for revisits, and all 24 trails leading to them were marked as SAMPLE UNITS.
+Each trail was manually mapped and buffered by 45m in each direction; XXX random points were drawn, thinned to distances > XXX m, leaving XXX random plots for assessment.
+XX trails were visited, allowing for the assessment of XX random points and XX occurrences.
+When conducting field work, all presences of *E. coloradense* were opportunistically noted, and to better describe the spread of the population points were subjectively placed, with considerations of local abundance, ca. 30-50m from the previous one until traversing out of the population (n = ).
+Additionally, subjectively placed absences were also collected in areas that seemed favorable, or were in proximity to *E. coloradense* individuals; this occurred both in the field (n = ) and through the use of aerial imagery on a computer afterward (n = ).
 
-The first round of ground verification was carried out from June-September 2024. 
-All pre-existing occurrence points were considered candidates for revisits and all 24 trails leading to them were marked as SAMPLE UNITS. 
-Each trail was manually mapped, and buffered 45m in each direction and XXX random points were drawn, thinned to distances > XXXm, leaving XXX random plots for assessment. 
-XX trails were visited, allowing for the assessment of XX random points and XX occurrences. 
-When conducting field work, all presences of *E. coloradense* were opportunistically noted, and to better describe the spread of the population points were subjectively placed, with considerations of local abundance, ca. 30-50m from the previous one until traversing out of the population (n = ). 
-Additionally subjectively placed absences were also collected in areas which seemed favorable, or were in close proximity, to *E. coloradense* individuals; this occurred both in field (n = ) and through use of aerial imagery on a computer afterwards (n = ). 
+Adaptive Niche-Based Sampling was conducted in July 2025.
+To determine whether adaptive sampling performed better than alternative sampling regimes (e.g., stratified, random), and if it could be improved by occupancy modeling, 30 points were selected for each of the aforementioned sampling schemas, plus 30 occupancy points.
 
-Adaptive Niche-Based Sampling was carried out in July of 2025. 
-To determine whether adaptive sampling performed better than alternative sampling regimes (e.g. stratified, random), and if it could be improved by occupancy modelling 30 points were selected for each of the aforementioned sampling schema plus 30 occupancy points. 
+### Comparison of Different Spatial Resolutions 
+Environmental Niche Models were generated at three spatial resolutions, 3 (~72m), 1 (~24m), and 1/3 (~8m) arc-seconds. 
+The modeling details were similar across resolutions.
+
+Records were thinned to the distance of a hypotenuse of a cell to avoid pseudo-replicates [@aeillo2015spthin].
+1.1 times as many Absence, as presence, records were generated using the background function with method environmental distance from sdm [@naimi2016sdm]. 
+These records were then manually reviewed, and six records deemed to be in areas with possible presences were identified and removed. After this, the records were randomly sampled to reduce the data set to XX records. 
+After the first modeling iteration, all additional presences and absences were thinned similarly and combined with the original absence records.
+'Presences' with greater coordinate uncertainty than the modeling resolution were removed.
+
+All random forest models were fit using the ranger package, 95% confidence intervals were generated using the infinitesimal jackknife [@wager2014confidence, @wright2017ranger].
 
 
-### Comparision of Different Spatial Resolutions  
 
-Environmental Niche Models were generated at four spatial resolutions, 3 (~72m), 1 (~24m), and 1/3 (~8m) arc-seconds, and 3m.  
-The details of modelling were similar for each resolution. 
-
-Records were thinned to the distance of an hypotenuse of a cell to avoid replicates (@aeillo2015spthin). 
-1.1 times as many Absence, as presence, records were generated using the background function with method environmental distance from sdm (@naimi2016sdm), these records were then manually reviewed and six records which were deemed in areas which may be possible presences were removed, after this the records were randomly sampled to reduce the data set size to XX records.  
-After the first iteration of modelling all additional presences and absences were thinned via a similar manner and combined with the original absence records. 
-'Presences' which had greater coordinate uncertainty than the resolution of modelling were removed. 
-
-All random forest models were fit using the ranger package, 95% confidence intervals were generated using the infinitesimal jackknife (@wager2014confidence, @wright2017ranger). 
-The generation of CI's for the 3m data set were not considered feasible and their prediction was omitted. 
-
-```{r Compare Models at Different Spatial Resolutions, eval = F}
+```{r Compare ENM Models at Different Spatial Resolutions, eval = F}
 
 ## lines ## 90m = 3 (dotted), 30m = 4 (dot dash), 10m = 2 (solid) 
 ## CIs ## 90m = 3 (dotted), 30m = 4 (dot dash), 10m = 2 (solid)  
@@ -184,7 +188,29 @@ Occupancy scores for each of these points were then calculated using (whiteboxto
 Plant density was modelled using five methods, focusing on a comparison of spatial and non-spatial cross-validation methods. 
 
 ```{r Regression of Plant Density Observed and Predicted}
+fp = file.path('..','results','CountModels','tables')
+f = file.path(fp, list.files(fp, pattern = 'csv'))
 
+ab_models = tibble(File = f) |>
+    mutate(
+      Run_Info = gsub('[.]csv', '', basename(File)),
+      Resolution = factor(gsub('arc.*$', '', Run_Info), levels = c("1-3", "1", "3")),
+      PresAbsRatio = as.numeric(gsub('^.*PA1_', '', Run_Info))
+      ) |>
+    mutate(Data = lapply(File, read_csv, show_col_types = FALSE)) |>
+    unnest(Data) |>
+    mutate(Model = str_replace(Model, 'Arithmatic', 'Arithmetic')) |>
+    select(-File) |>
+    filter(Metric == 'MAE')
+
+ggplot(ab_models, aes(x = PresAbsRatio, y = Value, color = Model, group = Model)) + 
+  geom_point(size = 5) +
+  geom_smooth() + 
+  facet_wrap(~Resolution, ncol = 3) +
+  theme_minimal()+
+  labs(y = 'Mean Absolute Error (Number of Plants per quadrat)')
+
+#rm(fp, f)
 ```
 
 ```{r Prepate Data for Final Maps}
@@ -204,30 +230,6 @@ test <- Occupancy[-index,]
 nnet::multinom()
 ```
 
-## Comparision of Juvenile and Mature Plant Models
-
-Using the top performing model resolution () models were refit using only either juvenile or mature plant presences, the number of mature presences were limited to the number of juvenile occurrences. 
-Models were fit at 6 sample sizes (n = 15, 30, 50, 75, 125, 200) 15 times each using a randomly sampled 60%-40% train-test split of data. 
-
-```{r Simulate Model Performance at different Lifestages, eval = F}
-
-```
-
-## Simulations of Sample Size 
-
-The effect of sample size on model performance was simulated at 8 sample sizes (n = 15, 30, 50, 75, 125, 200, 300, 400) each 25 times, using a randomly sampled 60%-40% train-test split of data. 
-
-```{r Simulate Model Performance at different Sample Sizes}
-
-```
-
-## Simulations of Coordinate Errors 
-
-The effect of sample size on model performance was simulated at 6 sample sizes (n = 15, 30, 50, 75, 125, 200), with three proportions of records in error (0%, 5%, 10%, 20%), and 3 levels of coordinate uncertainty (0m, 10m, 100m, 1000m), at each of the 5 resolutions 25 times. 
-
-```{r Simulate Model Performance with different amounts, and proportions of Coordinate Inaccuracies}
-
-```
 
 ## 3 | RESULTS  
 
@@ -269,7 +271,7 @@ dev.off()
 
 ```
 
-The area under the receiver operating curve (AUC-ROC) and precision-recall curve (AUC-PR), the True Skill Statistic, and Sensitivity and Specificity (@sofaer2019area, @allouche2006assessing).
+The area under the receiver operating curve (AUC-ROC) and precision-recall curve (AUC-PR), the True Skill Statistic, and Sensitivity and Specificity [@sofaer2019area, @allouche2006assessing].
 
 
 ### Ground Verification   
@@ -294,22 +296,9 @@ The area under the receiver operating curve (AUC-ROC) and precision-recall curve
 
 ```
 
-
-## Comparision of Juvenile and Mature Plant Models
-
 ## Simulations of Sample Size 
 
 ```{r Boxplot of different Sample Sizes Simulations}
-
-```
-
-## Simulations of Coordinate Errors 
-
-```{r Boxplot of Observed Coordinate Uncertainty}
-
-```
-
-```{r Boxplot of different Coordinate Error Simulations}
 
 ```
 
@@ -319,4 +308,5 @@ The area under the receiver operating curve (AUC-ROC) and precision-recall curve
 
 ## 6 | ACKNOWLEDGMENTS 
 
+\singlespace
 ## REFERENCES 
