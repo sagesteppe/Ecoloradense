@@ -35,7 +35,7 @@ header-includes:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = F, warning = F, message = F)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, comment = "")
 set.seed(27)
 ```
 
@@ -75,13 +75,13 @@ To increase the number of presences and absences in sites that are relatively si
 In ANBS cells with a high probability of occurrence or where models have higher prediction uncertainty, are preferentially visited.
 After each round of field visits, a new model is fit, incorporating both the original and the most recent data [@mondain2024adaptive].
 Using this process not only allows for the acquisition of a larger number of presences and absences, but also allows for verifying coordinate placement, confirming that historic points are still extent, reducing model uncertainty, and acquiring additional data such as census estimates and life stages [@stockwell2002effects; @wisz2008effects; @jansen2022stop].
-However, few studies have reported field-verified ANBS sampling efforts of plant species [@johnson2023field;; @borokini2023iterative; @zimmer2023field]. 
+However, few studies have reported field-verified ANBS sampling efforts of plant species [@johnson2023field; @borokini2023iterative; @zimmer2023field]. 
 
 An ENM predicts a single variable: the probability of suitable habitat for the taxon (taddeo2024grimes).
 Although in most conservation applications, the insight desired from an ENM is the species realized distribution (cite).
 The bridge between an ENM and a plant population's presence is related to the dispersal of propagules and the establishment of the population, rather than the distribution of the fundamental niche alone [@engler2009migclim].
-Calls - and significant progress have been made for better integration of SDM predictions with models of dispersal since the rise in popularity of ENMs [@guisan2005predicting, @franklin2010moving].
-Most of this progress focuses on the goal of 'connecting' currently suitable habitats to habitats predicted to be suitable under climate change scenarios [@engler2009migclim, @bocedi2014range].
+Calls - and significant progress have been made for better integration of SDM predictions with models of dispersal since the rise in popularity of ENMs [@guisan2005predicting; @franklin2010moving].
+Most of this progress focuses on the goal of 'connecting' currently suitable habitats to habitats predicted to be suitable under climate change scenarios [@engler2009migclim; @bocedi2014range].
 Accordingly, ground verification has not been conducted for them, nor has apparently much effort been made to improve ground verification for rare species...
 To assist practitioners in detecting new populations or extending the range of known populations, we propose modeling plant occupancy as a random variable that depends on distance from known occupied sites, the size and shape of the target site, and its relation to other suitable habitats. 
 In simple terms, these perspectives link habitat suitability to the tenets of island biogeography (CITE). 
@@ -100,7 +100,7 @@ knitr::include_graphics('../results/ConceptualFigure.png')
 
 Mapping the boundaries of a population is another time-consuming, albeit essential, task for realistic estimates of population census size.
 Currently, population boundaries are implicitly delineated by practitioners walking distances beyond which gene flow between individuals should be minimal (e.g., 1km), searching for additional individuals, or via aerial imagery [@alma9955306914202441].
-Many rare plant species are small and inconspicuous, and many taxa grow in small, clustered groups in specific habitats, making detection via either method difficult [@chen2013imperfect, @condit2000spatial].
+Many rare plant species are small and inconspicuous, and many taxa grow in small, clustered groups in specific habitats, making detection via either method difficult [@chen2013imperfect; @condit2000spatial].
 High-resolution spatial data eventually enable the determination of the extent of individual populations by detecting the edges of suitable habitat.
 
 Here, we 1) assess the status of historic occurrence records, 2) develop ENMs at three spatial resolutions; 
@@ -111,12 +111,12 @@ Collectively, these steps all build from an ENM, and showcase its utility in ser
 
 ### Study Species & System
 *Eriogonum coloradense* Small (Polygonaceae) is a synoecious mat-forming perennial herb endemic to the Central Southern Rocky Mountains in Colorado, U.S.A.
-It's known geographic range covers XX km^2^, with 26 formally described populations, and it is thought to occur across a range of elevation, slopes, aspects, soil types, and habitats.
-Its elevation range spans xx - xx m, and the major habitat types it's known from include high-elevation sagebrush steppe, subalpine grasslands, and alpine slopes.
-It is considered an S3/G3 species by NatureServe and a Tier 2 species in the State Wildlife Action Plan by the Colorado Parks and Wildlife Service (cite).
+It's known geographic range covers five counties, with 22 formally described populations, and it is thought to occur across a range of elevation, slopes, aspects, soil types, and habitats.
+Its elevation range spans 2703 - 3914 m, and the major habitat types it's known from include high-elevation sagebrush steppe, subalpine grasslands, and alpine slopes.
+It is considered an S3/G3 species by NatureServe and a Tier 2 species in the State Wildlife Action Plan by the Colorado Parks and Wildlife Service [@anderson2004eriogonum].
 
 ### Data Acquisition
-Dependent data were gathered from iNaturalist (80 records) and the Consortium of Southern Rockies herbaria (131 records) (@soro2024, INATURALIST).
+Dependent data were gathered from iNaturalist (80 records) and the Consortium of Southern Rockies herbaria (131 records) [@soro2024; INATURALIST].
 These data were manually reviewed, and 16 herbarium records with low geolocation quality or that were georeferenced to localities that did not match their herbarium labels were removed. 
 
 Digital Elevation Models at 3 arc (type) and 1 arc (type), and Digital Elevation Products at 1/3 arc and 1m resolution were acquired from the United States Geological Survey and clipped to the analysis domain (a rectangle buffered 16km (10 mi) beyond any known population).
@@ -129,15 +129,46 @@ ClimateNA was used to create a dataset at 3 arc-second resolution, which was the
 Gray co-occurrence level matrices were produced with the glcm R package from 2023 NAIP aerial imagery, bilinearly resampled to the original resolution, using default settings with a window size of 5 in both directions [@zvoleff2020glcm].
 
 ### Ground Verification
+```{r import iteration 1 data, echo=F}
+bp = file.path('..', 'data', 'GroundTruthPts')
+iter1_f_draw_pts = bind_rows(
+  sf::st_read(file.path(bp, 'Iteration1.shp'), quiet = T), 
+  sf::st_read(file.path(bp, 'Iteration1-Coechotopa.shp'), quiet = T) |>mutate(Trail = 'Coechotopa')
+  )
+
+n_iter1_f_draw_pts = nrow(iter1_f_draw_pts)
+
+iter1_gt = sf::st_read(file.path('..', 'data', 'GroundTruthing', 'Iteration1Pts.shp'), quiet = TRUE) |>
+  sf::st_drop_geometry() |>
+  drop_na('Lctn_bb')
+
+# computer generated plots visited. 
+plots_visited = filter(iter1_gt, str_detect(Site, 'r|p'))  # comp sim plots visited
+
+# opportunistic data collection
+iter1_gt = filter(iter1_gt, is.na(Site) | ! str_detect(Site, 'r|p')) 
+opportunistic_absences = iter1_gt |> filter(Presenc == 0) |> nrow()
+opportunistic_presences = iter1_gt |> filter(Presenc > 0) |> nrow()
+n_comp_based_abs <- nrow(
+  read.csv(
+    file.path('..', 'data', 'GroundTruthing', 'ComputerAbs.csv')
+    )
+  ) # manually entered to computer absences
+```
+
 The first round of ground verification was carried out from June to September 2024.
-All pre-existing occurrence points were considered candidates for revisits, and all 24 trails leading to them were marked as SAMPLE UNITS.
-Each trail was manually mapped and buffered by 45m in each direction; XXX random points were drawn, thinned to distances > XXX m, leaving XXX random plots for assessment.
-XX trails were visited, allowing for the assessment of XX random points and XX occurrences.
-When conducting field work, all presences of *E. coloradense* were opportunistically noted, and to better describe the spread of the population points were subjectively placed, with considerations of local abundance, ca. 30-50m from the previous one until traversing out of the population (n = ).
-Additionally, subjectively placed absences were also collected in areas that seemed favorable, or were in proximity to *E. coloradense* individuals; this occurred both in the field (n = ) and through the use of aerial imagery on a computer afterward (n = ).
+All pre-existing occurrence points were considered candidates for revisits, and `r distinct(iter1_f_draw_pts, Trail) |>nrow()` trails leading to them were marked as sample areas.
+Each trail was manually mapped and buffered by 45m in each direction; 551 random points were drawn, thinned to distances > 90 m, leaving `r n_iter1_f_draw_pts` random plots for assessment.
+`r nrow(distinct(iter1_gt, Lctn_bb))` trails were visited, allowing for the assessment of `r nrow(plots_visited)` random points and `r filter(plots_visited, Presenc > 0) |> nrow()` new occurrence records.
+When conducting field work, all presences of *E. coloradense* were opportunistically noted, and to better describe the spread of the population points were subjectively placed, with considerations of local abundance, ca. 30-50m from the previous one until traversing out of the population (n = `r opportunistic_presences`).
+Additionally, subjectively placed absences were also collected in areas that seemed favorable, or were in proximity to *E. coloradense* individuals; this occurred both in the field (n = `r opportunistic_absences`) and through the use of aerial imagery on a computer afterward (n = `r n_comp_based_abs`).
 
 Adaptive Niche-Based Sampling was conducted in July 2025.
 To determine whether adaptive sampling performed better than alternative sampling regimes (e.g., stratified, random), and if it could be improved by occupancy modeling, 30 points were selected for each of the aforementioned sampling schemas, plus 30 occupancy points.
+
+```{r}
+rm(plots_visited, opportunistic_presences, opportunistic_absences, n_comp_based_abs, iter1_gt, iter1_f_draw_pts, n_iter1_f_draw_pts, bp)
+```
 
 ### Comparison of Different Spatial Resolutions 
 Environmental Niche Models were generated at three spatial resolutions, 3 (~72m), 1 (~24m), and 1/3 (~8m) arc-seconds. 
@@ -149,9 +180,7 @@ These records were then manually reviewed, and six records deemed to be in areas
 After the first modeling iteration, all additional presences and absences were thinned similarly and combined with the original absence records.
 'Presences' with greater coordinate uncertainty than the modeling resolution were removed.
 
-All random forest models were fit using the ranger package, 95% confidence intervals were generated using the infinitesimal jackknife [@wager2014confidence, @wright2017ranger].
-
-
+All random forest models were fit using the ranger package, 95% confidence intervals were generated using the infinitesimal jackknife [@wager2014confidence; @wright2017ranger].
 
 ```{r Compare ENM Models at Different Spatial Resolutions, eval = F}
 
@@ -180,7 +209,36 @@ Occupancy scores for each of these points were then calculated using (whiteboxto
 200 points which maximized the spread of values along both dimensions (habitat, occupancy) were then chosen for ground verification.  
 
 ```{r Create Table of final ENM Results with number of plots with presences}
+fp = file.path('..','results','tables')
+f = file.path(fp, list.files(fp, pattern = 'csv'))
 
+binary_models = tibble(File = f) |>
+    mutate(
+      Run_Info = gsub('[.]csv', '', basename(File)),
+      Resolution = factor(gsub('arc.*$', '', Run_Info), levels = c("1-3", "1", "3")),
+      PresAbsRatio = as.numeric(gsub("[^0-9.]", "", (stringr::str_extract(Run_Info, ':.*DO'))))
+      ) |>
+    mutate(Data = lapply(File, read_csv, show_col_types = FALSE)) |>
+    unnest(Data) |>
+    select(-File) 
+
+binary_models |>
+  filter(metric == 'pr_auc') |>
+  ggplot( aes(x = PresAbsRatio, y = estimate, group = Resolution)) + 
+  geom_point(size = 5) +
+  geom_smooth() + 
+  facet_wrap(~Resolution, ncol = 3) +
+  theme_minimal() +
+  labs(x = 'Presence-Absence Ratio', y = 'Pr-AUC')
+
+binary_models |>
+  filter(metric == 'roc_auc') |>
+  ggplot( aes(x = PresAbsRatio, y = estimate, group = Resolution)) + 
+  geom_point(size = 5) +
+  geom_smooth() + 
+  facet_wrap(~Resolution, ncol = 3) +
+  theme_minimal() +
+  labs(x = 'Presence-Absence Ratio', y = 'ROC-AUC')
 ```
 
 ### Plant Density  
@@ -271,7 +329,7 @@ dev.off()
 
 ```
 
-The area under the receiver operating curve (AUC-ROC) and precision-recall curve (AUC-PR), the True Skill Statistic, and Sensitivity and Specificity [@sofaer2019area, @allouche2006assessing].
+The area under the receiver operating curve (AUC-ROC) and precision-recall curve (AUC-PR), the True Skill Statistic, and Sensitivity and Specificity [@sofaer2019area; @allouche2006assessing].
 
 
 ### Ground Verification   
