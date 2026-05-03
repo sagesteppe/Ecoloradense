@@ -113,7 +113,5 @@ unix::rlimit_all()
 
 f <- gsub('patches.tif', '',  list.files('../results/patches'))
 lapply(f, patchesDistances)
-
-# need to go back and finish 3 !!!
 ```
 
