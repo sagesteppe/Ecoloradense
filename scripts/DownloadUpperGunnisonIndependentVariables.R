@@ -780,7 +780,7 @@ geomorphon_df <- data.frame(
     'Footslope', 'Valley', 'Pit')
 )
 
-pennock_df <- data.frame(limate
+pennock_df <- data.frame(
   Value = c(1:7, 128),
   Class = c('CFS', 'DFS', 'CSH', 'DSH', 'CBS', 'DBS', 'L', NA)
 )
