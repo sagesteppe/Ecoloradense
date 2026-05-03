@@ -1355,10 +1355,248 @@ patchDist <- function(x, patch_lkp, r_name, thresh_type){
     )
   
   fp <- file.path('..', 'results', 'patch_distances')
-  
+
   r_name <- paste0(r_name, '-', thresh_type)
   write.csv(min_dist, file.path(fp, paste0(r_name, 'MinDist.csv')), row.names = F)
   write.csv(mean_dist_all_patches, file.path(fp, paste0(r_name, 'MeanDist.csv')), row.names = F)
   write.csv(d_long, file.path(fp, paste0(r_name, 'Distances.csv')), row.names = F)
-  
+
+}
+
+
+#' Extract border sample points from occupied patches
+#'
+#' Refactored from the interior of \code{patchDist()} so that occupied-patch
+#' source points can be obtained independently — e.g. as inputs to
+#' \code{leastCostDist()} and \code{leastCostDistAniso()}.
+#'
+#' @param patches_lyr      Single-layer SpatRaster of patch IDs for one
+#'   threshold type (e.g. one layer from the output of \code{patchAttributes()}).
+#' @param occ_ids          Integer vector of occupied patch IDs, as read from
+#'   the \code{-occupied.csv} table produced by \code{patchAttributes()}.
+#' @param max_pts_per_patch Integer. Maximum border sample points retained per
+#'   patch after segment sampling (default 100).
+#'
+#' @return sf POINT object. One point near the centre of each border segment
+#'   of every occupied patch, capped at \code{max_pts_per_patch} per patch.
+getOccupiedBorderPts <- function(patches_lyr, occ_ids, max_pts_per_patch = 100) {
+
+  occ_rast <- terra::ifel(patches_lyr %in% occ_ids, patches_lyr, NA)
+
+  borders <- terra::as.polygons(occ_rast) |>
+    sf::st_as_sf() |>
+    sf::st_cast('MULTILINESTRING') |>
+    sf::st_cast('LINESTRING')
+
+  colnames(borders)[1] <- 'Patch'
+  sf::st_agr(borders) <- 'constant'
+
+  segs <- stplanr::line_segment(borders, segment_length = 180, use_rsgeo = TRUE) |>
+    dplyr::group_by(Patch) |>
+    dplyr::mutate(ID = dplyr::row_number())
+
+  sf::st_agr(segs) <- 'constant'
+
+  sf::st_point_on_surface(segs) |>
+    dplyr::group_by(Patch) |>
+    dplyr::slice_sample(n = max_pts_per_patch) |>
+    dplyr::ungroup()
+}
+
+
+#' Assemble a bi-directional landscape resistance surface
+#'
+#' All layers are min-max normalised to [0, 1] before weighting so weights
+#' express relative influence directly. Slope and TRI use magnitude only
+#' (no aspect dependency), keeping the surface symmetric. Suitability is
+#' inverted so that unsuitable cells resist movement. Forest and shrub
+#' proportions enter as-is (already [0, 1]). Water bodies receive a fixed
+#' additive penalty large enough to act as a strong but non-infinite barrier,
+#' preserving graph connectivity.
+#'
+#' Concavity/convexity layers can be added later by passing them through
+#' the \code{...} mechanism once their role is better understood.
+#'
+#' @param slope       SpatRaster or file path. Slope magnitude in degrees.
+#' @param tri         SpatRaster or file path. Topographic Ruggedness Index.
+#' @param suitability SpatRaster or file path. Habitat suitability [0, 1].
+#' @param forest      SpatRaster or file path. Proportion canopy cover [0, 1].
+#' @param shrub       SpatRaster or file path. Proportion shrub cover [0, 1].
+#' @param water       SpatVector, SpatRaster, or file path. Water body features.
+#'   Rasterised to the template grid; intersecting cells receive a fixed
+#'   additive penalty controlled by \code{water_cost}.
+#' @param weights     Named numeric vector with elements: slope, tri,
+#'   suitability, forest, shrub. Relative weights applied after normalisation.
+#' @param water_cost  Numeric. Additive penalty for water cells on the same
+#'   scale as the summed weighted layers — 10 is roughly 3-4x the maximum
+#'   non-water resistance.
+#'
+#' @return SpatRaster. Resistance surface ready for \code{terra::costDist()}.
+buildCostSurface <- function(
+    slope, tri, suitability, forest, shrub,
+    water      = NULL,
+    weights    = c(slope = 1, tri = 1, suitability = 1, forest = 1, shrub = 0.5),
+    water_cost = 10
+) {
+
+  load_lyr <- function(x) if (is.character(x)) terra::rast(x) else x
+  slope       <- load_lyr(slope)
+  tri         <- load_lyr(tri)
+  suitability <- load_lyr(suitability)
+  forest      <- load_lyr(forest)
+  shrub       <- load_lyr(shrub)
+
+  norm01 <- function(r) {
+    mn <- terra::global(r, 'min', na.rm = TRUE)[[1]]
+    mx <- terra::global(r, 'max', na.rm = TRUE)[[1]]
+    (r - mn) / (mx - mn)
+  }
+
+  resistance <-
+    norm01(slope)           * weights[['slope']]       +
+    norm01(tri)             * weights[['tri']]         +
+    norm01(1 - suitability) * weights[['suitability']] +
+    forest                  * weights[['forest']]      +
+    shrub                   * weights[['shrub']]
+
+  if (!is.null(water)) {
+    water <- load_lyr(water)
+    water_r <- if (inherits(water, 'SpatVector')) {
+      terra::rasterize(water, resistance, field = 1, background = 0)
+    } else {
+      terra::resample(water, resistance, method = 'near')
+    }
+    resistance <- resistance + (water_r * water_cost)
+  }
+
+  names(resistance) <- 'resistance'
+  resistance
+}
+
+
+#' Compute least-cost distances from occupied patch borders to all raster cells
+#'
+#' Thin wrapper around \code{terra::costDist()} accepting either sf or
+#' SpatVector source points — e.g. the border sample points already produced
+#' by \code{patchDist()}. Returns accumulated least-cost distance from the
+#' nearest source cell, which feeds directly into the occupancy logistic
+#' regression as the environmental-distance predictor.
+#'
+#' @param resistance SpatRaster from \code{buildCostSurface()}.
+#' @param sources    SpatVector or sf. Source points — typically the border
+#'   sample points of known-occupied patches.
+#'
+#' @return SpatRaster. Accumulated least-cost distance from the nearest source.
+leastCostDist <- function(resistance, sources) {
+  if (inherits(sources, c('sf', 'sfc'))) sources <- terra::vect(sources)
+  terra::costDist(resistance, target = sources)
+}
+
+
+#' Build an anisotropic (directional) transition matrix for least-cost distance
+#'
+#' terra::costDist() is isotropic — it cannot distinguish uphill from downhill
+#' movement. This function uses gdistance to build a directed transition matrix
+#' where resistance between any two adjacent cells depends on the direction of
+#' traversal: going uphill costs exponentially more, going downhill costs
+#' exponentially less, reflecting gravity-driven seed dispersal.
+#'
+#' The slope asymmetry replaces the isotropic slope term from
+#' \code{buildCostSurface()}. To avoid double-counting, build the base surface
+#' with \code{weights[['slope']] = 0} before passing it here.
+#'
+#' The combined transition multiplies the directed slope conductance by the
+#' isotropic base conductance at each directed edge — equivalent to a
+#' multiplicative interaction between terrain direction and landscape
+#' permeability.
+#'
+#' Requires a projected CRS (metres). The existing UTM 32613 projection is fine.
+#'
+#' @param dem        SpatRaster or file path. Digital elevation model. Used
+#'   only for the directional slope component.
+#' @param resistance SpatRaster from \code{buildCostSurface()} with
+#'   \code{weights[['slope']] = 0}. All non-slope resistance layers.
+#' @param uphill_k   Numeric. Exponential penalty rate for uphill movement.
+#'   Conductance scales as \code{exp(-uphill_k * rise_per_metre)}. Adapted
+#'   from Tobler's hiking function (default 3.5); higher values steepen the
+#'   uphill penalty.
+#' @param downhill_k Numeric. Exponential facilitation rate for downhill
+#'   movement. Conductance scales as \code{exp(downhill_k * drop_per_metre)}.
+#'   Lower than uphill_k (default 1.5) reflects that gravity assistance is
+#'   more modest than gravity resistance — steep descents also risk seeds
+#'   overshooting suitable habitat.
+#' @param directions Integer. Cell connectivity: 8 (default, includes
+#'   diagonals) or 4.
+#'
+#' @return gdistance TransitionLayer. Pass to \code{leastCostDistAniso()}.
+buildAnisotropicTransition <- function(
+    dem,
+    resistance,
+    uphill_k   = 3.5,
+    downhill_k = 1.5,
+    directions = 8
+) {
+
+  load_lyr <- function(x) if (is.character(x)) terra::rast(x) else x
+  dem        <- load_lyr(dem)
+  resistance <- load_lyr(resistance)
+
+  cell_m <- mean(terra::res(dem))
+
+  # --- directed slope conductance ---
+  # transitionFunction receives [elev_from, elev_to] for each directed edge.
+  # symm = FALSE preserves directionality: A→B != B→A when there is relief.
+  slope_trans <- gdistance::transition(
+    raster::raster(dem),
+    transitionFunction = function(x) {
+      rise <- (x[2] - x[1]) / cell_m   # positive = uphill, negative = downhill
+      ifelse(
+        rise >= 0,
+        exp(-uphill_k   *  rise),       # uphill:   conductance falls steeply
+        exp( downhill_k * -rise)        # downhill: conductance rises moderately
+      )
+    },
+    directions = directions,
+    symm = FALSE
+  )
+  slope_trans <- gdistance::geoCorrection(slope_trans, type = 'c', scl = FALSE)
+
+  # --- isotropic base conductance (all non-slope layers) ---
+  # mean resistance of the two adjacent cells → conductance for that edge.
+  base_trans <- gdistance::transition(
+    raster::raster(resistance),
+    transitionFunction = function(x) 1 / mean(x),
+    directions = directions,
+    symm = TRUE
+  )
+  base_trans <- gdistance::geoCorrection(base_trans, type = 'c', scl = FALSE)
+
+  slope_trans * base_trans
+}
+
+
+#' Compute anisotropic least-cost distances from source points to all cells
+#'
+#' Wraps \code{gdistance::accCost()}, which returns the minimum accumulated
+#' cost from any source point to each raster cell — the directed analogue of
+#' \code{leastCostDist()}. Result is returned as a terra SpatRaster to stay
+#' consistent with the rest of the pipeline.
+#'
+#' @param transition gdistance TransitionLayer from
+#'   \code{buildAnisotropicTransition()}.
+#' @param sources    SpatVector, sf, or two-column matrix (x, y) in the same
+#'   CRS as the transition layer. Source points — typically border sample
+#'   points of known-occupied patches.
+#'
+#' @return SpatRaster. Accumulated anisotropic cost distance from the nearest
+#'   source, in the same units as the resistance surface.
+leastCostDistAniso <- function(transition, sources) {
+
+  if (inherits(sources, 'SpatVector')) {
+    sources <- sf::st_as_sf(sources) |> sf::as_Spatial()
+  } else if (inherits(sources, c('sf', 'sfc'))) {
+    sources <- sf::as_Spatial(sources)
+  }
+
+  terra::rast(gdistance::accCost(transition, sources))
 }
