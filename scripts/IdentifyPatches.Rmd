@@ -29,7 +29,6 @@ f_aoa <- file.path(p_suit, list.files(p_suit, pattern = 'AOA'))
 p_thresh <- file.path('..', 'results', 'threshold_masks')
 f_thresh <- file.path(p_thresh, list.files(p_thresh))
 
-
 input <- lapply(
   list(f_suit, f_aoa, f_thresh),
   \ (x) data.frame(
@@ -53,15 +52,13 @@ lapply(split(input, f = 1:nrow(input)), patchAttributes)
 we also want to know how far apart the patches are in terms of euclidean space. 
 However, many of the patches are quite large, and the patches are numerous. 
 Calculating across all cells of the raster which are deemed suitable habitat would thus be cost prohibitive. 
-To reduce the compuational expense we will apply a couple approaches which will make this a somewhat cheapened heuristic. 
+To reduce the computational expense we will apply a couple approaches which will make this a somewhat cheapened heuristic. 
 
 Using terra we will extract the boundaries of patches - making it so that we do not have to calculate the interior of patches - which by definition need to be colonized through a border cell. 
-We will then cluster cells along the borders - to a resultion of 90m. 
-Hence the 3arc dataset will remain native resolution, and the 1 arc will have 1 in 3 cells from a window chosen, and 1/3 arc have one in nine cells be selected for calculations of distance between occupied and unoccupied patches. 
+We will then cluster cells along the borders - to a resolution of 90m. 
+Hence the 3arc data set will remain native resolution, and the 1 arc will have 1 in 3 cells from a window chosen, and 1/3 arc have one in nine cells be selected for calculations of distance between occupied and unoccupied patches. 
 
 ```{r}
-
-
 f <- read.csv(
   file.path('..', 'results', 'patch_summaries', '1-3arc-Iteration1-PA1:3DO:0-patches.csv')
 ) |> filter(metric == 'area')
@@ -90,7 +87,7 @@ patchesDistances <- function(x){
     
     thr_name <- names(patches)[i]
     
-    if(grepl('1-3arc-', x)){ # remove 10x10m 'patches' or flecks from the finest res dataset.
+    if(grepl('1-3arc-', x)){ # remove 10x10m 'patches' or flecks from the finest res data set.
       # it has roughly 0.45 Mi records
       patch_areas_sub <- patch_areas[patch_areas$eval==thr_name & patch_areas$value > 0.02, 'id']
       msk <- terra::ifel(patches[[i]] %in% patch_areas_sub, patches[[i]], NA)
@@ -115,7 +112,7 @@ patchesDistances <- function(x){
 unix::rlimit_all()
 
 f <- gsub('patches.tif', '',  list.files('../results/patches'))
-lapply(f[3], patchesDistances)
+lapply(f, patchesDistances)
 
 # need to go back and finish 3 !!!
 ```
