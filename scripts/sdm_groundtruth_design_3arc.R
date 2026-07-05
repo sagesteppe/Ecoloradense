@@ -1,18 +1,19 @@
 # =============================================================================
-# Stratified ground-truth design for SDM verification — REAL DATA, 3arc
+# Stratified ground-truth design for SDM verification — REAL DATA
 #
 # Real-data counterpart to sdm_groundtruth_design.R. Same downstream pipeline
 # (region-orthogonalized cost anomaly R, GRTS w/ oversample, cLHS comparison),
-# wired to actual 3arc (~90m) rasters instead of the synthetic landscape.
+# wired to actual rasters instead of the synthetic landscape. Resolution is
+# whatever cfg$ver points at (currently 1arc, ~30m) - all messages/filenames
+# below are tagged from cfg$ver, not hardcoded to one resolution.
 #
 # Differences from the synthetic version, and why:
-#   - No D (suitability-disagreement) axis. se_prediction was never run at
-#     3arc, so there is no ensemble-SD raster to build it from. Dropped
-#     entirely rather than faked.
-#   - "Region" = named Site polygons from Feasible_to_Groundtruth.gpkg
-#     (group_by(Site) + st_union), not a synthetic tiling. These sites are
-#     wildly unequal in size (5 to ~14,600 candidate pixels), so region
-#     allocation is proportional-to-size with a floor, not flat n_per_region.
+#   - No D (suitability-disagreement) axis. se_prediction was never run for
+#     these model versions, so there is no ensemble-SD raster to build it
+#     from. Dropped entirely rather than faked.
+#   - "Region" = named Site polygons from GroundTruch_Areas.gpkg, not a
+#     synthetic tiling. Sites are unequal in size, so region allocation is
+#     proportional-to-size with a floor, not flat n_per_region.
 #   - E (Euclidean distance) is pixel-wise, but Cost (least-cost distance) was
 #     built in CostDistances.R from occupied PATCH BORDER points, not from
 #     individual occurrence points like E. That mismatch is intentional and is
@@ -37,15 +38,23 @@ set.seed(42)
 # 0.  CONFIG
 # -----------------------------------------------------------------------------
 cfg <- list(
-  ver           = '3arc-Iteration1-PA1:3DO:0',  # model version
+  ver           = '1arc-Iteration1-PA1:3DO:0',  # model version
   cost_thresh   = 'spec_sens',                  # threshold used for cost-distance sources
 
-  n_total_base   = 150,    # total base sites across ALL regions (budget, not per-region)
-  min_per_region = 3,      # floor: every region gets at least this many base sites
+  n_total_base   = 360,    # total base sites across ALL regions (budget, not per-region)
+  min_per_region = 5,      # floor: every region gets at least this many base sites
                             # (capped at that region's available pixel count). NOTE:
                             # floor * n_regions must leave room in n_total_base for the
                             # proportional term, or every region just gets the floor.
-  oversample_mult = 1.0,   # n_over = mult * n_base, capped at remaining available pixels
+  max_per_region = 60,     # ceiling: no region gets more than this many base sites,
+                            # regardless of how much pixel-count share it would command
+                            # (e.g. Cochetopa would otherwise swallow most of the budget).
+                            # Excess budget from capped regions is NOT redistributed.
+  size_exponent  = 0.5,    # allocate on avail^size_exponent, not raw avail. The 4 biggest
+                            # sites hold 88% of all candidate pixels, so linear (=1) leaves
+                            # mid-size regions (1-5k px) at just the floor. <1 compresses
+                            # that dominance and shifts share toward the mid tier; 1 = linear.
+  oversample_mult = 0.5,   # n_over = mult * n_base, capped at remaining available pixels
 
   w_coverage   = 1.0,      # flat base: guarantees span of S for identifiability
   w_discovery  = 1.0,      # bump in the contested mid-S band (find new occ.)
@@ -57,7 +66,7 @@ cfg <- list(
 
   r_cap_q = 0.90,          # stop upweighting cells above this within-region R quantile
 
-  mindis = 100             # min spacing between sites, in CRS units (metres; UTM 13N)
+  mindis = 30             # min spacing between sites, in CRS units (metres; UTM 13N)
 )
 
 # =============================================================================
@@ -80,6 +89,8 @@ stopifnot(
     file.exists(aniso_path) || file.exists(iso_path)
 )
 
+res_tag <- sub('-Iteration.*$', '', cfg$ver)   # e.g. "1arc" - used to tag outputs
+
 S_mean <- terra::rast(suit_path)
 aoa_r  <- terra::rast(aoa_path)
 
@@ -98,16 +109,9 @@ stopifnot('Cost raster does not align with suitability raster' =
             terra::compareGeom(S_mean, Cost, stopOnError = FALSE))
 
 # --- region: named Site polygons -> one (multi)polygon per site -> rasterize ---
-# The source gpkg has topology errors (duplicate vertices, self-crossing edges)
-# that break s2-backed st_union(); do the union in planar GEOS instead.
-sf::sf_use_s2(FALSE)
-region_v <- sf::st_read('../data/hikingTrails/Feasible_to_Groundtruth.gpkg', quiet = TRUE) |>
-  sf::st_make_valid() |>
-  sf::st_transform(terra::crs(S_mean)) |>
-  sf::st_make_valid() |>
-  dplyr::group_by(Site) |>
-  dplyr::summarise(geometry = sf::st_union(geometry), .groups = 'drop')
-sf::sf_use_s2(TRUE)
+region_v <- sf::st_read(
+  file.path('..', 'data', 'hikingTrails', 'GroundTruch_Areas.gpkg'),
+  quiet = TRUE)
 
 region_v$region_id <- as.integer(factor(region_v$Site))
 region <- terra::rasterize(terra::vect(region_v), S_mean, field = 'region_id')
@@ -143,7 +147,7 @@ message(sprintf('Pixels in frame: %s across %d regions (Sites)',
                 format(nrow(df), big.mark = ','), nlevels(df$region)))
 
 # =============================================================================
-# 3.  [D axis diagnostic skipped — no ensemble-SD raster at 3arc]
+# 3.  [D axis diagnostic skipped — no ensemble-SD raster for this version]
 # =============================================================================
 
 # =============================================================================
@@ -171,6 +175,7 @@ df <- df |>
   dplyr::group_by(region) |>
   dplyr::mutate(Sq = qn(S), Eq = qn(E), Rq = qn(R)) |>
   dplyr::ungroup()
+
 
 # =============================================================================
 # 6.  PRIORITY SURFACE — S/E/R only (no D term; nothing to disagree with)
@@ -205,10 +210,11 @@ lvls  <- names(avail)
 
 n_regions <- length(lvls)
 budget_for_prop <- max(cfg$n_total_base - cfg$min_per_region * n_regions, 0)
-prop <- as.numeric(avail) / sum(avail)
+weight <- as.numeric(avail)^cfg$size_exponent
+prop <- weight / sum(weight)
 
 n_base <- cfg$min_per_region + round(prop * budget_for_prop)
-n_base <- pmin(n_base, as.numeric(avail))                # never exceed availability
+n_base <- pmin(n_base, as.numeric(avail), cfg$max_per_region)  # availability + per-region cap
 n_base <- setNames(n_base, lvls)
 
 n_over <- pmin(round(n_base * cfg$oversample_mult), as.numeric(avail) - n_base)
@@ -277,7 +283,7 @@ p_plane <- ggplot(cover_plot, aes(Eq, Rq)) +
   geom_point(aes(color = method), size = 1.6) +
   geom_hline(yintercept = cfg$r_cap_q, linetype = 3) +
   facet_wrap(~method) +
-  labs(title = 'Realized joint coverage on the E-R plane (3arc, real data)',
+  labs(title = sprintf('Realized joint coverage on the E-R plane (%s, real data)', res_tag),
        subtitle = 'grey = available pixels; dotted = R-pocket cap',
        x = 'Euclidean (within-region quantile)',
        y = 'Cost residual R (within-region quantile)') +
@@ -290,16 +296,16 @@ p_marg <- ggplot(cover_plot, aes(Sq, fill = method)) +
   theme_minimal()
 
 dir.create(file.path(p2res, 'GroundTruthSampling'), showWarnings = FALSE)
-ggsave(file.path(p2res, 'GroundTruthSampling', paste0(cfg$ver, '-3arcTest-coverage_E_R_plane.png')),
+ggsave(file.path(p2res, 'GroundTruthSampling', paste0(cfg$ver, '-Test-coverage_E_R_plane.png')),
        p_plane, width = 9, height = 4.2, dpi = 130)
-ggsave(file.path(p2res, 'GroundTruthSampling', paste0(cfg$ver, '-3arcTest-coverage_S_marginal.png')),
+ggsave(file.path(p2res, 'GroundTruthSampling', paste0(cfg$ver, '-Test-coverage_S_marginal.png')),
        p_marg, width = 7, height = 3.6, dpi = 130)
 
 # =============================================================================
 # OUTPUTS for the field
 # =============================================================================
-out_base <- file.path(p2res, 'GroundTruthSampling', paste0(cfg$ver, '-3arcTest-base.gpkg'))
-out_over <- file.path(p2res, 'GroundTruthSampling', paste0(cfg$ver, '-3arcTest-oversample.gpkg'))
+out_base <- file.path(p2res, 'GroundTruthSampling', paste0(cfg$ver, '-Test-base.gpkg'))
+out_over <- file.path(p2res, 'GroundTruthSampling', paste0(cfg$ver, '-Test-oversample.gpkg'))
 ### The ':' characters in cfg$ver (e.g. "PA1:3DO:0") make GDAL's driver-guessing
 ### misread the path as a "driver:connection" string - name the driver explicitly.
 sf::st_write(base_sites, out_base, delete_dsn = TRUE, quiet = TRUE, driver = 'GPKG')
