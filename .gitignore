@@ -64,3 +64,6 @@ patches/
 threshold_masks/
 patch_summaries/
 patch_distances/
+ClimateNA_v750/
+results/cost_distances/
+

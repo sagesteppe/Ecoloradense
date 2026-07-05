@@ -1474,22 +1474,53 @@ buildCostSurface <- function(
 }
 
 
-#' Compute least-cost distances from occupied patch borders to all raster cells
+#' Build an isotropic (symmetric) transition matrix for least-cost distance
 #'
-#' Thin wrapper around \code{terra::costDist()} accepting either sf or
-#' SpatVector source points — e.g. the border sample points already produced
-#' by \code{patchDist()}. Returns accumulated least-cost distance from the
-#' nearest source cell, which feeds directly into the occupancy logistic
-#' regression as the environmental-distance predictor.
+#' Symmetric counterpart to \code{buildAnisotropicTransition()}. Conductance
+#' between adjacent cells is the inverse of the mean resistance of the two
+#' cells, with no directional component. Keeps both iso and aniso cost
+#' distances on the same gdistance/accCost code path.
 #'
 #' @param resistance SpatRaster from \code{buildCostSurface()}.
-#' @param sources    SpatVector or sf. Source points — typically the border
-#'   sample points of known-occupied patches.
+#' @param directions Integer. Cell connectivity: 8 (default) or 4.
+#'
+#' @return gdistance TransitionLayer. Pass to \code{leastCostDist()}.
+buildIsotropicTransition <- function(resistance, directions = 8) {
+  load_lyr <- function(x) if (is.character(x)) terra::rast(x) else x
+  resistance <- load_lyr(resistance)
+
+  tr <- gdistance::transition(
+    raster::raster(resistance),
+    transitionFunction = function(x) 1 / mean(x),
+    directions = directions,
+    symm = TRUE
+  )
+  gdistance::geoCorrection(tr, type = 'c', scl = FALSE)
+}
+
+
+#' Compute least-cost distances from occupied patch borders to all raster cells
+#'
+#' Wraps \code{gdistance::accCost()}, matching the interface of
+#' \code{leastCostDistAniso()} so both iso and aniso distances follow the
+#' same code path.
+#'
+#' @param transition gdistance TransitionLayer from
+#'   \code{buildIsotropicTransition()}.
+#' @param sources    SpatVector, sf, or two-column matrix (x, y).
 #'
 #' @return SpatRaster. Accumulated least-cost distance from the nearest source.
-leastCostDist <- function(resistance, sources) {
-  if (inherits(sources, c('sf', 'sfc'))) sources <- terra::vect(sources)
-  terra::costDist(resistance, target = sources)
+leastCostDist <- function(transition, sources) {
+  if (inherits(sources, 'SpatVector')) {
+    sources <- sf::st_as_sf(sources) |> sf::as_Spatial()
+  } else if (inherits(sources, c('sf', 'sfc'))) {
+    sources <- sf::as_Spatial(sources)
+  }
+  r  <- terra::rast(gdistance::accCost(transition, sources))
+  r  <- terra::ifel(is.infinite(r), NA, r)
+  mn <- terra::global(r, 'min', na.rm = TRUE)[[1]]
+  mx <- terra::global(r, 'max', na.rm = TRUE)[[1]]
+  terra::round((r - mn) / (mx - mn) * 65535L)
 }
 
 
@@ -1598,5 +1629,9 @@ leastCostDistAniso <- function(transition, sources) {
     sources <- sf::as_Spatial(sources)
   }
 
-  terra::rast(gdistance::accCost(transition, sources))
+  r  <- terra::rast(gdistance::accCost(transition, sources))
+  r  <- terra::ifel(is.infinite(r), NA, r)
+  mn <- terra::global(r, 'min', na.rm = TRUE)[[1]]
+  mx <- terra::global(r, 'max', na.rm = TRUE)[[1]]
+  terra::round((r - mn) / (mx - mn) * 65535L)
 }

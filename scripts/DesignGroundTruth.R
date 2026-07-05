@@ -8,7 +8,7 @@ setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
 
 # Generates ~n_total ground-truth sampling points that traverse three (or four)
 # correlated axes of the occupancy logistic regression:
-#   1. Habitat suitability  (above sensitivity threshold → 0.99)
+#   1. Habitat suitability  (above sensitivity threshold -> 0.99)
 #   2. Euclidean distance to nearest known population (capped at euclid_cap_m)
 #   3. Least-cost distance to nearest known population (anisotropic preferred)
 #   4. Model uncertainty — SE from infinitesimal jackknife (optional; include
