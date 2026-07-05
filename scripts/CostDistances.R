@@ -32,6 +32,10 @@ dir.create(file.path(p2res, 'cost_distances'), showWarnings = FALSE)
 versions <- gsub('patches.tif', '', list.files(file.path(p2res, 'patches')))
 versions <- versions[grepl('^(1-3arc|1arc|3arc)-', versions)]
 
+# Process coarsest to finest so errors surface cheaply
+res_order <- c('3arc', '1arc', '1-3arc')
+versions  <- versions[order(match(sub('-Iteration.*$', '', versions), res_order))]
+
 # -------------------------------------------------------------------------
 # Main loop — one pass per model version
 # -------------------------------------------------------------------------
@@ -42,7 +46,20 @@ for (v in versions) {
 
   message('\n--- ', ver, ' ---')
 
-  # --- shared raster layers for this resolution --------------------------
+  thresh_names <- c('spec_sens', 'equal_sens_spec', 'sensitivity')
+
+  # Check whether any outputs are missing before loading anything heavy
+  any_missing <- any(vapply(thresh_names, function(th) {
+    !file.exists(file.path(p2res, 'cost_distances', paste0(ver, '-', th, '-costDist.tif'))) ||
+    !file.exists(file.path(p2res, 'cost_distances', paste0(ver, '-', th, '-costDistAniso.tif')))
+  }, logical(1)))
+
+  if (!any_missing) {
+    message('  all outputs exist, skipping.')
+    next
+  }
+
+  # --- load layers only when work remains --------------------------------
   p_dem  <- file.path(p2proc, paste0('dem_', res))
   dem    <- file.path(p_dem, 'dem.tif')
   slope  <- file.path(p_dem, 'geomorphology', 'slope.tif')
@@ -51,39 +68,17 @@ for (v in versions) {
   forest <- veg[['Tree']]
   shrub  <- veg[['Shrub']]
 
-  # --- model-version-specific files --------------------------------------
   aoa_r     <- terra::rast(file.path(p2res, 'suitability_maps', paste0(ver, '-AOA.tif')))
   suit_path <- file.path(p2res, 'suitability_maps', paste0(ver, '-Pr.tif'))
   patches_r <- terra::rast(file.path(p2res, 'patches', paste0(v, 'patches.tif')))
   occ_tbl   <- read.csv(file.path(p2res, 'patch_summaries', paste0(v, 'occupied.csv')))
 
-  # Build base resistance surfaces once per version (shared across thresholds).
-  # Isotropic: slope contributes via its magnitude layer.
-  # Anisotropic base: slope weight = 0; direction is handled by buildAnisotropicTransition().
-  message('  building resistance surfaces...')
-
-  iso_resist <- buildCostSurface(
-    slope = slope, tri = tri, suitability = suit_path,
-    forest = forest, shrub = shrub,
-    weights = c(slope = 1, tri = 1, suitability = 1, forest = 1, shrub = 0.5)
-  ) |> terra::mask(aoa_r, maskvalues = 0)
-
-  base_resist <- buildCostSurface(
-    slope = slope, tri = tri, suitability = suit_path,
-    forest = forest, shrub = shrub,
-    weights = c(slope = 0, tri = 1, suitability = 1, forest = 1, shrub = 0.5)
-  ) |> terra::mask(aoa_r, maskvalues = 0)
-
-  # Build the anisotropic transition matrix once per version.
-  # gdistance::transition() iterates over every directed cell-pair, so this
-  # is the most expensive step — especially at 1-3arc.
-  message('  building anisotropic transition (slow at 1-3arc)...')
-  aniso_trans <- buildAnisotropicTransition(dem = dem, resistance = base_resist)
-
-  rm(base_resist); gc()
+  # Transitions are built lazily — only on first threshold that needs them
+  iso_trans   <- NULL
+  aniso_trans <- NULL
 
   # --- loop over threshold types ----------------------------------------
-  for (thresh_name in names(patches_r)) {
+  for (thresh_name in thresh_names) {
 
     out_iso   <- file.path(p2res, 'cost_distances',
                            paste0(ver, '-', thresh_name, '-costDist.tif'))
@@ -93,6 +88,30 @@ for (v in versions) {
     if (file.exists(out_iso) && file.exists(out_aniso)) {
       message('  ', thresh_name, ': outputs exist, skipping.')
       next
+    }
+
+    # Build transitions on first threshold that actually needs them
+    if (is.null(iso_trans)) {
+      message('  building resistance surfaces...')
+      iso_resist <- buildCostSurface(
+        slope = slope, tri = tri, suitability = suit_path,
+        forest = forest, shrub = shrub,
+        weights = c(slope = 1, tri = 1, suitability = 1, forest = 1, shrub = 0.5)
+      ) |> terra::mask(aoa_r, maskvalues = 0)
+
+      base_resist <- buildCostSurface(
+        slope = slope, tri = tri, suitability = suit_path,
+        forest = forest, shrub = shrub,
+        weights = c(slope = 0, tri = 1, suitability = 1, forest = 1, shrub = 0.5)
+      ) |> terra::mask(aoa_r, maskvalues = 0)
+
+      message('  building isotropic transition...')
+      iso_trans <- buildIsotropicTransition(resistance = iso_resist)
+      rm(iso_resist); gc()
+
+      message('  building anisotropic transition (slow at 1-3arc)...')
+      aniso_trans <- buildAnisotropicTransition(dem = dem, resistance = base_resist)
+      rm(base_resist); gc()
     }
 
     occ_ids <- occ_tbl$patch[occ_tbl$threshold == thresh_name]
@@ -106,19 +125,19 @@ for (v in versions) {
 
     if (!file.exists(out_iso)) {
       message('  ', thresh_name, ': computing isotropic cost distance...')
-      leastCostDist(iso_resist, sources) |>
-        terra::writeRaster(out_iso, overwrite = TRUE)
+      leastCostDist(iso_trans, sources) |>
+        terra::writeRaster(out_iso, datatype = 'INT2U', overwrite = TRUE)
     }
 
     if (!file.exists(out_aniso)) {
       message('  ', thresh_name, ': computing anisotropic cost distance...')
       leastCostDistAniso(aniso_trans, sources) |>
-        terra::writeRaster(out_aniso, overwrite = TRUE)
+        terra::writeRaster(out_aniso, datatype = 'INT2U', overwrite = TRUE)
     }
 
     message('  ', thresh_name, ': done.')
   }
 
-  rm(iso_resist, aniso_trans, veg, forest, shrub, aoa_r, patches_r, occ_tbl)
+  rm(iso_trans, aniso_trans, veg, forest, shrub, aoa_r, patches_r, occ_tbl)
   gc()
 }
