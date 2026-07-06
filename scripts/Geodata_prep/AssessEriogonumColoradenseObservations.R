@@ -1,7 +1,7 @@
 library(tidyverse)
 library(sf)
 
-setwd('~/Documents/Ecoloradense/scripts')
+setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
 
 inat <- read.csv('../data/collections/iNaturalistObservations_coloradense/observations-417874.csv') %>% 
   filter(positional_accuracy <= 10) %>% 

@@ -3,7 +3,7 @@ library(sf)
 library(tidyverse)
 library(fields)
 set.seed(20)
-setwd('~/Documents/Ecoloradense/scripts')
+setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
 
 # A conceptual figure should showcase the interrelated goals of modelling 
 # 1) Predicting suitable habitat 

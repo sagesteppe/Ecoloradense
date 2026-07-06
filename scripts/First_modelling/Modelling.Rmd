@@ -4,6 +4,10 @@ author: "steppe"
 output: html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = '/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
+```
+
 ```{r, warning = F, message = F}
 library(sf)
 library(tidyverse)
@@ -103,13 +107,13 @@ d_w_vars <- wrapper('3arc-Iteration1-PA1_3.3DO_0-Pr.tif')
 
 ```{r}
 
-mod <- readRDS('../results/CountModels/models/1-3arc-Iteration1-PA1_2.7-lgbm-poisson_spat.rds')$Model
+mod <- readRDS('../results/count_models/models/1-3arc-Iteration1-PA1_2.7-lgbm-poisson_spat.rds')$Model
 vars <- as.character(attr(mod[["preproc"]][["terms"]], 'variables')) # fns will run on all 
 vars <- vars[2:length(vars)] # vars even if not in model - but produce null wts as expected. 
 
 test_indices <- as.numeric(
   read.delim(
-    '../results/CountModels/test_data/twin_indx-3arc.txt', header = F, sep = ' ')
+    '../results/count_models/test_data/twin_indx-3arc.txt', header = F, sep = ' ')
   )
 
 test_dat <- d_w_vars[test_indices,] |>

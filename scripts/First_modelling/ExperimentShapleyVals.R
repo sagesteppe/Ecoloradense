@@ -2,13 +2,12 @@ library(xgboost)
 library(iml)
 library(tidyverse)
 
-setwd('/home/sagesteppe/Documents/Ecoloradense/scripts')
-#setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
-mod <- readRDS('../results/CountModels/models/1-3arc-Iteration1-PA1_2.7-poisson_spat.rds')
+setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
+mod <- readRDS('../results/count_models/models/1-3arc-Iteration1-PA1_2.7-poisson_spat.rds')
 
 test_indices <- as.numeric(
   read.delim(
-    '../results/CountModels/test_data/twin_indx-1-3arc.txt', header = F, sep = ' ')
+    '../results/count_models/test_data/twin_indx-1-3arc.txt', header = F, sep = ' ')
   )
 
 test_dat <- sf::st_read('../data/Data4modelling/10m-count-iter1.gpkg')[test_indices,] |>
@@ -29,13 +28,13 @@ rm(test_indices, rast_vals)
 
 shapley <- Shapley$new(predictor, x.interest = tdat[1, ]) 
 
-mod <- readRDS('../results/CountModels/models/1-3arc-Iteration1-PA1:2.7-tweedie.rds')$Model
+mod <- readRDS('../results/count_models/models/1-3arc-Iteration1-PA1:2.7-tweedie.rds')$Model
 vars <- as.character(attr(mod[["preproc"]][["terms"]], 'variables')) # fns will run on all 
 vars <- vars[2:length(vars)] # vars even if not in model - but produce null wts as expected. 
 
 test_indices <- as.numeric(
   read.delim(
-    '../results/CountModels/test_data/twin_indx-1-3arc.txt', header = F, sep = ' ')
+    '../results/count_models/test_data/twin_indx-1-3arc.txt', header = F, sep = ' ')
 )
 
 test_dat <- d_w_vars[test_indices,] |>
