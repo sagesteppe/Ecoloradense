@@ -4,6 +4,10 @@ author: "steppe"
 output: html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = '/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
+```
+
 ```{r}
 library(sf)
 library(tidyverse)

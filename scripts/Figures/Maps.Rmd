@@ -4,6 +4,10 @@ author: "steppe"
 output: html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = '/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
+```
+
 For an appendix - let's aim to put all preds of each type onto a single page. One page for probability of suitable habitat, and one page for counts. 
 
 ```{r}

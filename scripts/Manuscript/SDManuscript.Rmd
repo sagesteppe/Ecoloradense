@@ -250,7 +250,7 @@ binary_models |>
 Plant density was modelled using five methods, focusing on a comparison of spatial and non-spatial cross-validation methods. 
 
 ```{r Regression of Plant Density Observed and Predicted}
-fp = file.path('..','results','CountModels','tables')
+fp = file.path('..','results','count_models','tables')
 f = file.path(fp, list.files(fp, pattern = 'csv'))
 
 ab_models = tibble(File = f) |>

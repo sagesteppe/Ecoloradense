@@ -1001,7 +1001,7 @@ densityModeller <- function(x, bn, fp){
   
   # tune hyper parameters and fit all models  - the hyper param tuning on occasion
   # is super slow, and may crash so we want to write to disk as they are completed.
-  if(missing(fp)){fp <- file.path('..', 'results', 'CountModels')}
+  if(missing(fp)){fp <- file.path('..', 'results', 'count_models')}
 
   f <- file.path(fp, 'models', paste0(bn, '-poisson_spat.rds'))
   if(!file.exists(f)){
@@ -1150,7 +1150,7 @@ wrapper <- function(x){
   ## this just here for playing wiht PDP plots!!!
   return(df)
   
-  densityModeller(df, fp = '../results/CountModels', bn = gsub('DO.*$', '', x))
+  densityModeller(df, fp = '../results/count_models', bn = gsub('DO.*$', '', x))
   
 }
 

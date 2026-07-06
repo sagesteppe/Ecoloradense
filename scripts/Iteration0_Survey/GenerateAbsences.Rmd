@@ -4,6 +4,10 @@ author: "steppe"
 output: html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = '/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
+```
+
 ## Iteration 0
 The goal of the model from iteration 0 is to generate many more presences which 
 can be used for generating larger training/test data set. 

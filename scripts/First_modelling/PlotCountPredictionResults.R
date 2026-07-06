@@ -3,7 +3,7 @@ library(tidyverse)
 setwd('~/Documents/Ecoloradense/scripts')
 setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
 
-p2tabs <- file.path('..', 'results', 'CountModels', 'tables')
+p2tabs <- file.path('..', 'results', 'count_models', 'tables')
 f <- file.path(p2tabs, list.files(p2tabs))
 
 dat <- lapply(f, read.csv)
