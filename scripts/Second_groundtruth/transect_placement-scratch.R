@@ -133,7 +133,7 @@ ggplot() +
     data = filter(diff, src_ID == 164), 
     fill = 'blue',
     alpha = 0.5) +
-  geom_sf(data = priority_targets, fill = 'pink') + 
+ # geom_sf(data = priority_targets, fill = 'pink') + 
   geom_sf(data = pres) +
   coord_sf(
     xlim = c(bounds['xmin'], bounds['xmax']), 
