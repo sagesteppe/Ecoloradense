@@ -1,6 +1,6 @@
 ## =============================================================================
 ## Transect placement for population-boundary verification
-## Steps 4-6: dominant edge (OBB) -> tilted rays across the flanks ->
+## Steps 4-6: dominant edge (OBB) -> cardinal (N/S/E/W) rays across the flanks ->
 ##            rank by threshold disagreement -> transects as start + bearing + seq
 ##
 ## All geometry is PLANAR (UTM): locally exact at 100 m and lets st_intersection
@@ -21,6 +21,7 @@ suppressPackageStartupMessages({
   library(geosphere); 
   library(terra); 
   library(tidyverse);
+  library(leaflet);
   library(tmap)}
 )
 
@@ -32,8 +33,11 @@ test_rast <- terra::rast(tr_path)
 ## use only: 'sensitivity' and 'spec_sens' NOT 'equal_spec_sens'
 test_rast <- test_rast[[c('spec_sens', 'sensitivity')]]
 
-## and restrict to ground truth areas. 
+## and restrict to ground truth areas.
+## Cochetopa run: known-good area (2024 "Cochetopa Dome" field data already
+## exists there) - scoped to just this Site for this pass.
 sample_areas = st_read(file.path('..', 'data', 'hikingTrails', 'GroundTruch_Areas.gpkg')) |>
+  filter(Site == 'Cochetopa') |>
   st_transform(terra::crs(test_rast)) |>
   vect()
 
@@ -85,7 +89,6 @@ test_v |>
   group_by(layer) |>
   summarize(area = sum(area))
 
-
 ## areas that overlap
 sensitivity = test_v |>
   filter(layer == 'sensitivity') |>
@@ -96,8 +99,8 @@ spec_sens = test_v |>
   summarize(geometry = st_union(geometry))
 
 ggplot() + 
-  geom_sf(data = sensitivity) + 
-  geom_sf(data = spec_sens, fill = 'red')
+  geom_sf(data = sensitivity, fill = 'green', alpha = 0.5) + 
+  geom_sf(data = spec_sens, fill = 'red', alpha = 0.5)
 
 ## obtain only areas where the two methods diverge in 
 # classifying habitat
@@ -145,13 +148,13 @@ stations_along <- function(start, dir, length_m = 100, step_m = 10) {
 ## geosphere only here. bearingRhumb = constant compass heading (not great-circle).
 ## East declination: magnetic = true − decl  ("east is least"). Stores BOTH; the
 ## true bearing is the source of record, magnetic is derived and dated.
-transect_headings <- function(tr, utm_crs, decl = DECLINATION, length_m = 100) {
-  true_b <- mapply(function(x, y, dx, dy) {
+transect_headings <- function(tr, utm_crs, decl = DECLINATION) {
+  true_b <- mapply(function(x, y, dx, dy, length_m) {
     ends <- rbind(c(x, y), c(x + length_m * dx, y + length_m * dy))
     ll   <- st_coordinates(st_transform(
               st_sfc(st_point(ends[1, ]), st_point(ends[2, ]), crs = utm_crs), 4326))
     bearingRhumb(ll[1, ], ll[2, ])
-  }, tr$x, tr$y, tr$dx, tr$dy)
+  }, tr$x, tr$y, tr$dx, tr$dy, tr$length_m)
 
   tr$bearing_true <- round(true_b %% 360, 1)                 # source of record
   tr$declination  <- decl
@@ -168,40 +171,70 @@ transect_headings <- function(tr, utm_crs, decl = DECLINATION, length_m = 100) {
 ## they don't (see the diff/ scratch above - `sensitivity` nests entirely inside
 ## `spec_sens`). So "the edge" is just: cells of the smaller, higher-confidence
 ## layer (agreed by BOTH rules) that touch a cell outside it. A raster grid gives
-## the outward direction for free from its own 8 neighbours - no curve fitting.
+## the outward direction for free from its own 4 cardinal neighbours (N/S/E/W) -
+## no curve fitting, and every transect walks a pure compass direction.
 
 core_layer <- if (st_area(spec_sens) > st_area(sensitivity)) "sensitivity" else "spec_sens"
 core_rast  <- test_rast[[core_layer]]
-core_bool  <- !is.na(as.vector(values(core_rast)))
 
-## edge cells: inside the core layer, with >=1 of the 8 neighbours outside it
-cand_cells <- which(core_bool)
-adj        <- terra::adjacent(core_rast, cells = cand_cells, directions = 8)
-is_edge    <- apply(adj, 1, function(nb) any(!core_bool[nb], na.rm = TRUE))
-edge_cells <- cand_cells[is_edge]
+## clean the core layer with terra natives before edge-finding: fillHoles()
+## removes small non-core flecks fully enclosed inside the patch (NA speckles
+## that would otherwise register as spurious inward-facing edges), and
+## boundaries() then finds the true outer edge natively - 4-connected so it
+## only sees N/S/E/W adjacency, matching the cardinal direction step below.
+
+#core_rast <- terra::fillHoles(core_rast, nearest = FALSE)
+core_bool <- !is.na(as.vector(values(core_rast)))
+
+core_edge  <- terra::boundaries(core_rast, inner = TRUE, directions = 4)
+edge_cells <- which(as.vector(values(core_edge)) == 1)
 length(edge_cells)
 
-## direction per edge cell: unit vector from the core toward its non-core
-## neighbours, straight from the grid offsets ("easy directionality" - no smoothing)
-offsets <- expand.grid(dr = -1:1, dc = -1:1)
-offsets <- offsets[!(offsets$dr == 0 & offsets$dc == 0), ]
+## direction per edge cell: 4-connected (N/S/E/W) neighbours only, so every
+## candidate transect direction is a pure cardinal - no diagonal/tilted rays.
+## A cell exposed on two cardinal sides (a corner) yields one candidate per side.
+cardinal <- data.frame(
+  dr = c(-1,  1,  0, 0),   # N, S, W, E neighbour offsets (row, col)
+  dc = c( 0,  0, -1, 1),
+  dx = c( 0,  0, -1, 1),   # +col = east (+x)
+  dy = c( 1, -1,  0, 0)    # -row = north (+y)
+)
 
-edge_dir <- t(vapply(edge_cells, function(cel) {
+edge_rows <- lapply(edge_cells, function(cel) {
   rc      <- terra::rowColFromCell(core_rast, cel)
-  nb_cell <- terra::cellFromRowCol(core_rast, rc[1] + offsets$dr, rc[2] + offsets$dc)
+  nb_cell <- terra::cellFromRowCol(core_rast, rc[1] + cardinal$dr, rc[2] + cardinal$dc)
   outside <- !core_bool[nb_cell]
-  outside[is.na(outside)] <- FALSE
-  if (!any(outside)) return(c(NA_real_, NA_real_))       # symmetric neighbourhood, no clear way out
-  v <- colSums(cbind(offsets$dc, -offsets$dr)[outside, , drop = FALSE])  # +col = east (+x), +row = south (-y)
-  v / sqrt(sum(v^2))
-}, numeric(2)))
+  outside[is.na(outside)] <- FALSE        # off-grid neighbour: not an outward edge
+  if (!any(outside)) return(NULL)         # interior cell, or exposed only diagonally
+  xy <- terra::xyFromCell(core_rast, cel)
+  data.frame(x = xy[1], y = xy[2], dx = cardinal$dx[outside], dy = cardinal$dy[outside], cell = cel)
+})
+length(Filter(Negate(is.null), edge_rows))
 
 edge_pts <- st_as_sf(
-  data.frame(terra::xyFromCell(core_rast, edge_cells),
-             dx = edge_dir[, 1], dy = edge_dir[, 2], cell = edge_cells),
+  do.call(rbind, edge_rows),
   coords = c("x", "y"), crs = st_crs(test_v), remove = FALSE
-) |>
-  filter(!is.na(dx))   # drop the rare degenerate cell with no clear outward side
+)
+
+edge_pts_4326 <- edge_pts |>
+  st_transform(4326) |>
+  mutate(
+    lng = st_coordinates(geometry)[,1],
+    lat = st_coordinates(geometry)[,2]
+  )
+
+
+m <- leaflet(data = edge_pts_4326) |>
+  addProviderTiles(providers$CartoDB.Positron) |>
+  setView(lng = -107, lat = 38.9604, zoom = 13) |>
+  addCircleMarkers(
+    lng = ~lng, lat = ~lat#,
+    #radius = ~population,
+    #popup = ~paste0("<b>", name, "</b><br>Pop: ", population, "M"),
+    #label = ~name
+  )
+m
+
 
 ## tag each edge point with its source patch, restricted to populated patches
 core_patches <- filter(test_v, layer == core_layer, populated)
@@ -209,44 +242,103 @@ edge_pts <- st_join(edge_pts, core_patches[, "ID"], join = st_intersects) |>
   filter(!is.na(ID))
 
 ## a candidate transect is only usable if it stays on sampleable ground for its
-## whole 100 m - a good number of them were straying outside sample_areas
+## whole length - a good number of them were straying outside sample_areas
 sample_areas_u <- st_union(st_as_sf(sample_areas))
 
-valid_transect <- function(x, y, dx, dy, length_m = 100, step_m = 10) {
+valid_transect <- function(x, y, dx, dy, length_m, step_m = 10) {
   stn <- stations_along(c(x, y), c(dx, dy), length_m, step_m)
   pts <- st_as_sf(stn, coords = c("x", "y"), crs = st_crs(test_v))
   all(lengths(st_intersects(pts, sample_areas_u)) > 0)
 }
 
-## per patch: draw untried edges (the edge is the 50 m mark - start is stepped
-## 50 m back into the core) until 5 pass the containment check above, capped at
-## max_iter draws total so a patch with mostly out-of-bounds edges gives up
-## rather than looping forever
+## the OTHER threshold layer - the larger, looser one that fully contains
+## core_layer. Stopping the outward leg at the core edge only clears the
+## strict rule; ground just past it can still read "suitable" under the loose
+## rule, which is why transects were landing entirely inside threshold.
+outer_poly <- if (core_layer == "sensitivity") spec_sens else sensitivity
+
+INWARD_MARGIN <- 50   # start this far inside the core edge, on confirmed ground
+CLEAR_MARGIN  <- 15   # walk this far past the outer threshold once it's cleared
+MAX_OUTWARD   <- 300  # give up on a candidate whose disagreement band is wider than this
+
+## distance along (dx,dy) from (x,y) at which the ray exits `poly` - i.e. how
+## far you have to walk from the strict edge to clear the loose threshold too.
+## NA if it doesn't clear within max_reach (disagreement band too wide here).
+exit_distance <- function(x, y, dx, dy, poly, max_reach = MAX_OUTWARD) {
+  ray    <- st_sfc(st_linestring(rbind(c(x, y), c(x + max_reach * dx, y + max_reach * dy))),
+                    crs = st_crs(test_v))
+  inside <- st_intersection(ray, st_geometry(poly))
+  if (length(inside) == 0 || all(st_is_empty(inside))) return(0)
+  pts <- st_coordinates(inside)
+  out <- max(sqrt((pts[, "X"] - x)^2 + (pts[, "Y"] - y)^2))
+  if (out >= max_reach) return(NA_real_)   # never actually exited within the cap
+  out
+}
+
+## per patch: draw untried edges (the edge is the core-strict boundary; the
+## outward leg is extended per-candidate until it clears the loose threshold
+## too, so every kept transect runs confirmed-core -> disagreement -> truly
+## outside) until 5 pass both the exit and containment checks, capped at
+## max_iter draws total so a patch with mostly bad edges gives up rather than
+## looping forever
 max_iter <- 10
 
 tr_list <- lapply(unique(edge_pts$ID), function(pid) {
   pool <- filter(edge_pts, ID == pid) |>
     st_drop_geometry() |>
-    transmute(cell, dx, dy, x = x - 50 * dx, y = y - 50 * dy)
-  ord  <- sample(nrow(pool))   # draw order, without replacement
-  keep <- integer(0)
+    transmute(cell, dx, dy, edge_x = x, edge_y = y)
+  ord    <- sample(nrow(pool))   # draw order, without replacement
+  keep   <- integer(0)
+  lens   <- numeric(0)
   i <- 1
   while (length(keep) < 5 && i <= min(max_iter, length(ord))) {
-    cand <- ord[i]
-    if (valid_transect(pool$x[cand], pool$y[cand], pool$dx[cand], pool$dy[cand]))
-      keep <- c(keep, cand)
+    cand     <- ord[i]
+    out_dist <- exit_distance(pool$edge_x[cand], pool$edge_y[cand],
+                               pool$dx[cand], pool$dy[cand], outer_poly)
+    if (!is.na(out_dist)) {
+      len <- INWARD_MARGIN + out_dist + CLEAR_MARGIN
+      sx  <- pool$edge_x[cand] - INWARD_MARGIN * pool$dx[cand]
+      sy  <- pool$edge_y[cand] - INWARD_MARGIN * pool$dy[cand]
+      if (valid_transect(sx, sy, pool$dx[cand], pool$dy[cand], len)) {
+        keep <- c(keep, cand)
+        lens <- c(lens, len)
+      }
+    }
     i <- i + 1
   }
   if (length(keep) == 0) return(NULL)
-  mutate(pool[keep, ], patch_ID = pid)
+  mutate(pool[keep, ],
+         patch_ID = pid, length_m = lens,
+         x = edge_x - INWARD_MARGIN * dx, y = edge_y - INWARD_MARGIN * dy) |>
+    select(-edge_x, -edge_y)
 })
 
 tr <- bind_rows(tr_list)
 tr <- transect_headings(tr, utm_crs = st_crs(test_v))
 
+## no two transects may cross - among any crossing pair, drop the later one
+tr_lines <- st_sfc(
+  lapply(seq_len(nrow(tr)), function(k)
+    st_linestring(rbind(c(tr$x[k], tr$y[k]),
+                         c(tr$x[k] + tr$length_m[k] * tr$dx[k],
+                           tr$y[k] + tr$length_m[k] * tr$dy[k])))),
+  crs = st_crs(test_v)
+)
+
+crosses <- st_crosses(tr_lines, tr_lines, sparse = FALSE)
+pairs   <- which(upper.tri(crosses) & crosses, arr.ind = TRUE)
+
+drop <- logical(nrow(tr))
+for (r in seq_len(nrow(pairs))) {
+  i <- pairs[r, 1]; j <- pairs[r, 2]
+  if (!drop[i]) drop[j] <- TRUE
+}
+if (any(drop)) message(sum(drop), " transect(s) dropped for crossing another transect")
+tr <- tr[!drop, ]
+
 stns <- do.call(rbind, lapply(seq_len(nrow(tr)), function(k)
   cbind(patch_ID = tr$patch_ID[k], transect = k,
-        stations_along(c(tr$x[k], tr$y[k]), c(tr$dx[k], tr$dy[k])))))
+        stations_along(c(tr$x[k], tr$y[k]), c(tr$dx[k], tr$dy[k]), length_m = tr$length_m[k]))))
 
 # # deliverables: a start-waypoint + bearing table is the field sheet; lines optional
 #write.csv(
@@ -255,7 +347,7 @@ stns <- do.call(rbind, lapply(seq_len(nrow(tr)), function(k)
 #)
 
 st_write(
-  st_as_sf(stns, coords = c("x","y"), crs = 32613), 
-  "transects.gpkg",
+  st_as_sf(stns, coords = c("x","y"), crs = 32613),
+  "transects_cochetopa.gpkg",
   append = F
 )

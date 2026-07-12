@@ -1,0 +1,114 @@
+---
+title: "Threshold delineation checks"
+format: html
+---
+
+## Overview
+
+Need to determine how accurate the threshold process is. 
+
+- Maximize coverage of *occupied* habitat.
+
+
+
+
+```{r}
+library(sf)
+library(dplyr) 
+library(geosphere) 
+library(terra)
+library(tidyverse)
+```
+
+
+```{r import thresholds}
+tr_path <- file.path('..', 'results', 'threshold_masks', '3arc-Iteration1-PA1_3.6DO_0-thresholds.tif')
+test_rast <- terra::rast(tr_path)
+test_rast <- test_rast[[c('spec_sens', 'sensitivity')]]
+```
+
+```{r subset to cochetopa for testing}
+sample_areas = st_read(file.path('..', 'data', 'hikingTrails', 'GroundTruch_Areas.gpkg')) |>
+  filter(Site == 'Cochetopa') |>
+  st_transform(terra::crs(test_rast)) |>
+  vect()
+```
+
+```{r identify known populated occurrences}
+## add known presences to be able to tag polygons
+pres <- st_read(
+  file.path('..', 'data', 'Data4modelling', '3m-presence-iter1.gpkg'),
+  quiet = T
+) |>
+  filter(Presenc == 1) |>
+  select(geom)
+
+```
+
+
+## prep data
+
+```{r split both threshold types into their own layers}
+patches_by_layer <- lapply(names(test_rast), function(nm) {
+  sf_p <- mask(test_rast[[nm]], sample_areas) |>
+    as.polygons() |>
+    sf::st_as_sf() |>
+    st_cast('POLYGON')
+  st_sf(layer = nm, geometry = st_geometry(sf_p))
+})
+
+patches_by_layer <- setNames(patches_by_layer, names(test_rast))  # lookup used below
+
+test_v <- do.call(rbind, patches_by_layer) |>
+  mutate(ID = row_number())
+
+ggplot(data = test_v, aes(fill = layer)) +
+    geom_sf() +
+    facet_wrap(~layer) + 
+    theme_void()
+
+sf::st_write(
+    filter(test_v, layer == 'spec_sens'),
+    file.path('..', 'data', 'TRANSECT_SCRATCH', 'spec_sens.gpkg')
+)
+
+sf::st_write(
+    filter(test_v, layer == 'sensitivity'),
+    file.path('..', 'data', 'TRANSECT_SCRATCH', 'sens.gpkg')
+)
+```
+
+
+```{r}
+test_v <- test_v[!duplicated(st_equals(test_v)), ]
+
+## subset to polygons >= 2 pixels of THIS raster. A flat m^2 number is meaningless once
+## sites get pooled across products at different resolutions (1arc vs 3arc) - deriving
+## it from res() keeps "2 pixels" the same concept regardless of source grid.
+min_area <- 2 * prod(terra::res(test_rast))
+###  13339.58 = 2 pixels of 3arc DEM resolution. 
+test_v <- test_v |>
+  mutate(area = as.numeric(st_area(geometry))) |>
+  filter(area >= min_area)
+nrow(test_v) 
+
+
+## identify the difference between patches... 
+test_v |>
+  group_by(layer) |>
+  summarize(area = sum(area))
+
+## areas that overlap
+sensitivity = test_v |>
+  filter(layer == 'sensitivity') |>
+  summarize(geometry = st_union(geometry))
+
+spec_sens = test_v |>
+  filter(layer == 'spec_sens') |>
+  summarize(geometry = st_union(geometry))
+
+ggplot() + 
+  geom_sf(data = sensitivity, fill = 'green', alpha = 0.5) + 
+  geom_sf(data = spec_sens, fill = 'red', alpha = 0.5)
+
+```
