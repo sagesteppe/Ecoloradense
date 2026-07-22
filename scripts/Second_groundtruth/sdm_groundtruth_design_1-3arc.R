@@ -8,9 +8,7 @@
 # below are tagged from cfg$ver, not hardcoded to one resolution.
 #
 # Differences from the synthetic version, and why:
-#   - No D (suitability-disagreement) axis. se_prediction was never run for
-#     these model versions, so there is no ensemble-SD raster to build it
-#     from. Dropped entirely rather than faked.
+#   - No D (suitability-disagreement) axis. 
 #   - "Region" = named Site polygons from GroundTruch_Areas.gpkg, not a
 #     synthetic tiling. Sites are unequal in size, so region allocation is
 #     proportional-to-size with a floor, not flat n_per_region.
@@ -38,7 +36,7 @@ set.seed(42)
 # 0.  CONFIG
 # -----------------------------------------------------------------------------
 cfg <- list(
-  ver           = '1arc-Iteration1-PA1:3DO:0',  # model version
+  ver           = '1-3arc-Iteration1-PA1:2.7DO:0',  # model version
   cost_thresh   = 'spec_sens',                  # threshold used for cost-distance sources
 
   n_total_base   = 360,    # total base sites across ALL regions (budget, not per-region)
@@ -101,9 +99,11 @@ Cost <- if (file.exists(aniso_path)) {
   message('Anisotropic cost distance not available; using isotropic.')
   terra::rast(iso_path)
 }
-# leastCostDist()/leastCostDistAniso() round-trip through raster/gdistance and
-# lose the CRS on write; extent/res/dims already match S_mean exactly, so this
-# is a metadata fix, not a resample.
+# CostDistances.R now reapplies CRS itself (leastCostDist()/leastCostDistAniso()
+# take a crs= arg, since gdistance::transition() drops it internally) before
+# writing, so freshly-generated tifs already carry it. This line is now just a
+# defensive fallback for tifs written before that fix (extent/res/dims already
+# match S_mean exactly, so it's a metadata patch, not a resample).
 terra::crs(Cost) <- terra::crs(S_mean)
 stopifnot('Cost raster does not align with suitability raster' =
             terra::compareGeom(S_mean, Cost, stopOnError = FALSE))
