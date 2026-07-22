@@ -3,17 +3,11 @@
 ## Steps 4-6: dominant edge (OBB) -> cardinal (N/S/E/W) rays across the flanks ->
 ##            rank by threshold disagreement -> transects as start + bearing + seq
 ##
-## All geometry is PLANAR (UTM): locally exact at 100 m and lets st_intersection
-## run on the hulls without spherical-geometry distortion. geosphere is used only
-## at the end to translate the finished planar direction into a compass HEADING a
-## person reads and dials - rhumb (constant-heading) bearing, then declination.
-##
 ## Inputs you bring from steps 1-3:
 ##   hulls   : list of 3 concave-hull polygons (your threshold rules), any order
 ##   origins : sf POINTS to cast from (pixel centres inside the shape, or a subsample)
 ##   occ     : (optional) sf POINTS of occurrences / high-count cells, for the
 ##             inside anchor in step 6
-## Requires sf >= 1.0-0 (GEOS >= 3.9) for st_minimum_rotated_rectangle().
 ## =============================================================================
 suppressPackageStartupMessages({ 
   library(sf); 
@@ -21,11 +15,12 @@ suppressPackageStartupMessages({
   library(geosphere); 
   library(terra); 
   library(tidyverse);
-  library(leaflet);
-  library(tmap)}
+  library(leaflet)
+  }
 )
+set.seed(27)
 
-setwd('~/Documents/Ecoloradense/scripts')
+#setwd('~/Documents/Ecoloradense/scripts')
 tr_path<- file.path('..', 'results', 'threshold_masks', '3arc-Iteration1-PA1_3.6DO_0-thresholds.tif')
 test_rast <- terra::rast(tr_path)
 
@@ -37,7 +32,7 @@ test_rast <- test_rast[[c('spec_sens', 'sensitivity')]]
 ## Cochetopa run: known-good area (2024 "Cochetopa Dome" field data already
 ## exists there) - scoped to just this Site for this pass.
 sample_areas = st_read(file.path('..', 'data', 'hikingTrails', 'GroundTruch_Areas.gpkg')) |>
-  filter(Site == 'Cochetopa') |>
+  #filter(Site == 'Cochetopa') |>
   st_transform(terra::crs(test_rast)) |>
   vect()
 
@@ -98,9 +93,25 @@ spec_sens = test_v |>
   filter(layer == 'spec_sens') |>
   summarize(geometry = st_union(geometry))
 
-ggplot() + 
-  geom_sf(data = sensitivity, fill = 'green', alpha = 0.5) + 
+ggplot() +
+  geom_sf(data = sensitivity, fill = 'green', alpha = 0.5) +
   geom_sf(data = spec_sens, fill = 'red', alpha = 0.5)
+
+## write both threshold layers out for GUI GIS inspection, one gpkg two layers
+threshold_layers_path <- file.path('..', 'results', 'GroundTruthSampling', 'threshold_layers.gpkg')
+st_write(sensitivity, 
+  threshold_layers_path, 
+  layer = 'sensitivity', 
+  delete_dsn = TRUE, 
+  quiet = TRUE
+)
+
+st_write(spec_sens, 
+  threshold_layers_path, 
+  layer = 'spec_sens', 
+  append = TRUE, 
+  quiet = TRUE
+)
 
 ## obtain only areas where the two methods diverge in 
 # classifying habitat
@@ -211,34 +222,17 @@ edge_rows <- lapply(edge_cells, function(cel) {
 })
 length(Filter(Negate(is.null), edge_rows))
 
-edge_pts <- st_as_sf(
+edge_pts_raw <- st_as_sf(
   do.call(rbind, edge_rows),
   coords = c("x", "y"), crs = st_crs(test_v), remove = FALSE
 )
 
-edge_pts_4326 <- edge_pts |>
-  st_transform(4326) |>
-  mutate(
-    lng = st_coordinates(geometry)[,1],
-    lat = st_coordinates(geometry)[,2]
-  )
-
-
-m <- leaflet(data = edge_pts_4326) |>
-  addProviderTiles(providers$CartoDB.Positron) |>
-  setView(lng = -107, lat = 38.9604, zoom = 13) |>
-  addCircleMarkers(
-    lng = ~lng, lat = ~lat#,
-    #radius = ~population,
-    #popup = ~paste0("<b>", name, "</b><br>Pop: ", population, "M"),
-    #label = ~name
-  )
-m
-
-
-## tag each edge point with its source patch, restricted to populated patches
+## tag each edge point with its source patch, restricted to populated patches -
+## core verification budget only goes to patches with a known occurrence
+## within 100m (see `populated` above). Patches without one are handled as a
+## separate, flagged "exploratory" stage further down, not silently dropped.
 core_patches <- filter(test_v, layer == core_layer, populated)
-edge_pts <- st_join(edge_pts, core_patches[, "ID"], join = st_intersects) |>
+edge_pts <- st_join(edge_pts_raw, core_patches[, "ID"], join = st_intersects) |>
   filter(!is.na(ID))
 
 ## a candidate transect is only usable if it stays on sampleable ground for its
@@ -257,9 +251,11 @@ valid_transect <- function(x, y, dx, dy, length_m, step_m = 10) {
 ## rule, which is why transects were landing entirely inside threshold.
 outer_poly <- if (core_layer == "sensitivity") spec_sens else sensitivity
 
-INWARD_MARGIN <- 50   # start this far inside the core edge, on confirmed ground
-CLEAR_MARGIN  <- 15   # walk this far past the outer threshold once it's cleared
-MAX_OUTWARD   <- 300  # give up on a candidate whose disagreement band is wider than this
+INWARD_MARGIN    <- 50    # start this far inside the core edge, on confirmed ground
+CLEAR_MARGIN     <- 15    # walk this far past the outer threshold once it's cleared
+MAX_TRANSECT_LEN <- 150   # hard cap on total transect length (field logistics)
+MAX_OUTWARD <- MAX_TRANSECT_LEN - INWARD_MARGIN - CLEAR_MARGIN  # cap on the disagreement-
+## band search so INWARD_MARGIN + out_dist + CLEAR_MARGIN can never exceed MAX_TRANSECT_LEN
 
 ## distance along (dx,dy) from (x,y) at which the ray exits `poly` - i.e. how
 ## far you have to walk from the strict edge to clear the loose threshold too.
@@ -275,45 +271,176 @@ exit_distance <- function(x, y, dx, dy, poly, max_reach = MAX_OUTWARD) {
   out
 }
 
-## per patch: draw untried edges (the edge is the core-strict boundary; the
+## per-patch transect quota: proportional-to-size with a floor, same logic as
+## the region allocation in sdm_groundtruth_design_3arc.R (weight on
+## area^size_exponent so a few huge patches don't swallow the whole budget,
+## floor guarantees every patch still gets sampled, ceiling caps the biggest).
+MIN_PER_PATCH  <- 3     # floor: every patch gets at least this many transects
+MAX_PER_PATCH  <- 12    # ceiling: no single patch gets more than this many
+SIZE_EXPONENT  <- 0.5   # allocate on area^exponent, not raw area
+
+patch_ids  <- unique(edge_pts$ID)
+patch_area <- setNames(core_patches$area[match(patch_ids, core_patches$ID)], patch_ids)
+
+N_TRANSECTS_BUDGET <- 5 * length(patch_ids)  # total budget across all patches
+## (keeps the old flat-5-per-patch total as the overall budget, just reallocated by size)
+
+budget_for_prop <- max(N_TRANSECTS_BUDGET - MIN_PER_PATCH * length(patch_ids), 0)
+weight <- patch_area^SIZE_EXPONENT
+prop   <- weight / sum(weight)
+n_patch <- MIN_PER_PATCH + round(prop * budget_for_prop)
+n_patch <- pmin(n_patch, MAX_PER_PATCH)
+n_patch <- setNames(n_patch, patch_ids)
+
+## fallback for patches with no reachable disagreement band: a patch that both
+## rules agree is suitable well past MAX_OUTWARD in every direction never
+## produces a candidate with a finite exit_distance(), so the main loop below
+## keeps 0 transects for it - MIN_PER_PATCH's floor was never actually
+## guaranteed. Fill the floor with fixed-length transects confirming
+## agreed-suitable ground instead of a disagreement band.
+FALLBACK_LEN <- INWARD_MARGIN + CLEAR_MARGIN
+
+## per patch: evaluate every edge (the edge is the core-strict boundary; the
 ## outward leg is extended per-candidate until it clears the loose threshold
 ## too, so every kept transect runs confirmed-core -> disagreement -> truly
-## outside) until 5 pass both the exit and containment checks, capped at
-## max_iter draws total so a patch with mostly bad edges gives up rather than
-## looping forever
-max_iter <- 10
-
-tr_list <- lapply(unique(edge_pts$ID), function(pid) {
-  pool <- filter(edge_pts, ID == pid) |>
+## outside), keep the ones that pass both the exit and containment checks,
+## then take `target` of them, the ones most spread out across this patch -
+## not just the first ones drawn - so coverage isn't clumped in one corner.
+## Shared across the core and exploratory stages below - only the patch pool
+## and its target count differ between them.
+place_patch_transects <- function(pid, target, edge_pts_pool) {
+  pool <- filter(edge_pts_pool, ID == pid) |>
     st_drop_geometry() |>
     transmute(cell, dx, dy, edge_x = x, edge_y = y)
-  ord    <- sample(nrow(pool))   # draw order, without replacement
-  keep   <- integer(0)
-  lens   <- numeric(0)
-  i <- 1
-  while (length(keep) < 5 && i <= min(max_iter, length(ord))) {
-    cand     <- ord[i]
-    out_dist <- exit_distance(pool$edge_x[cand], pool$edge_y[cand],
-                               pool$dx[cand], pool$dy[cand], outer_poly)
-    if (!is.na(out_dist)) {
-      len <- INWARD_MARGIN + out_dist + CLEAR_MARGIN
-      sx  <- pool$edge_x[cand] - INWARD_MARGIN * pool$dx[cand]
-      sy  <- pool$edge_y[cand] - INWARD_MARGIN * pool$dy[cand]
-      if (valid_transect(sx, sy, pool$dx[cand], pool$dy[cand], len)) {
-        keep <- c(keep, cand)
-        lens <- c(lens, len)
-      }
+
+  pool$out_dist <- mapply(exit_distance, pool$edge_x, pool$edge_y, pool$dx, pool$dy,
+                           MoreArgs = list(poly = outer_poly))
+  pool$len <- INWARD_MARGIN + pool$out_dist + CLEAR_MARGIN
+  pool$sx  <- pool$edge_x - INWARD_MARGIN * pool$dx
+  pool$sy  <- pool$edge_y - INWARD_MARGIN * pool$dy
+
+  eligible <- which(!is.na(pool$out_dist))
+  eligible <- Filter(function(k)
+    valid_transect(pool$sx[k], pool$sy[k], pool$dx[k], pool$dy[k], pool$len[k]),
+    eligible)
+
+  ## spread coverage across the patch via greedy sequential selection, not a
+  ## static rank: a candidate's raw average distance to EVERY other eligible
+  ## point favours whatever sits at the geometric extreme of the patch (the
+  ## habitat edge/tail), so the top-k by that score cluster right back
+  ## together out there. Instead: seed with the most isolated candidate,
+  ## then repeatedly add whichever remaining candidate is, on average,
+  ## farthest from the ones already picked - each new pick is chosen relative
+  ## to what's already accepted, not to the whole pool.
+  if (length(eligible) <= 1 || target <= 1) {
+    keep <- head(eligible, target)
+  } else {
+    coords  <- as.matrix(pool[eligible, c("edge_x", "edge_y")])
+    full_d  <- as.matrix(dist(coords))              # indices are into `eligible`
+    n_elig  <- length(eligible)
+
+    avg_dist_all <- rowSums(full_d) / (n_elig - 1)
+    picked    <- which.max(avg_dist_all)            # 1) seed: most isolated overall
+    remaining <- setdiff(seq_len(n_elig), picked)
+
+    while (length(picked) < min(target, n_elig) && length(remaining) > 0) {
+      avg_to_picked <- rowMeans(full_d[remaining, picked, drop = FALSE])
+      nxt <- remaining[which.max(avg_to_picked)]     # 2/3) farthest from accepted so far
+      picked    <- c(picked, nxt)
+      remaining <- setdiff(remaining, nxt)
     }
-    i <- i + 1
+    keep <- eligible[picked]
+  }
+  lens <- pool$len[keep]
+  type <- rep("disagreement", length(keep))
+
+  ## floor guarantee: this patch's disagreement band never resolved (or wasn't
+  ## wide enough to hit MIN_PER_PATCH) - fall back to fixed-length transects on
+  ## untried edges, checked only for staying on sampleable ground. Floor is
+  ## capped at `target` too - a patch trimmed below MIN_PER_PATCH by the
+  ## per-Site cap must not get re-inflated back up here.
+  floor_n <- min(MIN_PER_PATCH, target)
+  if (length(keep) < floor_n) {
+    fb_ord <- sample(setdiff(seq_len(nrow(pool)), keep))
+    j <- 1
+    while (length(keep) < floor_n && j <= length(fb_ord)) {
+      cand <- fb_ord[j]
+      sx <- pool$edge_x[cand] - INWARD_MARGIN * pool$dx[cand]
+      sy <- pool$edge_y[cand] - INWARD_MARGIN * pool$dy[cand]
+      if (valid_transect(sx, sy, pool$dx[cand], pool$dy[cand], FALLBACK_LEN)) {
+        keep <- c(keep, cand)
+        lens <- c(lens, FALLBACK_LEN)
+        type <- c(type, "fallback")
+      }
+      j <- j + 1
+    }
   }
   if (length(keep) == 0) return(NULL)
   mutate(pool[keep, ],
-         patch_ID = pid, length_m = lens,
+         patch_ID = pid, length_m = lens, type = type,
          x = edge_x - INWARD_MARGIN * dx, y = edge_y - INWARD_MARGIN * dy) |>
-    select(-edge_x, -edge_y)
-})
+    select(-edge_x, -edge_y, -out_dist, -len, -sx, -sy)
+}
 
-tr <- bind_rows(tr_list)
+## ---- STAGE 2 setup: flagged (unpopulated) patches --------------------------
+## Patches with no known occurrence within 100m get no proportional-to-size
+## share of the core budget above - sending crews to purely model-predicted
+## ground with no supporting record risks a fishing expedition. Instead: flag
+## them, and place just the guaranteed floor on each, kept separate (own
+## `stage` tag, own output layer) so it's a conscious add-on, never silently
+## blended into the core field sheet.
+EXPLORATORY_PER_PATCH <- MIN_PER_PATCH  # flat floor only, no size-proportional share
+
+core_patches_flagged <- filter(test_v, layer == core_layer, !populated)
+edge_pts_flagged <- st_join(edge_pts_raw, core_patches_flagged[, "ID"], join = st_intersects) |>
+  filter(!is.na(ID))
+patch_ids_flagged <- unique(edge_pts_flagged$ID)
+n_patch_flagged <- setNames(rep(EXPLORATORY_PER_PATCH, length(patch_ids_flagged)), patch_ids_flagged)
+
+## ---- per-Site cap: no Site gets more than MAX_PER_SITE transects total ----
+## (core + exploratory combined), mirroring max_per_region in
+## sdm_groundtruth_design_3arc.R. Patch quotas are allocated per-patch above,
+## but a field crew visits per-Site, so the ceiling has to apply at that
+## level too - tag each patch with the Site polygon it falls in, then trim.
+MAX_PER_SITE <- 15
+
+site_v <- st_read(file.path('..', 'data', 'hikingTrails', 'GroundTruch_Areas.gpkg'), quiet = TRUE) |>
+  st_transform(st_crs(test_v)) |>
+  select(Site)
+patches_joined <- st_join(bind_rows(core_patches, core_patches_flagged), site_v,
+                           join = st_intersects, largest = TRUE)
+patch_site <- setNames(patches_joined$Site, patches_joined$ID)
+
+## trim one unit at a time from whichever patch currently holds the largest
+## quota in the over-budget Site - exploratory quotas go first (lowest
+## priority), then core - until that Site's total is at/under the cap.
+## Excess is just dropped, not redistributed elsewhere (same policy as the
+## region cap in sdm_groundtruth_design_3arc.R).
+for (s in unique(patch_site)) {
+  core_ids <- names(n_patch)[patch_site[names(n_patch)] == s]
+  flag_ids <- names(n_patch_flagged)[patch_site[names(n_patch_flagged)] == s]
+  over <- sum(n_patch[core_ids], n_patch_flagged[flag_ids]) - MAX_PER_SITE
+  while (over > 0 && any(n_patch_flagged[flag_ids] > 0)) {
+    k <- flag_ids[which.max(n_patch_flagged[flag_ids])]
+    n_patch_flagged[k] <- n_patch_flagged[k] - 1
+    over <- over - 1
+  }
+  while (over > 0 && any(n_patch[core_ids] > 0)) {
+    k <- core_ids[which.max(n_patch[core_ids])]
+    n_patch[k] <- n_patch[k] - 1
+    over <- over - 1
+  }
+}
+
+tr_core <- bind_rows(lapply(patch_ids, function(pid)
+  place_patch_transects(pid, n_patch[as.character(pid)], edge_pts))) |>
+  mutate(stage = "core")
+
+tr_flagged <- bind_rows(lapply(patch_ids_flagged, function(pid)
+  place_patch_transects(pid, n_patch_flagged[as.character(pid)], edge_pts_flagged))) |>
+  mutate(stage = "exploratory")
+
+tr <- bind_rows(tr_core, tr_flagged)   # core rows first: crossing-check below favours core on ties
 tr <- transect_headings(tr, utm_crs = st_crs(test_v))
 
 ## no two transects may cross - among any crossing pair, drop the later one
@@ -337,17 +464,28 @@ if (any(drop)) message(sum(drop), " transect(s) dropped for crossing another tra
 tr <- tr[!drop, ]
 
 stns <- do.call(rbind, lapply(seq_len(nrow(tr)), function(k)
-  cbind(patch_ID = tr$patch_ID[k], transect = k,
+  cbind(patch_ID = tr$patch_ID[k], transect = k, type = tr$type[k], stage = tr$stage[k],
         stations_along(c(tr$x[k], tr$y[k]), c(tr$dx[k], tr$dy[k]), length_m = tr$length_m[k]))))
 
 # # deliverables: a start-waypoint + bearing table is the field sheet; lines optional
 #write.csv(
-#  tr[, c("transect","x","y","bearing_true","bearing_mag","heading_note")], 
+#  tr[, c("transect","x","y","bearing_true","bearing_mag","heading_note")],
 #  "field_sheet.csv"
 #)
 
+## core and exploratory kept as separate layers in one gpkg - same file, but
+## never silently combined, so exploratory sites are a conscious pull, not a
+## default part of the core field sheet.
+transects_path <- file.path('..', 'results', 'GroundTruthSampling', "transects.gpkg")
 st_write(
-  st_as_sf(stns, coords = c("x","y"), crs = 32613),
-  "transects_cochetopa.gpkg",
-  append = F
+  st_as_sf(filter(stns, stage == "core"), coords = c("x","y"), crs = 32613),
+  transects_path, layer = "core", delete_dsn = TRUE, quiet = TRUE
 )
+if (any(stns$stage == "exploratory")) {
+  st_write(
+    st_as_sf(filter(stns, stage == "exploratory"), coords = c("x","y"), crs = 32613),
+    transects_path, layer = "exploratory", append = TRUE, quiet = TRUE
+  )
+} else {
+  message("No flagged (unpopulated) patches produced exploratory transects.")
+}

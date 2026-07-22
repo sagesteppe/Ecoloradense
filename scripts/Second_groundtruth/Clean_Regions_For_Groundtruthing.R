@@ -1,4 +1,5 @@
 library(dplyr)
+library(sf)
 source('functions.R')
 
 sf::sf_use_s2(FALSE)

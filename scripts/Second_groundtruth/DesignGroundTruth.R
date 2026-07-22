@@ -24,7 +24,7 @@ setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
 # Parameters — edit here
 # =========================================================================
 
-ver          <- '1-3arc-Iteration1-PA1:3DO:0'   # model version to use
+ver          <- '1-3arc-Iteration1-PA1:2.7DO:0'   # model version to use
 cost_thresh  <- 'spec_sens'   # threshold type for cost distance surfaces
 n_total      <- 100           # total ground-truth points
 euclid_cap_m <- 2400          # ~1.5 miles; hard cap on euclidean distance

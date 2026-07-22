@@ -1404,6 +1404,92 @@ getOccupiedBorderPts <- function(patches_lyr, occ_ids, max_pts_per_patch = 100) 
 }
 
 
+#' Subset sf points falling within a terra extent
+#'
+#' @param pts sf POINT object.
+#' @param e   terra SpatExtent.
+#'
+#' @return sf POINT object, subset of \code{pts}.
+sourcesInExt <- function(pts, e) {
+  xy <- sf::st_coordinates(pts)
+  e  <- as.vector(e)
+  pts[xy[, 1] >= e[1] & xy[, 1] <= e[2] & xy[, 2] >= e[3] & xy[, 2] <= e[4], ]
+}
+
+
+#' Split source points into geographically disjoint buffered regions, capped
+#' by cell count
+#'
+#' Used to keep \code{gdistance::transition()} matrices under the ~2.1B
+#' nonzero-entry cap of the \code{Matrix} package's sparse matrix
+#' representation (32-bit index limit) — and, in practice, far under that:
+#' at 1-3arc (~9m) resolution, \code{gdistance::transition()}'s R-level
+#' matrix assembly was observed to hold flat around 12GB RSS for ~49 minutes
+#' on a ~94M-cell region and then blow up to 115GB+ and crash R within
+#' seconds, on a machine with 125GB RAM. A synthetic 3M-cell benchmark and a
+#' real-data benchmark up to 1.75M cells both stayed fast (<1min) and safe
+#' (<10GB), so cost-distance layers are built per population cluster (e.g.
+#' CB vs. Cochetopa Dome, ~50km apart) and, if a cluster is still too big,
+#' recursively bisected (kmeans k=2) until every leaf's cropped extent is
+#' under \code{max_cells}. Leaves are then mosaicked back together.
+#'
+#' kmeans() has no default seed, so which population lands in "cluster 1"
+#' vs "cluster 2" (and thus which one a given for-loop iteration hits first)
+#' is otherwise non-deterministic between runs — set \code{seed} for
+#' reproducible tiling.
+#'
+#' @param pts       sf POINT object of source points (e.g. occupied-patch
+#'   border points from \code{getOccupiedBorderPts()}).
+#' @param k         Integer. Number of initial geographic clusters (kmeans).
+#' @param buffer_m  Numeric. Buffer distance in metres added around each
+#'   cluster's bounding box.
+#' @param max_cells Integer or NULL. Cap on a leaf cluster's cropped-extent
+#'   cell count (bbox+buffer area / \code{res_m}^2). Clusters over the cap
+#'   are recursively bisected. NULL disables the cap (legacy behaviour:
+#'   exactly \code{k} clusters, no recursion).
+#' @param res_m     Numeric. Raster resolution in metres/cell. Required if
+#'   \code{max_cells} is set.
+#' @param seed      Integer or NULL. Passed to \code{set.seed()} before each
+#'   kmeans() call for reproducible splits. NULL leaves the RNG untouched.
+#'
+#' @return list of terra SpatExtent, one per (possibly recursively split)
+#'   cluster.
+clusterRegionExtents <- function(pts, k = 2, buffer_m = 3000,
+                                  max_cells = NULL, res_m = NULL, seed = 1) {
+  stopifnot('res_m is required when max_cells is set' =
+              is.null(max_cells) || !is.null(res_m))
+
+  ext_of <- function(p) {
+    sf::st_bbox(p) |>
+      sf::st_as_sfc(crs = sf::st_crs(p)) |>
+      sf::st_buffer(buffer_m) |>
+      terra::vect() |>
+      terra::ext()
+  }
+  ncell_of <- function(e) {
+    v <- as.vector(e)
+    ((v[2] - v[1]) / res_m) * ((v[4] - v[3]) / res_m)
+  }
+  kmeans_cluster <- function(p, centers) {
+    if (!is.null(seed)) set.seed(seed)
+    kmeans(sf::st_coordinates(p), centers = centers)$cluster
+  }
+
+  split_recursive <- function(p) {
+    e <- ext_of(p)
+    if (is.null(max_cells) || nrow(p) < 4 || ncell_of(e) <= max_cells) {
+      return(list(e))
+    }
+    cl <- kmeans_cluster(p, centers = 2)
+    if (length(unique(cl)) < 2) return(list(e))   # degenerate split, give up
+    do.call(c, lapply(sort(unique(cl)), function(i) split_recursive(p[cl == i, ])))
+  }
+
+  cl0 <- kmeans_cluster(pts, centers = k)
+  do.call(c, lapply(sort(unique(cl0)), function(i) split_recursive(pts[cl0 == i, ])))
+}
+
+
 #' Assemble a bi-directional landscape resistance surface
 #'
 #' All layers are min-max normalised to [0, 1] before weighting so weights
@@ -1505,22 +1591,36 @@ buildIsotropicTransition <- function(resistance, directions = 8) {
 #' \code{leastCostDistAniso()} so both iso and aniso distances follow the
 #' same code path.
 #'
+#' Returns raw accumulated cost, NOT rescaled — when tiling by region
+#' (CostDistances.R), each region's cost range differs, so rescaling per-tile
+#' before mosaicking would put tiles on different scales. Rescale once, after
+#' mosaicking all regions together, on the merged raster.
+#'
+#' \code{gdistance::transition()} drops the CRS itself (confirmed: even
+#' \code{raster::crs(transition)} is already NA before \code{accCost()} ever
+#' runs), so it can't be recovered from \code{transition} downstream — it
+#' must be passed in from the original resistance/DEM raster and reapplied
+#' here as metadata (extent/res/dims are untouched by the round-trip, so this
+#' is not a resample).
+#'
 #' @param transition gdistance TransitionLayer from
 #'   \code{buildIsotropicTransition()}.
 #' @param sources    SpatVector, sf, or two-column matrix (x, y).
+#' @param crs        Character or crs object. CRS of the raster the
+#'   transition was built from (e.g. \code{terra::crs(resistance)}) —
+#'   reapplied to the output since gdistance/raster round-trips lose it.
 #'
-#' @return SpatRaster. Accumulated least-cost distance from the nearest source.
-leastCostDist <- function(transition, sources) {
+#' @return SpatRaster. Raw accumulated least-cost distance from the nearest
+#'   source (same units as the resistance surface); Inf cells set to NA.
+leastCostDist <- function(transition, sources, crs) {
   if (inherits(sources, 'SpatVector')) {
     sources <- sf::st_as_sf(sources) |> sf::as_Spatial()
   } else if (inherits(sources, c('sf', 'sfc'))) {
     sources <- sf::as_Spatial(sources)
   }
-  r  <- terra::rast(gdistance::accCost(transition, sources))
-  r  <- terra::ifel(is.infinite(r), NA, r)
-  mn <- terra::global(r, 'min', na.rm = TRUE)[[1]]
-  mx <- terra::global(r, 'max', na.rm = TRUE)[[1]]
-  terra::round((r - mn) / (mx - mn) * 65535L)
+  r <- terra::rast(gdistance::accCost(transition, sources))
+  terra::crs(r) <- crs
+  terra::ifel(is.infinite(r), NA, r)
 }
 
 
@@ -1613,15 +1713,27 @@ buildAnisotropicTransition <- function(
 #' \code{leastCostDist()}. Result is returned as a terra SpatRaster to stay
 #' consistent with the rest of the pipeline.
 #'
+#' Returns raw accumulated cost, NOT rescaled — see \code{leastCostDist()}
+#' for why (per-tile rescaling before mosaicking puts regions on different
+#' scales; rescale once after mosaicking instead).
+#'
+#' Also see \code{leastCostDist()} for why \code{crs} must be passed in
+#' explicitly: \code{gdistance::transition()} drops the CRS itself, so it
+#' cannot be recovered from \code{transition} downstream.
+#'
 #' @param transition gdistance TransitionLayer from
 #'   \code{buildAnisotropicTransition()}.
 #' @param sources    SpatVector, sf, or two-column matrix (x, y) in the same
 #'   CRS as the transition layer. Source points — typically border sample
 #'   points of known-occupied patches.
+#' @param crs        Character or crs object. CRS of the raster the
+#'   transition was built from (e.g. \code{terra::crs(dem)}) — reapplied to
+#'   the output since gdistance/raster round-trips lose it.
 #'
-#' @return SpatRaster. Accumulated anisotropic cost distance from the nearest
-#'   source, in the same units as the resistance surface.
-leastCostDistAniso <- function(transition, sources) {
+#' @return SpatRaster. Raw accumulated anisotropic cost distance from the
+#'   nearest source, in the same units as the resistance surface; Inf cells
+#'   set to NA.
+leastCostDistAniso <- function(transition, sources, crs) {
 
   if (inherits(sources, 'SpatVector')) {
     sources <- sf::st_as_sf(sources) |> sf::as_Spatial()
@@ -1629,9 +1741,40 @@ leastCostDistAniso <- function(transition, sources) {
     sources <- sf::as_Spatial(sources)
   }
 
-  r  <- terra::rast(gdistance::accCost(transition, sources))
-  r  <- terra::ifel(is.infinite(r), NA, r)
-  mn <- terra::global(r, 'min', na.rm = TRUE)[[1]]
-  mx <- terra::global(r, 'max', na.rm = TRUE)[[1]]
-  terra::round((r - mn) / (mx - mn) * 65535L)
+  r <- terra::rast(gdistance::accCost(transition, sources))
+  terra::crs(r) <- crs
+  terra::ifel(is.infinite(r), NA, r)
+}
+
+
+#' Mosaic per-region raw cost-distance tiles into one globally-rescaled surface
+#'
+#' Companion to \code{leastCostDist()}/\code{leastCostDistAniso()}, which now
+#' return raw (unscaled) accumulated cost precisely so this step can rescale
+#' once, globally, after mosaicking — not per-tile before it. Adjacent
+#' regions' buffered extents (see \code{clusterRegionExtents()}) can overlap;
+#' those cells are resolved by minimum cost (\code{fun = 'min'}), i.e. a cell
+#' reachable more cheaply from a neighbouring region's sources wins, rather
+#' than an arbitrary first-tile-wins pick. Finally extended onto
+#' \code{template}'s grid — tiles and template share origin/res (mosaicking
+#' only shrinks the extent to the clustered regions' neighbourhoods), so this
+#' is a pad with NA, not a resample.
+#'
+#' @param tiles    list of SpatRaster, raw accumulated cost, one per region,
+#'   from \code{leastCostDist()}/\code{leastCostDistAniso()}.
+#' @param template SpatRaster. Target grid to extend onto (e.g. the version's
+#'   \code{-Pr.tif} suitability raster).
+#'
+#' @return SpatRaster, rescaled to [0, 65535] (ready for INT2U), on
+#'   \code{template}'s grid.
+mosaicCostTiles <- function(tiles, template) {
+  merged <- if (length(tiles) > 1) {
+    terra::mosaic(terra::sprc(tiles), fun = 'min')
+  } else {
+    tiles[[1]]
+  }
+  mn <- terra::global(merged, 'min', na.rm = TRUE)[[1]]
+  mx <- terra::global(merged, 'max', na.rm = TRUE)[[1]]
+  terra::round((merged - mn) / (mx - mn) * 65535L) |>
+    terra::extend(template)
 }
