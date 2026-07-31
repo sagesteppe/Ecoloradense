@@ -53,7 +53,6 @@ distOrder_PAratio_simulator( # this does all the presence absence modelling. = b
   )
 
 
-
 rastReader <- function(x, p2proc){
 
   # create paths for the first level of files. 
@@ -81,7 +80,6 @@ write.csv(
 
 # playing with count prediction 
 
-
 ```{r Partition data and clean for modelling, eval = F}
 
 p <- '../results/suitability_maps'
@@ -106,7 +104,6 @@ d_w_vars <- wrapper('3arc-Iteration1-PA1_3.3DO_0-Pr.tif')
 
 
 ```{r}
-
 mod <- readRDS('../results/count_models/models/1-3arc-Iteration1-PA1_2.7-lgbm-poisson_spat.rds')$Model
 vars <- as.character(attr(mod[["preproc"]][["terms"]], 'variables')) # fns will run on all 
 vars <- vars[2:length(vars)] # vars even if not in model - but produce null wts as expected. 
