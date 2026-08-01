@@ -20,11 +20,11 @@ suppressPackageStartupMessages({
   library(dplyr); 
   library(geosphere); 
   library(terra); 
-  library(tidyverse);
-  library(tmap)})
+  library(tidyverse)
+})
 
-setwd('~/Documents/Ecoloradense/scripts')
-tr_path<- file.path('..', 'results', 'threshold_masks', '3arc-Iteration1-PA1_3.6DO_0-thresholds.tif')
+#setwd('./scripts/Second_groundtruth')
+tr_path<- file.path('..', '..', 'results', 'threshold_masks', '1-3arc-Iteration1-PA1:2.7DO:0-thresholds.tif')
 test_rast <- terra::rast(tr_path)
 
 ## from thresholds 
@@ -32,13 +32,13 @@ test_rast <- terra::rast(tr_path)
 test_rast <- test_rast[[c('spec_sens', 'sensitivity')]]
 
 ## and restrict to ground truth areas. 
-sample_areas = st_read(file.path('..', 'data', 'hikingTrails', 'GroundTruch_Areas.gpkg')) |>
+sample_areas = st_read(file.path('..', '..', 'data', 'hikingTrails', 'GroundTruch_Areas.gpkg')) |>
   st_transform(terra::crs(test_rast)) |>
   vect()
 
 ## add known presences to be able to tag polygons
 pres <- st_read(
-  file.path('..', 'data', 'Data4modelling', '3m-presence-iter1.gpkg'),
+  file.path('..', '..', 'data', 'Data4modelling', '3m-presence-iter1.gpkg'),
   quiet = T
 ) |>
   filter(Presenc == 1) |>

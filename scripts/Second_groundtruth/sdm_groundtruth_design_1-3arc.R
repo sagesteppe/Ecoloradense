@@ -29,7 +29,7 @@ suppressPackageStartupMessages({
   library(ggplot2)     # coverage diagnostics
 })
 
-setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
+setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts/Second_groundtruth')
 set.seed(42)
 
 # -----------------------------------------------------------------------------
@@ -70,8 +70,8 @@ cfg <- list(
 # =============================================================================
 # 1.  REAL INPUTS
 # =============================================================================
-p2res  <- '../results'
-p2data <- '../data/Data4modelling'
+p2res  <- '../../results'
+p2data <- '../../data/Data4modelling'
 
 suit_path  <- file.path(p2res, 'suitability_maps', paste0(cfg$ver, '-Pr.tif'))
 aoa_path   <- file.path(p2res, 'suitability_maps', paste0(cfg$ver, '-AOA.tif'))
@@ -110,7 +110,7 @@ stopifnot('Cost raster does not align with suitability raster' =
 
 # --- region: named Site polygons -> one (multi)polygon per site -> rasterize ---
 region_v <- sf::st_read(
-  file.path('..', 'data', 'hikingTrails', 'GroundTruch_Areas.gpkg'),
+  file.path('..', '..', 'data', 'hikingTrails', 'GroundTruch_Areas.gpkg'),
   quiet = TRUE)
 
 region_v$region_id <- as.integer(factor(region_v$Site))
@@ -130,6 +130,21 @@ S_mean <- terra::mask(S_mean, aoa_r, maskvalues = 0) |> terra::mask(region)
 E      <- terra::mask(E,      aoa_r, maskvalues = 0) |> terra::mask(region)
 Cost   <- terra::mask(Cost,   aoa_r, maskvalues = 0) |> terra::mask(region)
 
+# --- patch: CostDistances.R only routes cost distance through cells within
+# reach of known occurrences, so regions with no nearby occurrences (e.g.
+# Upper Crossing) come back all-NA on Cost. That silently drops the whole
+# region once as.data.frame(na.rm=TRUE) runs. Backfill with the max observed
+# cost - these are, by construction, at least as hard to reach as anywhere
+# already in the surface.
+cost_max      <- terra::global(Cost, 'max', na.rm = TRUE)[1, 1]
+cost_gap_mask <- is.na(Cost) & !is.na(region)
+n_patched     <- terra::global(cost_gap_mask, 'sum', na.rm = TRUE)[1, 1]
+if (n_patched > 0) {
+  message(sprintf('Backfilling %s Cost-NA pixels within valid regions to max cost (%.1f).',
+                  format(n_patched, big.mark = ','), cost_max))
+  Cost <- terra::ifel(cost_gap_mask, cost_max, Cost)
+}
+
 # =============================================================================
 # 2.  Assemble the per-pixel table over the mask
 # =============================================================================
@@ -145,10 +160,6 @@ df$Site  <- site_lkp[as.character(df$region)]
 
 message(sprintf('Pixels in frame: %s across %d regions (Sites)',
                 format(nrow(df), big.mark = ','), nlevels(df$region)))
-
-# =============================================================================
-# 3.  [D axis diagnostic skipped — no ensemble-SD raster for this version]
-# =============================================================================
 
 # =============================================================================
 # 4.  Region-aware cost orthogonalization:  R = within-region residual of C on E
