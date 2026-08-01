@@ -20,8 +20,7 @@ suppressPackageStartupMessages({
 )
 set.seed(27)
 
-#setwd('~/Documents/Ecoloradense/scripts')
-tr_path<- file.path('..', 'results', 'threshold_masks', '3arc-Iteration1-PA1_3.6DO_0-thresholds.tif')
+tr_path<- file.path('..','..',  'results', 'threshold_masks', '1-3arc-Iteration1-PA1:2.7DO:0-thresholds.tif')
 test_rast <- terra::rast(tr_path)
 
 ## from thresholds 
@@ -31,14 +30,14 @@ test_rast <- test_rast[[c('spec_sens', 'sensitivity')]]
 ## and restrict to ground truth areas.
 ## Cochetopa run: known-good area (2024 "Cochetopa Dome" field data already
 ## exists there) - scoped to just this Site for this pass.
-sample_areas = st_read(file.path('..', 'data', 'hikingTrails', 'GroundTruch_Areas.gpkg')) |>
+sample_areas = st_read(file.path('..', '..', 'data', 'hikingTrails', 'GroundTruch_Areas.gpkg')) |>
   #filter(Site == 'Cochetopa') |>
   st_transform(terra::crs(test_rast)) |>
   vect()
 
 ## add known presences to be able to tag polygons
 pres <- st_read(
-  file.path('..', 'data', 'Data4modelling', '3m-presence-iter1.gpkg'),
+  file.path('..', '..', 'data', 'Data4modelling', '3m-presence-iter1.gpkg'),
   quiet = T
 ) |>
   filter(Presenc == 1) |>
@@ -93,12 +92,9 @@ spec_sens = test_v |>
   filter(layer == 'spec_sens') |>
   summarize(geometry = st_union(geometry))
 
-ggplot() +
-  geom_sf(data = sensitivity, fill = 'green', alpha = 0.5) +
-  geom_sf(data = spec_sens, fill = 'red', alpha = 0.5)
 
 ## write both threshold layers out for GUI GIS inspection, one gpkg two layers
-threshold_layers_path <- file.path('..', 'results', 'GroundTruthSampling', 'threshold_layers.gpkg')
+threshold_layers_path <- file.path('..', '..', 'results', 'GroundTruthSampling', 'threshold_layers.gpkg')
 st_write(sensitivity, 
   threshold_layers_path, 
   layer = 'sensitivity', 
@@ -188,18 +184,18 @@ transect_headings <- function(tr, utm_crs, decl = DECLINATION) {
 core_layer <- if (st_area(spec_sens) > st_area(sensitivity)) "sensitivity" else "spec_sens"
 core_rast  <- test_rast[[core_layer]]
 
-## clean the core layer with terra natives before edge-finding: fillHoles()
-## removes small non-core flecks fully enclosed inside the patch (NA speckles
-## that would otherwise register as spurious inward-facing edges), and
-## boundaries() then finds the true outer edge natively - 4-connected so it
-## only sees N/S/E/W adjacency, matching the cardinal direction step below.
-
 #core_rast <- terra::fillHoles(core_rast, nearest = FALSE)
-core_bool <- !is.na(as.vector(values(core_rast)))
+
+## raster-native from here down: values()/as.vector() forces the WHOLE grid into
+## one R vector, which is fine at 1arc but OOMs at 1-3arc (~330M cells, almost
+## all NA outside the ground-truth areas). core_bool stays a SpatRaster and is
+## indexed by cell number on demand below; edge cells come from as.points(),
+## which terra streams block-by-block instead of materializing the full array.
+core_bool <- !is.na(core_rast)
 
 core_edge  <- terra::boundaries(core_rast, inner = TRUE, directions = 4)
-edge_cells <- which(as.vector(values(core_edge)) == 1)
-length(edge_cells)
+edge_pts_v <- terra::as.points(terra::ifel(core_edge == 1, core_edge, NA))
+edge_cells <- terra::cellFromXY(core_edge, terra::crds(edge_pts_v))
 
 ## direction per edge cell: 4-connected (N/S/E/W) neighbours only, so every
 ## candidate transect direction is a pure cardinal - no diagonal/tilted rays.
@@ -214,7 +210,7 @@ cardinal <- data.frame(
 edge_rows <- lapply(edge_cells, function(cel) {
   rc      <- terra::rowColFromCell(core_rast, cel)
   nb_cell <- terra::cellFromRowCol(core_rast, rc[1] + cardinal$dr, rc[2] + cardinal$dc)
-  outside <- !core_bool[nb_cell]
+  outside <- !core_bool[nb_cell][[1]]     # core_bool[cells] -> 1-col data.frame; unwrap to vector
   outside[is.na(outside)] <- FALSE        # off-grid neighbour: not an outward edge
   if (!any(outside)) return(NULL)         # interior cell, or exposed only diagonally
   xy <- terra::xyFromCell(core_rast, cel)
@@ -404,7 +400,7 @@ n_patch_flagged <- setNames(rep(EXPLORATORY_PER_PATCH, length(patch_ids_flagged)
 ## level too - tag each patch with the Site polygon it falls in, then trim.
 MAX_PER_SITE <- 15
 
-site_v <- st_read(file.path('..', 'data', 'hikingTrails', 'GroundTruch_Areas.gpkg'), quiet = TRUE) |>
+site_v <- st_read(file.path('..', '..', 'data', 'hikingTrails', 'GroundTruch_Areas.gpkg'), quiet = TRUE) |>
   st_transform(st_crs(test_v)) |>
   select(Site)
 patches_joined <- st_join(bind_rows(core_patches, core_patches_flagged), site_v,
@@ -473,10 +469,7 @@ stns <- do.call(rbind, lapply(seq_len(nrow(tr)), function(k)
 #  "field_sheet.csv"
 #)
 
-## core and exploratory kept as separate layers in one gpkg - same file, but
-## never silently combined, so exploratory sites are a conscious pull, not a
-## default part of the core field sheet.
-transects_path <- file.path('..', 'results', 'GroundTruthSampling', "transects.gpkg")
+transects_path <- file.path('..', '..', 'results', 'GroundTruthSampling', "transects.gpkg")
 st_write(
   st_as_sf(filter(stns, stage == "core"), coords = c("x","y"), crs = 32613),
   transects_path, layer = "core", delete_dsn = TRUE, quiet = TRUE
@@ -489,3 +482,4 @@ if (any(stns$stage == "exploratory")) {
 } else {
   message("No flagged (unpopulated) patches produced exploratory transects.")
 }
+
