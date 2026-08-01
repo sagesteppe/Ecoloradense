@@ -753,7 +753,7 @@ heat <- function(x){
   
   hli <- spatialEco::hli(r)
   names(hli) <- 'HLI'
-  terra::writeRaster(r, file.path(dirname(x), 'HLI.tif'))
+  terra::writeRaster(hli, file.path(dirname(x), 'HLI.tif'))
   
 }
 
