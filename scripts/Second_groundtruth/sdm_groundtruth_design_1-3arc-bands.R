@@ -15,14 +15,16 @@
 #         band 3   E >= band_far               -> DISCOVERY, far     (goal 3)
 #     Breaks are absolute metres, set to multiples of the 3-arc pixel (~90 m)
 #     so they also fall on cell edges of the coarser products:
-#         band_near = 450  (5 px)   below this we assume cells are not
+#         band_near = 270  (3 px)   below this we assume cells are not
 #                                    dispersal-limited, so a predicted-suitable
 #                                    cell with no plants is model error, not
-#                                    just unreachable ground.
-#         band_far  = 990  (11 px)  ~ the 1 km population-separation distance
-#                                    used as a defensible fallback in this
-#                                    literature; beyond it a new find is a new
-#                                    (sub)population rather than an extension.
+#                                    just unreachable ground. Tightened from
+#                                    450m (a bumblebee-scale dispersal
+#                                    distance): the taxon's pollinators are
+#                                    mostly flies and solitary bees, whose
+#                                    foraging/dispersal range runs shorter.
+#         band_far  = 540  (6 px)   beyond it a new find is a new (sub)
+#                                    population rather than an extension.
 #
 #   * THREE SEPARATE DRAWS, not one blended sample — one shared engine
 #     (run_band_draw) called once per band. Evaluation and discovery want
@@ -64,8 +66,8 @@ cfg <- list(
   ver = '1-3arc-Iteration1-PA1:2.7DO:0',   # focal model version
 
   # --- distance bands (metres, Euclidean to nearest known occurrence) ---------
-  band_near = 450,   # < this: evaluation frame (assumed not dispersal-limited)
-  band_far  = 990,   # >= this: discovery-far frame (new populations)
+  band_near = 270,   # < this: evaluation frame (assumed not dispersal-limited)
+  band_far  = 540,   # >= this: discovery-far frame (new populations)
 
   # --- per-draw budgets (base sites, before oversample) -----------------------
   #     These are the field-effort dials. Defaults preserve the old ~360 total,

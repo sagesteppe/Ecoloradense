@@ -1,0 +1,216 @@
+---
+title: "SDManuscript maps"
+format: html
+---
+
+Builds the manuscript's map figures and writes each composite to `figures/`
+as a PNG. Kept separate from SDManuscript.Rmd because the final rasters are
+large and slow to crop/mask/render - knitting the manuscript itself
+shouldn't have to pay that cost every time. Render this file whenever the
+source rasters change; SDManuscript.Rmd just pulls in whatever PNGs it
+finds in `figures/` via `knitr::include_graphics()`.
+
+```{r setup}
+library(ggplot2)
+library(patchwork)
+library(sf)
+library(terra)
+source('theme_manuscript.R')
+
+fig_dir <- 'figures'
+dir.create(fig_dir, showWarnings = FALSE, recursive = TRUE)
+```
+
+## Final suitability and density maps
+
+
+```{r zoom bboxes}
+## Manually chosen zoom windows for the density figure's inset panels, read
+## off a basemap in WGS84 lon/lat - each entry is NW corner then SE corner
+## (lat, lon). Kept in WGS84 here; reprojected to the raster's CRS wherever
+## they're actually used to crop (see `zoom_bbs` below).
+zoom_corners <- list(
+  cb     = c(nw_lat = 39.015644, nw_lon = -107.034565, se_lat = 39.007642, se_lon = -107.0207323),
+  coche  = c(nw_lat = 38.177820, nw_lon = -106.705831, se_lat = 38.174130, se_lon = -106.696740),
+  antero = c(nw_lat = 38.984090, nw_lon = -105.993880, se_lat = 38.974038, se_lon = -105.976990)
+)
+
+zoom_bbs_ll <- lapply(zoom_corners, function(z) {
+  sf::st_bbox(
+    c(xmin = z[['nw_lon']], xmax = z[['se_lon']], ymin = z[['se_lat']], ymax = z[['nw_lat']]),
+    crs = 4326
+  )
+})
+```
+
+
+```{r Final Suitability and Density Maps, eval = FALSE}
+## TODO: paths below point to the final refit outputs (2.8) - not yet
+## produced (that model uses ground-truth data still being collected) -
+## so this chunk stays eval=FALSE until they exist.
+
+bbs_sf <- sf::st_read(
+  file.path('..', '..', 'data', 'Cartography', 'bboxes_for_manuscript.gpkg'),
+  quiet = TRUE
+)
+region_names <- c('cb', 'coche', 'antero')
+bbs <- setNames(lapply(1:3, function(i) sf::st_bbox(bbs_sf[i, ])), region_names)
+
+suit_r <- terra::rast(file.path('..', '..', 'results', 'suitability_maps', 'final-Pr.tif'))
+aoa_r  <- terra::rast(file.path('..', '..', 'results', 'suitability_maps', 'final-AOA.tif'))
+dens_r <- terra::rast(file.path('..', '..', 'results', 'count_models', 'final-density.tif'))
+
+## AOA == 0 pixels are outside the model's area of applicability - not real
+## predictions - so null them out, and speckle that area on the plot rather
+## than leaving it a blank gap.
+suit_r  <- mask_aoa(suit_r, aoa_r)
+speck   <- aoa_speckle(aoa_r)
+
+## ---- final habitat suitability: full domain (left, full height) + the
+## three focal regions to the right, each panel the same size so smaller
+## regions read at a visibly larger scale than the full domain ----
+suit_full   <- mapPanel(
+  rasterToDF(suit_r),
+  scale_fill_suitability, 
+  'Full domain', 
+  bboxes = bbs, 
+  speckle = speck
+  )
+suit_cb     <- mapPanel(rasterToDF(suit_r, bbs$cb),     scale_fill_suitability, 'Crested Butte', speckle = speck)
+suit_coche  <- mapPanel(rasterToDF(suit_r, bbs$coche),  scale_fill_suitability, 'Cochetopa', speckle = speck)
+suit_antero <- mapPanel(rasterToDF(suit_r, bbs$antero), scale_fill_suitability, 'Antero', speckle = speck)
+
+p_suit_final <- (suit_full + (suit_cb / suit_coche / suit_antero) +
+  plot_layout(widths = c(2, 1), guides = 'collect')) +
+  plot_annotation(tag_levels = 'A') &
+  theme_manuscript_tags() &
+  theme(legend.position = 'bottom')
+p_suit_final
+ggsave(file.path(fig_dir, 'suitability_final.png'), p_suit_final, width = 9, height = 7, dpi = 300)
+```
+
+```{r Final Density Maps, eval = FALSE}
+## ---- final census/density surfaces: one row per site, stacked
+## vertically (no full-domain panel here - density is only modelled/
+## meaningful within the surveyed regions). Each row pairs the site-level
+## map (with a nested zoom bbox outlined) against a further zoomed-in crop
+## of that nested box. All sites share one fill scale/legend so density is
+## comparable across sites, not just within one. ----
+## Zoom windows are the manually chosen boxes from `zoom_bbs_ll` (WGS84),
+## reprojected to the density raster's CRS.
+dens_nested <- lapply(zoom_bbs_ll[names(bbs)], function(z) {
+  sf::st_bbox(sf::st_transform(sf::st_as_sfc(z), terra::crs(dens_r)))
+})
+
+dens_df_cb     <- rasterToDF(dens_r, bbs$cb)
+dens_df_coche  <- rasterToDF(dens_r, bbs$coche)
+dens_df_antero <- rasterToDF(dens_r, bbs$antero)
+dens_limits <- range(c(dens_df_cb$value, dens_df_coche$value, dens_df_antero$value), na.rm = TRUE)
+dens_scale <- function() scale_fill_density(limits = dens_limits)
+
+dens_cb_main     <- mapPanel(dens_df_cb,     dens_scale, 'Crested Butte', bboxes = list(zoom = dens_nested$cb))
+dens_cb_zoom     <- mapPanel(rasterToDF(dens_r, dens_nested$cb),     dens_scale, 'Crested Butte (zoom)')
+dens_coche_main  <- mapPanel(dens_df_coche,  dens_scale, 'Cochetopa', bboxes = list(zoom = dens_nested$coche))
+dens_coche_zoom  <- mapPanel(rasterToDF(dens_r, dens_nested$coche),  dens_scale, 'Cochetopa (zoom)')
+dens_antero_main <- mapPanel(dens_df_antero, dens_scale, 'Antero', bboxes = list(zoom = dens_nested$antero))
+dens_antero_zoom <- mapPanel(rasterToDF(dens_r, dens_nested$antero), dens_scale, 'Antero (zoom)')
+
+p_dens_final <- (
+  (dens_cb_main | dens_cb_zoom) /
+  (dens_coche_main | dens_coche_zoom) /
+  (dens_antero_main | dens_antero_zoom) +
+  plot_layout(guides = 'collect')) +
+  plot_annotation(tag_levels = 'A') &
+  theme_manuscript_tags() &
+  theme(legend.position = 'bottom', legend.justification = 'center')
+p_dens_final
+ggsave(file.path(fig_dir, 'density_final.png'), p_dens_final, width = 8, height = 10, dpi = 300)
+```
+
+## Theme preview (real test raster, no final refit yet)
+
+```{r Example Maps Theme Preview, fig.height = 6}
+## Preview of theme_manuscript_map() styling using a real single-run
+## suitability/AOA/SE triple dropped in results/suitability_maps for this
+## purpose (not the final refit - that's still above, eval=FALSE until it
+## exists). Delete this chunk once those are back to eval=TRUE.
+## No real density test raster yet, so that panel stays on example_surface().
+demo_fp <- file.path('..', '..', 'results', 'suitability_maps')
+suit_r_demo <- terra::rast(file.path(demo_fp, '3arc-Iteration1-PA1:DO:0-Seed1017-Pr.tif'))
+aoa_r_demo  <- terra::rast(file.path(demo_fp, '3arc-Iteration1-PA1:DO:0-Seed1017-AOA.tif'))
+se_r_demo   <- terra::rast(file.path(demo_fp, '3arc-Iteration1-PA1:DO:0-Seed1017-SE.tif'))
+
+## AOA == 0 pixels are outside the model's area of applicability - not real
+## predictions - so null them out before plotting.
+suit_r_demo <- mask_aoa(suit_r_demo, aoa_r_demo)
+se_r_demo   <- mask_aoa(se_r_demo, aoa_r_demo)
+demo_crs    <- terra::crs(suit_r_demo)
+speck_demo  <- aoa_speckle(aoa_r_demo)
+
+bbs_sf_demo <- sf::st_transform(
+  sf::st_read(file.path('..', '..', 'data', 'Cartography', 'bboxes_for_manuscript.gpkg'), quiet = TRUE),
+  demo_crs
+)
+region_names_demo <- c('cb', 'coche', 'antero')
+bbs_demo <- setNames(lapply(1:3, function(i) sf::st_bbox(bbs_sf_demo[i, ])), region_names_demo)
+dens_r_demo <- example_surface(sf::st_bbox(bbs_sf_demo), res = 100, range = c(0, 40), seed = 28)
+
+## ---- suitability: full domain (left, north arrow since it's the
+## overview panel) + the three focal regions to the right ----
+suit_full_demo   <- mapPanel(rasterToDF(suit_r_demo), scale_fill_suitability,
+                              'Full domain', crs = demo_crs, bboxes = bbs_demo, speckle = speck_demo, north_arrow = TRUE)
+suit_cb_demo     <- mapPanel(rasterToDF(suit_r_demo, bbs_demo$cb),     scale_fill_suitability, 'Crested Butte', crs = demo_crs, speckle = speck_demo)
+suit_coche_demo  <- mapPanel(rasterToDF(suit_r_demo, bbs_demo$coche),  scale_fill_suitability, 'Cochetopa', crs = demo_crs, speckle = speck_demo)
+suit_antero_demo <- mapPanel(rasterToDF(suit_r_demo, bbs_demo$antero), scale_fill_suitability, 'Antero', crs = demo_crs, speckle = speck_demo)
+
+p_suit_preview <- (suit_full_demo + (suit_cb_demo / suit_coche_demo / suit_antero_demo) +
+  plot_layout(widths = c(2, 1), guides = 'collect')) +
+  plot_annotation(
+    tag_levels = 'A',
+    title = 'Final ENM for Colorado Buckwheat') &
+  theme_manuscript_tags() &
+  theme(legend.position = 'bottom')
+p_suit_preview
+ggsave(file.path(fig_dir, 'suitability_preview.png'), p_suit_preview, width = 9, height = 7, dpi = 300)
+
+## ---- density: one row per site, stacked vertically, each row pairing
+## the site-level map (nested zoom bbox outlined) with a further zoomed-in
+## crop of that nested box. All sites share one fill scale/legend. ----
+dens_nested_demo <- lapply(bbs_demo, shrink_bbox, factor = 0.35)
+
+dens_df_cb_demo     <- rasterToDF(dens_r_demo, bbs_demo$cb)
+dens_df_coche_demo  <- rasterToDF(dens_r_demo, bbs_demo$coche)
+dens_df_antero_demo <- rasterToDF(dens_r_demo, bbs_demo$antero)
+dens_limits_demo <- range(c(dens_df_cb_demo$value, dens_df_coche_demo$value, dens_df_antero_demo$value), na.rm = TRUE)
+dens_scale_demo <- function() scale_fill_density(limits = dens_limits_demo)
+
+dens_cb_main_demo     <- mapPanel(dens_df_cb_demo,     dens_scale_demo, 'Crested Butte', crs = demo_crs, bboxes = list(zoom = dens_nested_demo$cb))
+dens_cb_zoom_demo     <- mapPanel(rasterToDF(dens_r_demo, dens_nested_demo$cb),     dens_scale_demo, 'Crested Butte (zoom)', crs = demo_crs)
+dens_coche_main_demo  <- mapPanel(dens_df_coche_demo,  dens_scale_demo, 'Cochetopa', crs = demo_crs, bboxes = list(zoom = dens_nested_demo$coche))
+dens_coche_zoom_demo  <- mapPanel(rasterToDF(dens_r_demo, dens_nested_demo$coche),  dens_scale_demo, 'Cochetopa (zoom)', crs = demo_crs)
+dens_antero_main_demo <- mapPanel(dens_df_antero_demo, dens_scale_demo, 'Antero', crs = demo_crs, bboxes = list(zoom = dens_nested_demo$antero))
+dens_antero_zoom_demo <- mapPanel(rasterToDF(dens_r_demo, dens_nested_demo$antero), dens_scale_demo, 'Antero (zoom)', crs = demo_crs)
+
+p_dens_preview <- (
+  (dens_cb_main_demo | dens_cb_zoom_demo) /
+  (dens_coche_main_demo | dens_coche_zoom_demo) /
+  (dens_antero_main_demo | dens_antero_zoom_demo) +
+  plot_layout(guides = 'collect')) +
+  plot_annotation(tag_levels = 'A') &
+  theme_manuscript_tags() &
+  theme(legend.position = 'bottom', legend.justification = 'center')
+p_dens_preview
+ggsave(file.path(fig_dir, 'density_preview.png'), p_dens_preview, width = 8, height = 10, dpi = 300)
+```
+
+```{r Example Bivariate Map Theme Preview, fig.height = 5}
+## Bivariate preview: suitability as fill (red = low, green = high) with
+## prediction SE mapped to alpha, so uncertain pixels fade toward white
+## rather than needing a second 3x3 legend grid.
+df_biv_demo <- merge(rasterToDF(suit_r_demo), rasterToDF(se_r_demo), by = c('x', 'y'))
+names(df_biv_demo)[3:4] <- c('value', 'se')
+
+p_biv_preview <- mapPanelBivariate(df_biv_demo, label = 'Full domain (suitability x SE)', crs = demo_crs, speckle = speck_demo)
+p_biv_preview
+ggsave(file.path(fig_dir, 'bivariate_preview.png'), p_biv_preview, width = 7, height = 6, dpi = 300)
+```
