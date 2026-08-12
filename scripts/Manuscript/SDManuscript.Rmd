@@ -7,22 +7,22 @@ author: |
   $^{3}$ Department of Environmental and Ocean Sciences, University of California San Diego, San Diego, California 92110, USA  
 abstract: |
   \noindent  
-  Aim)  Species distribution models (SDMs) are rarely field-verified at landscape scales, and it remains unclear whether their predictions — especially at fine spatial resolutions — can reliably guide the detection of new populations and sub-populations of rare plants, or support estimates of population census size. We tested whether SDMs built at different resolutions, combined with distance-based sampling and density modelling, can achieve both.
-  Location) South-central Rocky Mountains, Colorado, U.S.A.
-  Methods)  We compiled occurrence records for Eriogonum coloradense, a rare narrow endemic, from iNaturalist and regional herbaria, and built random forest SDMs at three spatial resolutions (3, 1, and 1/3 arc-second). Before evaluating any model, we first ground-truthed the raw occurrence dataset itself — revisiting existing, previously reported localities to confirm what was actually present — rather than relying on model predictions to guide us to already-known populations. We then tested model predictions using a spatially balanced, adaptive occupancy-based sampling design, classifying newly discovered sites as extensions of known populations, new sub-populations, or new populations based on their Euclidean and least-cost distance from existing occurrences. Plant density was modelled using five machine-learning approaches (XGBoost, light gradient boosting) under spatial and non-spatial cross-validation, and combined with modelled population boundaries to estimate census size.
-  Results)
-  Main Conclusions)  
+  Aim)  Species distribution models (SDMs) are rarely field-verified at landscape scales, and it remains unclear whether their predictions — especially at fine spatial resolutions — can reliably guide the detection of new populations and sub-populations of rare plants, or support estimates of population census size. We tested whether SDMs built at different resolutions, combined with distance-based sampling and density modelling, can achieve both.  
+  Location) South-central Rocky Mountains, Colorado, U.S.A.  
+  Methods)  We compiled occurrence records for Eriogonum coloradense, a rare narrow endemic, from iNaturalist and regional herbaria, and built random forest SDMs at three spatial resolutions (3, 1, and 1/3 arc-second). Before evaluating any model, we first ground-truthed the raw occurrence dataset itself — revisiting existing, previously reported localities to confirm what was actually present — rather than relying on model predictions to guide us to already-known populations. We then tested model predictions using a spatially balanced, adaptive occupancy-based sampling design, classifying newly discovered sites as extensions of known populations, new sub-populations, or new populations based on their Euclidean and least-cost distance from existing occurrences. Plant density was modelled using five machine-learning approaches (XGBoost, light gradient boosting) under spatial and non-spatial cross-validation, and combined with modelled population boundaries to estimate census size.  
+  Results)  
+  Main Conclusions)
 keywords: ["species distribution model", "occupancy", "census size estimates"]
 orcid: |
   Reed Benkendorf https://orcid.org/0000-0003-3110-6687  
   Jeremie Fant https://orcid.org/0000-0001-9276-1111  
   Sophie Taddeo https://orcid.org/0000-0002-7789-1417  
 output: 
+#  word_document: default
   pdf_document: 
     latex_engine: xelatex
     toc: false
     fig_caption: true
-  word_document: default
 csl: "../../citations/chicago-author-date.csl"
 bibliography: "../../citations/citations.bib"
 link-citations: true
@@ -33,6 +33,28 @@ header-includes:
   - \doublespacing
   - \usepackage{lineno}
   - \linenumbers
+  - \makeatletter
+  - |
+    \renewcommand{\@maketitle}{%
+      \newpage
+      \null
+      \vskip 2em%
+      \begin{center}%
+      \let \footnote \thanks
+        {\LARGE \@title \par}%
+        \vskip 1.5em%
+        {\large
+          \lineskip .5em%
+          \begin{minipage}{0.95\textwidth}
+            \centering
+            \@author
+          \end{minipage}\par}%
+        \vskip 1em%
+        {\large \@date}%
+      \end{center}%
+      \par
+      \vskip 1.5em}
+  - \makeatother
 ---
 
 ```{r setup, include=FALSE}
@@ -54,7 +76,7 @@ library(pROC)
 source('theme_manuscript.R')
 ```
 
-# 1 | INTRODUCTION
+# 1 | Introduction
 
 https://onlinelibrary.wiley.com/doi/10.1111/ele.12189
 https://onlinelibrary.wiley.com/doi/full/10.1111/ddi.13795 # maybe
@@ -70,8 +92,9 @@ Further, this progress - paired with a growing volume of occurrence data from ci
 
 However, despite this progress, the utility of models is seldom field verified, especially at landscape scales [@chiffard2020anbs; @a2022species].
 ENMs generally suffer from having few, often spatially biased, occurrence records as dependent variables, which often fail to characterise the ecological breadth of the species [@stolar2015accounting; @feeley2011keep; @pili2025correcting].
-Accordingly, while many ENMs achieve high performance on small hold-out subsets, there might be biases in the training data carried onto field predictions [@a2022species].
-To generate more presence and absence records for training, adaptive-niche-based sampling (ANBS) has become increasingly employed, preferentially visiting cells with high predicted occurrence probability or high prediction uncertainty [@guisan2006using]; because such cells are, almost by definition, close to already-known occurrences, this tests a model's easiest predictions rather than confirming whether the occurrence records it was trained on remain accurate on the ground.
+Accordingly, while many ENMs achieve high performance on hold-out test subsets, biases in the training data may be carried into predictions [@a2022species].
+To generate more presence and absence records for training, adaptive-niche-based sampling (ANBS) is increasingly used.
+... preferentially visiting cells with high predicted occurrence probability or high prediction uncertainty [@guisan2006using]; because such cells are, almost by definition, close to already-known occurrences, this tests a model's easiest predictions rather than confirming whether the occurrence records it was trained on remain accurate on the ground.
 Refitting a model with this newly acquired data not only expands the presence/absence pool, but also verifies coordinate placement, confirms that historic points are still extant, reduces model uncertainty, and yields additional data such as census estimates and life stage demographics [@stockwell2002effects; @wisz2008effects; @jansen2022stop; @mondain2024adaptive].
 Ground-truthing results are, in any case, seldom shared or reported for plant species, and even less effort has apparently been made to first verify the baseline reliability of existing records for rare species specifically [@johnson2023field; @borokini2023iterative; @zimmer2023field].
 
@@ -85,7 +108,7 @@ However, in most conservation applications, the insight desired from an ENM is t
 Significant progress has been made integrating SDM predictions with models of dispersal, recognising that the bridge between an ENM and a plant population's presence is propagule dispersal and establishment, not the distribution of the fundamental niche alone [@guisan2005predicting; @franklin2010moving; @engler2009migclim].
 Previous innovations have largely focused on connecting currently suitable habitat to habitat predicted to be suitable under climate change [@engler2009migclim; @bocedi2014range], rather than on detecting populations that already exist but remain undiscovered.
 To assist practitioners in detecting new populations or extending the range of known populations, we propose modelling plant occupancy as a random variable that depends on distance from known occupied sites.
-'Distance' may be defined as Euclidean (or Haversine for large distances), or as a least-cost distance reflecting a generalised surface which conveys the difficulty for seeds to travel between the nearest occupied sites and the site of interest [@etherington2016least].
+'Distance' may be defined as Euclidean (or Haversine), or as a least-cost distance reflecting a generalised surface which conveys the difficulty for seeds to travel between the nearest occupied sites and the site of interest [@etherington2016least].
 By combining habitat suitability with both Euclidean and least-cost distance, we distinguish candidate sites as extensions of known populations, new sub-populations, or new populations, rather than relying on suitability alone to prioritise field verification.
 
 Obtaining reliable estimates of plant population census sizes requires two pieces of information: 1) measurements of plant density and 2) population extent.
@@ -101,32 +124,30 @@ Many rare plant species are small and inconspicuous, and many taxa grow in small
 knitr::include_graphics('../../results/ConceptualFigure.png')
 ```
 
-Here we: 1) evaluate the results of the best-performing model with groundtruthing (within 450m of existing occurrences).
+Here we: 1) evaluate the results of the best-performing model with groundtruthing (within 270m of existing occurrences).
 2) Compare the results of models from different resolutions to the best model, as based on hold-out test data.
-3) Determine whether model predictions are useful to find new sub-populations (450m - 1km from existing occurrences), or populations (> 1km from existing occurrences).
+3) Determine whether model predictions are useful to find new sub-populations (270m - 540m from existing occurrences), or populations (> 540m from existing occurrences).
 4) Estimate population census size using 4a) estimates of plant density, and 4b) modelling of population boundaries.
 
-# 2 | METHODS
+# 2 | Methods
 
 ### 2.1 | Study Species & System
 *Eriogonum coloradense* Small (Polygonaceae) is a synoecious, mat-forming perennial herb endemic to the south-central Rocky Mountains of Colorado, U.S.A.
-Its known range spans five counties and encompasses 22 documented populations, occurring across a range of elevations, slopes, aspects, soil types, and habitats.
-Elevation spans 2700-3900 m, with major habitat types including high-elevation sagebrush steppe, subalpine grasslands, and alpine slopes.
+Its known range spans five counties and encompasses 22 documented populations, occurring across a broad range of elevation (2700-3900 asl), slope, aspects, soil types, and habitats - from high-elevation sagebrush steppe, subalpine grasslands, and alpine slopes.
 It is ranked S3/G3 by NatureServe and listed as a Tier 2 species in Colorado Parks and Wildlife's State Wildlife Action Plan [@anderson2004eriogonum].
 
 ### 2.2 | Data Acquisition
-Dependent data were gathered from iNaturalist (80 records) and the Consortium of Southern Rockies herbaria (131 records) [@inaturalist2024ecolo; @soro2024].
-These data were manually reviewed; 16 herbarium records with low geolocation quality or a georeferenced locality inconsistent with the specimen label were removed.
+Occurrence records were downloaded from iNaturalist (80 records) and the Consortium of Southern Rockies herbaria (131 records) [@inaturalist2024ecolo; @soro2024].
+These data were manually reviewed and 16 herbarium records removed due to low geolocation quality or a georeferenced locality inconsistent with the specimen label.
 
-Digital Elevation Models at 3 arc (type) and 1 arc (type) resolution, and Digital Elevation Products at 1/3 arc resolution, were acquired from the United States Geological Survey and clipped to the analysis domain — a rectangle buffered 16 km (10 mi) beyond any known population [CITE].
-A comparison of these results in the overlapping region is presented in Appendix XX.
-These elevation products were used to derive most geomorphology datasets with whiteboxTools [@wu2022whitebox], plus heat load and diurnal anisotropic heat indices with spatialEco [@evans2025spatialeco].
+Digital elevation models (DEMs) at 3 arc (type) and 1 arc (type) resolution, and digital elevation products (DEPs) at 1/3 arc resolution, were acquired from the United States Geological Survey and clipped to the analytical domain — a rectangle buffered 16 km (10 mi) beyond any known population [CITE].
+These elevation products were used to derive most geomorphology datasets with whiteboxTools [@wu2022whitebox], plus heat load and diurnal anisotropic heat indices calculated with spatialEco [@evans2025spatialeco].
 Vegetation cover data were generated by combining raster layers into three continuous cover classes: Forested, Shrub, and Herbaceous [@tuanmu2014global].
 
 ClimateNA was used to create a dataset at 3 arc-second resolution, which was then bilinearly interpolated to generate products at the 1 and 1/3 arc resolutions [@wang2016locally].
 Gray-Level Co-occurrence Matrices (GLCM) were produced with the glcm R package from 2023 NAIP aerial imagery, bilinearly resampled to the original resolution, using default settings with a window size of 5 in both directions [@zvoleff2020glcm].
 
-Collectively these resulted in 50 indepedent variables for SDM modelling. 
+Collectively these resulted in 50 indepedent variables for ENM modelling. 
 
 ### 2.3 | Ground Verification (H1)
 ```{r import iteration 1 data, echo=F}
@@ -160,8 +181,9 @@ The first round of ground verification was carried out from June to September 20
 All pre-existing occurrence points were considered candidates for revisits, and `r distinct(iter1_f_draw_pts, Trail) |>nrow()` trails leading to them were marked as sample areas.
 Each trail was manually mapped and buffered by 45m in each direction; 551 random points were drawn, thinned to distances > 90m, leaving `r n_iter1_f_draw_pts` random plots for assessment.
 `r nrow(distinct(iter1_gt, Lctn_bb))` trails were visited, allowing for the assessment of `r nrow(plots_visited)` random points, of which `r filter(plots_visited, Presenc > 0) |> nrow()` had new occurrence records.
-When conducting fieldwork, all presences of *E. coloradense* were opportunistically noted; to better describe the spread of the population, points were quasi-randomly placed - accounting for local abundance - ca. 30-50m from the previous plot until traversing out of the population (n = `r opportunistic_presences`).
-Subjectively placed absences were also collected in areas that seemed favourable or were in proximity to *E. coloradense* individuals; this occurred both in the field (n = `r opportunistic_absences`) and later via aerial imagery review (n = `r n_comp_based_abs`).
+When conducting fieldwork presences of *E. coloradense* were opportunistically noted to better describe the spread of the population, quadrats were quasi-randomly placed - accounting for local abundance - ca. 30-50m from the previous plot until traversing out of the population (n = `r opportunistic_presences`).
+Subjectively placed absences were also collected in areas that seemed favourable or were in proximity to *E. coloradense* individuals; this occurred both in the field (n = `r opportunistic_absences`).
+Absences in areas known to be outside the range of the populations were also added later via aerial imagery  (n = `r n_comp_based_abs`).
 At each occurrence site, individuals were counted by three maturity stages (mature, juvenile, and seedling) in 3x3m quadrats.
 
 ```{r}
@@ -169,11 +191,11 @@ rm(plots_visited, opportunistic_presences, opportunistic_absences, n_comp_based_
 ```
 
 ### 2.4 | Comparison of Different Spatial Resolutions (H2)
-Environmental Niche Models were generated at three spatial resolutions: 3 arc-second (~72m), 1 arc-second (~24m), and 1/3 arc-second (~8m).
-The modelling details were similar across resolutions.
+Environmental niche models were generated at three spatial resolutions: 3 arc-second (~72m), 1 arc-second (~24m), and 1/3 arc-second (~8m).
+The modelling details followed the same process across spatial resolutions.
 
 Records were thinned to the distance of a hypotenuse of a cell to avoid pseudo-replicates [@aeillo2015spthin].
-1.1 times as many absence records as presence records were generated using the background function (method = environmental distance) from the sdm package [@naimi2016sdm].
+1.1 times as many background absence records as presence records were generated using the environmental distance from the sdm package [@naimi2016sdm].
 These records were then manually reviewed, and six records in areas with possible presences were removed.
 After this, the records were randomly sampled to reduce the dataset to XX records.
 After the first modelling iteration, all additional presences and absences were thinned similarly and combined with the original absence records.
@@ -185,8 +207,8 @@ All random forest models were fit using the ranger package; 95% confidence inter
 ### 2.5 | Occupancy Based Field Sampling (H3)
 
 360 candidate ground-truthing sites and 180 oversamples were selected using a spatially-balanced Generalized Random Tessellation Stratified (GRTS) design [@dumelle2024spsurvey], stratified by named site regions and allocated proportional to each region's candidate-pixel count.
-Within each region, pixels were prioritised using a weighted combination of: 1) predicted suitability, favoring the ~50% probability band; 2) Euclidean distance from known occurrences, favoring the underrepresented far tail; and 3) a cost-distance anomaly.
-The cost-distance anomaly utilises within-region residuals of least-cost distance [@vanetten2017gdistance] regressed on Euclidean distance, which flags cells where terrain-based travel difficulty diverges most from straight-line expectations.
+Within each region, pixels were prioritised using a weighted combination of: 1) predicted suitability, favoring the ~50% probability band; 2) Euclidean distance from known occurrences, favouring the underrepresented far tail; and 3) a cost-distance anomaly.
+The cost-distance anomaly utilises within-region residuals of least-cost distance [@vanetten2017gdistance] regressed on Euclidean distance, which flags cells where terrain-based travel difficulty diverges most from straight-line expectations. 
 
 ### 2.6 | Plant Density (H4a)
 
@@ -202,7 +224,8 @@ Two null models served as baselines for comparison: the arithmetic mean plant co
 
 ### 2.7 | Population Boundaries (H4b)
 
-To delineate population boundaries, we thresholded the continuous habitat suitability surface from the best-performing model using two different threshold-selection rules — the threshold maximising the sum of sensitivity and specificity ('spec_sens'), and the threshold at which sensitivity alone is maximised ('sensitivity') — producing two independent candidate delineations of suitable habitat, and polygonized each into discrete patches within ground-truthable areas, retaining only patches ≥ 2 pixels of the source raster's resolution [@hijman2024dismo].
+Population boundaries were delineated by thresholding the continuous habitat suitability surface from the best-performing model using two different threshold-selection rules 1) sensitivity, and 2) equal sensitivity and specificity.
+*— the threshold maximising the sum of sensitivity and specificity ('spec_sens'), and the threshold at which sensitivity alone is maximised ('sensitivity') — producing two independent candidate delineations of suitable habitat, and polygonized each into discrete patches within ground-truthable areas, retaining only patches ≥ 2 pixels of the source raster's resolution [@hijman2024dismo].*
 Because the sensitivity-rule polygons were nested entirely within the spec_sens-rule polygons rather than crossing them, we used the smaller (sensitivity-rule) polygon's outer edge as the baseline for transect placement, treating the band between the two polygons as the zone where the two threshold rules disagree - and therefore the ground most worth testing to determine which rule better predicts the population's actual extent.
 For each patch, we identified the smaller polygon's outer edge using native raster boundary detection (4-connected neighbours), generating candidate transects along the four cardinal directions from each edge cell.
 Transects began 50m inside this edge, extended outward across the disagreement band until clearing the larger (spec_sens-rule) polygon's boundary by a further 15m, and were capped at 150m total length, so that each transect crosses both threshold boundaries and directly tests which rule better matches the field-observed edge of the population.
@@ -215,72 +238,90 @@ Using occurrence, density, and boundary-transect data from both rounds of ground
 
 Data processing was largely performed in R [@rcoreteam2026r], using sf [@pebesma2018sf] and terra [@hijman2026terra] for spatial data, and modelling via the tidymodels framework [@kuhn2020tidymodels].
 
-## 3 | RESULTS
+## 3 | Results
 
 ### 3.1 | Ground Verification (H1)
 
 ```{r Best Model Groundtruthing Evaluation}
-# TODO: results for best-performing model evaluated against groundtruthing (within 450m of existing occurrences).
+# TODO: results for best-performing model evaluated against groundtruthing (within 270m of existing occurrences).
+```
+
+```{r Held-out vs Field-validated Pr-AUC Placeholder, out.width='100%', fig.width=8, fig.height=4.5}
+## PLACEHOLDER: synthetic data previewing the layout for held-out vs.
+## field-validated Pr-AUC of the single best model per resolution, split
+## into the two ground-verification phases: H0 (fit on pre-existing
+## occurrence records only) and H1 (refit after incorporating the first
+## round of ground-truthing). Swap the synthetic tibble below for the real
+## one, with the same Resolution/Phase/Heldout/Field columns, once
+## field-validated Pr-AUC is computed for both phases.
+res_levels <- c('3 arc-second', '1 arc-second', '1/3 arc-second')  # coarse (bottom) -> fine (top)
+
+heldout_field_mock <- tibble(
+  Resolution = factor(rep(res_levels, each = 2), levels = res_levels),
+  Phase      = factor(rep(c('H0', 'H1'), times = length(res_levels)), levels = c('H0', 'H1')),
+  Heldout    = c(0.79, 0.83,  0.84, 0.87,  0.76, 0.79),
+  Field      = c(0.55, 0.71,  0.62, 0.80,  0.48, 0.62)
+) |>
+  pivot_longer(c(Heldout, Field), names_to = 'Set', values_to = 'PrAUC') |>
+  mutate(Set = factor(Set, levels = c('Heldout', 'Field'), labels = c('Held-out', 'Field-validated')))
+
+ggplot(heldout_field_mock, aes(y = Resolution, x = PrAUC, color = Phase, group = interaction(Resolution, Phase))) +
+  geom_line(position = position_dodge(width = 0.5), color = 'grey70', linewidth = 0.6) +
+  geom_point(aes(shape = Set), position = position_dodge(width = 0.5), size = 3, stroke = 1.1) +
+  scale_shape_manual(values = c('Held-out' = 1, 'Field-validated' = 16)) +
+  scale_color_phase() +
+  scale_x_continuous(limits = c(0, 1)) +
+  labs(x = 'Pr-AUC', y = NULL, shape = NULL, color = 'Phase',
+       title = '(mock) H1 - Held-out vs. field-validated Pr-AUC, best model per resolution') +
+  theme_manuscript()
 ```
 
 ### 3.2 | Comparison of Different Spatial Resolutions (H2)
 
 ```{r Predicted Probability of Occurrence Correlations, eval = F}
 
-res_comparision <- data.frame(
- m1 = seq(1:100),
- m3 = jitter(seq(1:100), 1),
- arc1_3 = jitter(seq(1:100), 2),
- arc1 = jitter(seq(1:100), 3),
- arc3 = jitter(seq(1:100), 4)
-) |>
-  pivot_longer(m3:arc3, names_to = 'Resolution', values_to = 'Predicted')
-
-par(pty="s")
-plot(
-  y = res_comparision$Predicted, x = res_comparision$m1, frame.plot = FALSE,
-  pch=1, col = 'grey15', xlim = c(0,100), ylim = c(0,100),
-  main = "Correlation Between 1m and Coarser Resolution Predictions",
-  xlab = "Predicted Probability of\nSuitability Habitat",
-  ylab = "Predicted Probability of\nSuitability Habitat (1m)"
-)
-axis(side = 1)
-#abline(m3_mod, col = '#bc5090', lty = 1); abline(arc1_3_mod, col = '#58508d', lty = 2)
-#abline(arc1_mod, col = '#ff6361', lty = 4); abline(arc3_mod, col = '#003F5C', lty = 3)
-
-# text(25, 5, paste0("r = ", round(kendallTau[["estimate"]][["tau"]], 3)))
-dev.off()
 ```
 
-```{r Evaluation Metrics Table}
-fp = file.path('..','..', 'results','tables')
-f = file.path(fp, list.files(fp, pattern = 'csv'))
 
-binary_models = tibble(File = f) |>
+```{r PA-ratio Sensitivity, out.width='100%', fig.width=10, fig.height=4.2}
+res_labels <- c(`10` = '1/3 arc-second (~8m)', `30` = '1 arc-second (~24m)', `90` = '3 arc-second (~72m)')
+
+read_paratio_search <- function(fp, split) {
+  f <- list.files(fp, pattern = '^[0-9]+-PAratio-search[.]csv$', full.names = TRUE)
+  tibble(File = f, Split = split) |>
     mutate(
-      Run_Info = gsub('[.]csv', '', basename(File)),
-      Resolution = factor(gsub('arc.*$', '', Run_Info), levels = c("1-3", "1", "3")),
-      PresAbsRatio = as.numeric(gsub("[^0-9.]", "", (stringr::str_extract(Run_Info, ':.*DO'))))
-      ) |>
-    mutate(Data = lapply(File, read_csv, show_col_types = FALSE)) |>
+      Resolution = factor(gsub('-PAratio-search.*$', '', basename(File)), levels = names(res_labels)),
+      Data = lapply(File, read_csv, show_col_types = FALSE)
+    ) |>
     unnest(Data) |>
     select(-File)
+}
 
-binary_models |>
-  filter(metric == 'pr_auc') |>
-  ggplot( aes(x = PresAbsRatio, y = estimate, group = Resolution)) +
-  geom_point(size = 5) +
-  geom_smooth() +
-  facet_wrap(~Resolution, ncol = 3) +
-  theme_minimal() +
-  labs(x = 'Presence-Absence Ratio', y = 'Pr-AUC')
+paratio <- bind_rows(
+  read_paratio_search(file.path('..', '..', 'results', 'tables'), 'Spatial'),
+  read_paratio_search(file.path('..', '..', 'results', 'results_classicsplit', 'tables'), 'Classic')
+) |>
+  mutate(
+    Resolution = factor(Resolution, levels = names(res_labels), labels = res_labels),
+    Split = factor(Split, levels = c('Spatial', 'Classic')),
+    ratio_label = factor(round(ratio, 2))
+  ) |>
+    filter(ratio <= 4)
+
+ggplot(paratio, aes(x = ratio_label, y = metric, color = Split, fill = Split, shape = Split)) +
+  geom_boxplot(aes(group = interaction(ratio_label, Split)),
+               position = position_dodge2(width = 0.7, preserve = 'single'),
+               alpha = 0.25, outlier.shape = NA, linewidth = 0.4) +
+  geom_point(position = position_jitterdodge(jitter.width = 0.12, dodge.width = 0.7), size = 1.6, alpha = 0.8) +
+  facet_wrap(~Resolution, ncol = 3, scales = 'free_x') +
+  scale_color_split() +
+  scale_fill_split() +
+  scale_shape_split() +
+  labs(x = 'Presence:Absence Ratio', y = 'Pr-AUC', color = 'Train/test split', fill = 'Train/test split', shape = 'Train/test split') +
+  theme_manuscript()
 ```
 
-```{r AUC-ROC and Cumulative Sum Suitable Habitat Plot}
-
-```
-
-The area under the receiver operating curve (AUC-ROC) and precision-recall curve (AUC-PR), the True Skill Statistic, and Sensitivity and Specificity [@sofaer2019area; @allouche2006assessing].
+The area under the precision-recall curve (AUC-PR), the True Skill Statistic, and Sensitivity and Specificity [@sofaer2019area; @allouche2006assessing].
 
 ### 3.3 | Occupancy Based Field Sampling (H3)
 
@@ -290,7 +331,11 @@ The area under the receiver operating curve (AUC-ROC) and precision-recall curve
 
 ### 3.4 | Plant Density (H4a)
 
-```{r Regression of Plant Density Observed and Predicted Plot}
+```{r Regression of Plant Density Observed and Predicted Plot, eval = FALSE}
+## NOTE: kept for reference - written around the PA-ratio comparison, which
+## is being dropped for this section, and doesn't yet have a field-validated
+## MAE series. Needs reworking before this goes back into the doc; see the
+## placeholder chunk below for the intended layout in the meantime.
 fp = file.path('..', '..', 'results','count_models','tables')
 f = file.path(fp, list.files(fp, pattern = 'csv'))
 
@@ -314,6 +359,15 @@ ggplot(ab_models, aes(x = PresAbsRatio, y = Value, color = Model, group = Model)
   labs(y = 'Mean Absolute Error (Number of Plants per quadrat)')
 ```
 
+```{r Plant Density Held-out vs Field-validated MAE Placeholder, out.width='100%'}
+## PLACEHOLDER: mock dumbbell plot (synthetic data) previewing the layout
+## for held-out vs. field-validated MAE per model, faceted by resolution.
+## Swap for the real chunk once field-validated MAE is computed and the
+## PA-ratio comparison is collapsed out of the count-model tables.
+img <- file.path('figures', 'fig3_density_mae_MOCK.png')
+if (file.exists(img)) knitr::include_graphics(img)
+```
+
 ### 3.5 | Population Boundaries (H4b)
 
 ```{r Population Boundary Results}
@@ -322,85 +376,56 @@ ggplot(ab_models, aes(x = PresAbsRatio, y = Value, color = Model, group = Model)
 
 ### 3.6 | Final Results
 
-```{r Final Suitability and Density Maps, eval = FALSE}
-## TODO: paths below point to the final refit outputs (2.8) - not yet
-## produced (that model uses ground-truth data still being collected) -
-## so this chunk stays eval=FALSE until they exist.
-
-bbs_sf <- sf::st_read(
-  file.path('..', '..', 'data', 'Cartography', 'bboxes_for_manuscript.gpkg'),
-  quiet = TRUE
-)
-region_names <- c('cb', 'coche', 'antero')
-bbs <- setNames(lapply(1:3, function(i) sf::st_bbox(bbs_sf[i, ])), region_names)
-
-suit_r <- terra::rast(file.path('..', '..', 'results', 'suitability_maps', 'final-Pr.tif'))
-dens_r <- terra::rast(file.path('..', '..', 'results', 'count_models', 'final-density.tif'))
-
-## shared helpers: crop (optionally) + tidy a raster for geom_tile, then
-## build one styled map panel - keeps the 4 suitability + 3 density panels
-## below from repeating the same five lines each.
-rasterToDF <- function(r, bb = NULL) {
-  if (!is.null(bb)) r <- terra::crop(r, terra::ext(bb[c('xmin', 'xmax', 'ymin', 'ymax')]))
-  setNames(as.data.frame(r, xy = TRUE), c('x', 'y', 'value'))
-}
-
-mapPanel <- function(df, scale_fn, title = NULL) {
-  ggplot(df, aes(x, y, fill = value)) +
-    geom_tile() +
-    scale_fn() +
-    coord_equal() +
-    labs(title = title) +
-    theme_manuscript_map()
-}
-
-## ---- final habitat suitability: full domain (left, full height) + the
-## three focal regions to the right, each panel the same size so smaller
-## regions read at a visibly larger scale than the full domain ----
-suit_full   <- mapPanel(rasterToDF(suit_r),             scale_fill_suitability, 'Full domain')
-suit_cb     <- mapPanel(rasterToDF(suit_r, bbs$cb),     scale_fill_suitability, 'Comanche Basin')
-suit_coche  <- mapPanel(rasterToDF(suit_r, bbs$coche),  scale_fill_suitability, 'Cochetopa')
-suit_antero <- mapPanel(rasterToDF(suit_r, bbs$antero), scale_fill_suitability, 'Antero')
-
-suit_full + (suit_cb / suit_coche / suit_antero) +
-  plot_layout(widths = c(2, 1), guides = 'collect') &
-  theme(legend.position = 'bottom')
+```{r Final Suitability Map, out.width='100%'}
+img <- file.path('figures', 'suitability_final.png')
+if (file.exists(img)) knitr::include_graphics(img)
 ```
 
-```{r Final Density Maps, eval = FALSE}
-## ---- final census/density surfaces: the three focal regions side by
-## side (no full-domain panel here - density is only modelled/meaningful
-## within the surveyed regions) ----
-dens_cb     <- mapPanel(rasterToDF(dens_r, bbs$cb),     scale_fill_density, 'Comanche Basin')
-dens_coche  <- mapPanel(rasterToDF(dens_r, bbs$coche),  scale_fill_density, 'Cochetopa')
-dens_antero <- mapPanel(rasterToDF(dens_r, bbs$antero), scale_fill_density, 'Antero')
-
-dens_cb + dens_coche + dens_antero +
-  plot_layout(guides = 'collect') &
-  theme(legend.position = 'bottom')
+```{r Final Density Map, out.height='40%'}
+img <- file.path('figures', 'density_final.png')
+## dpi = NA: skip knitr's auto width-from-pixel-size calculation, so only
+## out.height constrains the figure and LaTeX scales width proportionally
+## (otherwise a fixed, often page-overflowing width gets forced alongside
+## out.height).
+if (file.exists(img)) knitr::include_graphics(img, dpi = NA)
 ```
 
-## 4 | DISCUSSION
+```{r Suitability Map Theme Preview, out.width='100%'}
+img <- file.path('figures', 'suitability_preview.png')
+if (file.exists(img)) knitr::include_graphics(img)
+```
 
-## 5 | CONCLUSIONS 
+```{r Density Map Theme Preview, out.height='50%'}
+img <- file.path('figures', 'density_preview.png')
+if (file.exists(img)) knitr::include_graphics(img, dpi = NA)
+```
 
-## 6 | AUTHOR CONTRIBUTIONS
+## 4 | Discussion
+
+## 5 | Conclusions 
+
+## 6 | Author Contributions
 
 R.C.B.: Conceptualization, Data curation, Formal analysis, Investigation, Methodology, Software, Visualization, Writing. 
 S.T. and J.B.F.: Writing. 
 All authors read, revised and approved the manuscript.  
 
-## 7 | ACKNOWLEDGMENTS 
+### Acknowledgments 
 
 The following individuals are thanked for uploading multiple iNaturalist observations that were used in modelling: Rick Williams, Rosemary Smith, John Powers.  
 
-## 8 | FUNDING 
+### Funding 
 
-No funding sources were used.
+The authors have nothing to report. 
 
-## 9 | Data Availability Statement
+### Conflicts of Interest
+
+The authors declare no conflicts of interest.
+
+### Data Availability Statement
 
 Occurrence data supporting the findings of this study are archived on Zenodo [DOI]. All analysis code is available on GitHub at [REPO URL].
 
 \singlespace
-## REFERENCES 
+
+### References 
