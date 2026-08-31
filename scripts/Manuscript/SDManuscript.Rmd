@@ -253,13 +253,29 @@ Using occurrence, density, and boundary-transect data from both rounds of ground
 ### 3.1 | Ground Verification (H1)
 
 ```{r Best Model Groundtruthing Evaluation}
-# TODO: results for best-performing model evaluated against groundtruthing (within 270m of existing occurrences).
+## Field-validated Pr-AUC of the best-performing model against the 2026
+## opportunistic ground-truthing points, within 270m of existing occurrences
+## (produced by Second_groundtruth/digitize_evaluate_2026_groundtruth.R).
+## Only the 3 arc-second surface is evaluated for now - the 1 and 1/3
+## arc-second suitability surfaces aren't built on this machine yet; add
+## their rows to the same table once they are.
+gt2026_270 <- read_csv(file.path('..', '..', 'results', 'tables', '2026-groundtruth-evaluation-270m.csv'),
+                        show_col_types = FALSE)
+
+best_model_row <- filter(gt2026_270, resolution == '3 arc-second')
+best_model_pr_auc <- if (nrow(best_model_row) == 1) round(best_model_row$pr_auc, 2) else 'XX'
+best_model_n <- if (nrow(best_model_row) == 1) best_model_row$n else 'XX'
 ```
 
-Within 270m of the known occurrences, the model had a PR-AUC of XX, indicating they can model the species fundamental niche.
+Within 270m of the known occurrences, the 3 arc-second model (n = `r best_model_n`) had a PR-AUC of `r best_model_pr_auc`, indicating they can model the species fundamental niche.
 The differences between resolutions varies by XX-XX, with 3-arc second models' performance likely inflated due to a trump ruling where absences near presences are removed for evaluation.
 
 ```{r Held-out vs Field-validated Pr-AUC Placeholder, out.width='100%', fig.width=8, fig.height=4.5}
+
+## phase HO, 'Publically Available Points'
+## phase H1, 'Initial Survey'
+## phase H2, 'Field Verified'
+
 ## PLACEHOLDER: synthetic data previewing the layout for held-out vs.
 ## field-validated Pr-AUC of the single best model per resolution, split
 ## into the two ground-verification phases: H0 (fit on pre-existing
@@ -276,16 +292,24 @@ heldout_field_mock <- tibble(
   Field      = c(0.55, 0.71,  0.62, 0.80,  0.48, 0.62)
 ) |>
   pivot_longer(c(Heldout, Field), names_to = 'Set', values_to = 'PrAUC') |>
-  mutate(Set = factor(Set, levels = c('Heldout', 'Field'), labels = c('Held-out', 'Field-validated')))
+  mutate(Set = factor(Set, levels = c('Heldout', 'Field'), labels = c('Held-out', 'Field-validated')),
+         ## position_dodge infers a per-Phase y-offset for geom_point (it can tell
+         ## Resolution is the discrete axis), but not for geom_line - so the
+         ## connecting line was landing on the row's true center instead of
+         ## alongside its own pair of points. Offset y by hand instead, using
+         ## the same magnitude position_dodge(width = 0.5) gives geom_point.
+         y_num = as.numeric(Resolution) + ifelse(Phase == 'H0', -0.125, 0.125))
 
-ggplot(heldout_field_mock, aes(y = Resolution, x = PrAUC, color = Phase, group = interaction(Resolution, Phase))) +
-  geom_line(position = position_dodge(width = 0.5), color = 'grey70', linewidth = 0.6) +
-  geom_point(aes(shape = Set), position = position_dodge(width = 0.5), size = 3, stroke = 1.1) +
+ggplot(heldout_field_mock, aes(y = y_num, x = PrAUC, color = Phase, group = interaction(Resolution, Phase))) +
+  geom_line(linewidth = 0.6) +
+  geom_point(aes(shape = Set), size = 3, stroke = 1.1) +
   scale_shape_manual(values = c('Held-out' = 1, 'Field-validated' = 16)) +
   scale_color_phase() +
   scale_x_continuous(limits = c(0, 1)) +
+  scale_y_continuous(breaks = seq_along(res_levels), labels = res_levels,
+                      limits = c(0.5, length(res_levels) + 0.5)) +
   labs(x = 'Area under the precision-recall curve', y = NULL, shape = NULL, color = 'Phase',
-       title = '(mock) H1 - Held-out vs. field-validated Pr-AUC, best model per resolution') +
+       title = '(mock) H1 - Held-out vs. field-validated Pr-AUC, median model per resolution') +
   theme_manuscript()
 ```
 
