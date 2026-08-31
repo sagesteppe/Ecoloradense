@@ -44,6 +44,18 @@ theme_manuscript_map <- function(base_size = 11) {
     )
 }
 
+## Enlarged legend swatches for composite map figures - the default
+## legend.key.size (~1.2 lines) reads too small once a fill gradient is
+## squeezed under a wide multi-panel composite. `width_mult`/`height_mult`
+## scale relative to that default. Apply with `& theme_manuscript_legend()`
+## alongside theme_manuscript_tags() after plot_annotation().
+theme_manuscript_legend <- function(width_cm = 1.5, height_cm = 0.5) {
+  ggplot2::theme(
+    legend.key.width  = ggplot2::unit(width_cm, 'cm'),
+    legend.key.height = ggplot2::unit(height_cm, 'cm')
+  )
+}
+
 ## Patchwork panel-tag styling ("A", "B", ... from plot_annotation(tag_levels
 ## = 'A')): flush to the top-left corner of each panel instead of
 ## patchwork's default inset margin. plot.tag.location = 'margin' draws it
@@ -157,15 +169,30 @@ lonlat_breaks <- function(x_range, y_range, crs) {
 }
 
 ## Region bounding boxes drawn as outline rectangles - e.g. to show where
-## the focal-region crops sit within a full-domain panel.
-bbox_layer <- function(bboxes, color = 'black', linewidth = 0.6, linetype = '3313') {
-  bbox_df <- do.call(rbind, lapply(bboxes, function(b) {
-    data.frame(xmin = b[['xmin']], xmax = b[['xmax']], ymin = b[['ymin']], ymax = b[['ymax']])
+## the focal-region crops sit within a full-domain panel. If `tags` is
+## given (named to match `bboxes`, e.g. c(cb = 'B', coche = 'C', antero =
+## 'D') - the patchwork letter of each box's own inset panel), a grey-
+## background label is stamped at each box's top-left corner so the
+## full-domain panel cross-references its insets without a separate key.
+bbox_layer <- function(bboxes, tags = NULL, color = 'black', linewidth = 0.6, linetype = '3313',
+                        tag_fill = 'grey85', tag_size = 3) {
+  bbox_df <- do.call(rbind, lapply(names(bboxes), function(nm) {
+    b <- bboxes[[nm]]
+    data.frame(name = nm, xmin = b[['xmin']], xmax = b[['xmax']], ymin = b[['ymin']], ymax = b[['ymax']])
   }))
-  ggplot2::geom_rect(
+  layers <- list(ggplot2::geom_rect(
     data = bbox_df, ggplot2::aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
     inherit.aes = FALSE, fill = NA, color = color, linewidth = linewidth, linetype = linetype
-  )
+  ))
+  if (!is.null(tags)) {
+    bbox_df$tag <- tags[bbox_df$name]
+    layers <- c(layers, list(ggplot2::geom_label(
+      data = bbox_df, ggplot2::aes(x = xmin, y = ymax, label = tag),
+      inherit.aes = FALSE, hjust = 0, vjust = 1, size = tag_size, fontface = 'bold',
+      label.size = 0, label.padding = ggplot2::unit(0.1, 'lines'), fill = tag_fill
+    )))
+  }
+  layers
 }
 
 ## Centered "zoom" bounding box: shrinks bb to `factor` of its width/height
@@ -182,7 +209,7 @@ shrink_bbox <- function(bb, factor = 0.35) {
 ## Shared chrome for a map panel: in-panel upper-left title, lon/lat axis
 ## ticks, a scale bar, and (optionally) a north arrow.
 decorate_map <- function(p, x_range, y_range, label = NULL, crs = NULL,
-                          scale_bar = TRUE, north_arrow = FALSE) {
+                          scale_bar = TRUE, north_arrow = FALSE, scale_width_hint = 0.25) {
   if (!is.null(label)) {
     p <- p + ggplot2::annotate(
       'label', x = x_range[1], y = y_range[2], label = label,
@@ -197,9 +224,17 @@ decorate_map <- function(p, x_range, y_range, label = NULL, crs = NULL,
       ggplot2::scale_y_continuous(breaks = lb$y_breaks, labels = lb$y_labels)
   }
   if (scale_bar) {
+    ## width_hint controls the scale bar's target length as a fraction of
+    ## panel width, which in turn decides ggspatial's m/km (or ft/mi)
+    ## bucket: it picks km only once that target length exceeds 1600m
+    ## (scalebar_params()'s internal threshold). Tightly zoomed panels can
+    ## land just under that with the default 0.25 hint and render as an
+    ## awkward '1000 m' instead of '1 km' - bump scale_width_hint on those
+    ## panels to push the target comfortably past the boundary.
     p <- p + ggspatial::annotation_scale(
       location = 'tr', style = 'ticks', text_cex = 0.6,
-      pad_y = grid::unit(if (north_arrow) 1.1 else 0.3, 'cm')
+      pad_y = grid::unit(if (north_arrow) 1.1 else 0.3, 'cm'),
+      width_hint = scale_width_hint
     )
   }
   if (north_arrow) {
@@ -218,8 +253,8 @@ decorate_map <- function(p, x_range, y_range, label = NULL, crs = NULL,
 ## draws region bounding boxes as outline rectangles (e.g. on a full-domain
 ## panel, to show where the focal-region crops sit). `speckle` (from
 ## aoa_speckle()) stipples the outside-AOA gap instead of leaving it blank.
-mapPanel <- function(df, scale_fn, label = NULL, crs = NULL, bboxes = NULL, speckle = NULL,
-                      scale_bar = TRUE, north_arrow = FALSE) {
+mapPanel <- function(df, scale_fn, label = NULL, crs = NULL, bboxes = NULL, bbox_tags = NULL,
+                      speckle = NULL, scale_bar = TRUE, north_arrow = FALSE, scale_width_hint = 0.25) {
   x_range <- range(df$x, na.rm = TRUE)
   y_range <- range(df$y, na.rm = TRUE)
 
@@ -230,9 +265,9 @@ mapPanel <- function(df, scale_fn, label = NULL, crs = NULL, bboxes = NULL, spec
     theme_manuscript_map()
 
   if (!is.null(speckle)) p <- p + speckle_layer(speckle)
-  if (!is.null(bboxes)) p <- p + bbox_layer(bboxes)
+  if (!is.null(bboxes)) p <- p + bbox_layer(bboxes, tags = bbox_tags)
 
-  decorate_map(p, x_range, y_range, label, crs, scale_bar, north_arrow)
+  decorate_map(p, x_range, y_range, label, crs, scale_bar, north_arrow, scale_width_hint)
 }
 
 ## Bivariate panel: suitability as fill (red = low, green = high) with
