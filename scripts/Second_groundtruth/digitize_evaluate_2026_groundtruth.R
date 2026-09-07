@@ -24,6 +24,27 @@ gt <- gt_raw |>
 st_write(gt, file.path(p2proj, 'data', 'GroundTruthing', '2026_groundtruth_points.gpkg'),
           append = FALSE, quiet = TRUE)
 
+## 1b. Combine with visited random ground-truth points --------------------
+## `visited_subset.gpkg` (built in Visited_Random_Points.qmd) holds the
+## random base_pts/os_pts that field crews have since visited. A point is
+## Present if any of its three visit columns (Prsnc_M/J/S) recorded a
+## nonzero count.
+
+visited_gt <- st_read(file.path(p2proj, 'data', 'GroundTruthPts', 'visited_subset.gpkg'),
+                       layer = 'visited_points', quiet = TRUE) |>
+  st_transform(st_crs(gt)) |>
+  mutate(Presence = as.integer(if_any(c(Prsnc_M, Prsnc_J, Prsnc_S), ~ replace_na(. > 0, FALSE))))
+
+## visited_gt's geometry column is named `geom` (from the gpkg) while gt's is
+## `geometry` (from st_as_sf) - bind_rows() does not reconcile differing sfc
+## column names, so rebuild visited_gt on a `geometry` column before binding.
+visited_gt <- st_sf(Presence = visited_gt$Presence, geometry = st_geometry(visited_gt))
+
+gt <- bind_rows(
+  gt |> select(Presence),
+  visited_gt
+)
+
 ## 2. Evaluate against available suitability surfaces ---------------------
 
 known_occ <- st_read(file.path(p2proj, 'data', 'collections', 'occurrences_coloradense', 'occurrences.shp'),
