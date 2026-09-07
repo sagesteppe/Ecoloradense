@@ -72,8 +72,20 @@ parse_model_id <- function(f) {
 
 model_files <- map_dfr(names(cv_roots), function(root) {
   f <- list.files(file.path(p2proj, root, 'models'), pattern = '\\.rds$', full.names = TRUE)
-  bind_cols(map_dfr(f, parse_model_id), cv_structure = unname(cv_roots[root]))
+  bind_cols(map_dfr(f, parse_model_id), root = root, cv_structure = unname(cv_roots[root]))
 })
+
+## modeller()'s own holdout evaluation (results_root/tables/<model>.csv) - fit-time
+## pr_auc/roc_auc on that fit's internal train/test split, for comparing against how the
+## same model does on the independent 2026 ground truth below.
+read_orig_eval <- function(root, model) {
+  f <- file.path(p2proj, root, 'tables', paste0(model, '.csv'))
+  if (!file.exists(f)) return(tibble(orig_pr_auc = NA_real_, orig_roc_auc = NA_real_))
+  oe <- read.csv(f)
+  tibble(orig_pr_auc = oe$estimate[oe$metric == 'pr_auc'][1],
+         orig_roc_auc = oe$estimate[oe$metric == 'roc_auc'][1])
+}
+model_files <- bind_cols(model_files, pmap_dfr(model_files, function(root, model, ...) read_orig_eval(root, model)))
 
 ## 3. Extract point-level predictor values once per resolution, reused by every model ----
 ## fit at that resolution - the predictor stack doesn't change with split/PAratio/seed,
@@ -89,7 +101,7 @@ point_covs_by_res <- map(unique(model_files$resolution), function(res) {
 ## 4. Predict each model at the ground-truth points, evaluate PR-AUC --------------------
 
 evaluate_model <- function(path, model, resolution, iteration, pa_ratio, dist_order, seed,
-                            cv_structure, within_m = NULL) {
+                            cv_structure, orig_pr_auc, orig_roc_auc, within_m = NULL, ...) {
   covs <- point_covs_by_res[[resolution]]
   keep_dist <- if (is.null(within_m)) rep(TRUE, nrow(gt)) else gt$dist_known_occ <= within_m
   rf_model <- readRDS(path)
@@ -97,7 +109,8 @@ evaluate_model <- function(path, model, resolution, iteration, pa_ratio, dist_or
   keep <- keep_dist & !is.na(pred)
 
   base <- tibble(model = model, resolution = unname(res_labels[resolution]), iteration = iteration,
-                 pa_ratio = pa_ratio, dist_order = dist_order, seed = seed, cv_structure = cv_structure)
+                 pa_ratio = pa_ratio, dist_order = dist_order, seed = seed, cv_structure = cv_structure,
+                 orig_pr_auc = orig_pr_auc, orig_roc_auc = orig_roc_auc)
 
   if (sum(keep) == 0 || length(unique(gt$Presence[keep])) < 2) {
     return(bind_cols(base, tibble(n = sum(keep), pr_auc = NA_real_)))
@@ -110,8 +123,29 @@ evaluate_model <- function(path, model, resolution, iteration, pa_ratio, dist_or
 eval_all <- pmap_dfr(model_files, evaluate_model)
 eval_270 <- pmap_dfr(model_files, evaluate_model, within_m = 270)
 
+## 5. Aggregate over seed --------------------------------------------------------------
+## A single (resolution, cv_structure, iteration, pa_ratio) row is a seed replicate, not
+## a distinct model - seed-to-seed noise is often as large as the PA-ratio effect itself
+## (see adaptive_PAratio_search() Details), so comparing individual rows overstates how
+## much any one of them can be trusted. Summarise across seeds before comparing ratios.
+summarise_over_seeds <- function(eval_tbl) {
+  eval_tbl |>
+    group_by(resolution, cv_structure, iteration, pa_ratio, dist_order) |>
+    summarise(n_seeds = n(), n_pts = first(n),
+              mean_pr_auc = mean(pr_auc, na.rm = TRUE), sd_pr_auc = sd(pr_auc, na.rm = TRUE),
+              min_pr_auc = min(pr_auc, na.rm = TRUE), max_pr_auc = max(pr_auc, na.rm = TRUE),
+              mean_orig_pr_auc = mean(orig_pr_auc, na.rm = TRUE), sd_orig_pr_auc = sd(orig_pr_auc, na.rm = TRUE),
+              .groups = 'drop') |>
+    arrange(desc(mean_pr_auc))
+}
+
+summary_all <- summarise_over_seeds(eval_all)
+summary_270 <- summarise_over_seeds(eval_270)
+
 dir.create(file.path(p2proj, 'results', 'tables'), showWarnings = FALSE, recursive = TRUE)
 write.csv(eval_all, file.path(p2proj, 'results', 'tables', '2026-groundtruth-gridsearch-pointpredict-all.csv'), row.names = FALSE)
 write.csv(eval_270, file.path(p2proj, 'results', 'tables', '2026-groundtruth-gridsearch-pointpredict-270m.csv'), row.names = FALSE)
+write.csv(summary_all, file.path(p2proj, 'results', 'tables', '2026-groundtruth-gridsearch-summary-all.csv'), row.names = FALSE)
+write.csv(summary_270, file.path(p2proj, 'results', 'tables', '2026-groundtruth-gridsearch-summary-270m.csv'), row.names = FALSE)
 
-eval_all |> arrange(desc(pr_auc))
+summary_all
