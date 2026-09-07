@@ -19,7 +19,7 @@ distribution of the species at the expense of expanding the expected distributio
 library(tidyverse)
 library(sf)
 library(terra)
-source('functions.R')
+source('../functions.R')
 set.seed(27)
 ```
 
@@ -28,7 +28,7 @@ Then we will apply spThin to them, to avoid underestimating suitable habitat in 
 
 ```{r}
 
-occ <-  st_read('../data/collections/occurrences_coloradense/occurrences.shp', quiet = T) %>% 
+occ <-  st_read('../../data/collections/occurrences_coloradense/occurrences.shp', quiet = T) %>% 
   mutate(
     Longitude = unlist(map(.$geometry,1)),
     Latitude = unlist(map(.$geometry,2)), 
@@ -54,7 +54,7 @@ rm(thinned)
 We will generate pseudo-absences which are from environments notable distinct from our presence records. 
 ```{r iteration 0 absence generation, eval = F}
 
-p2proc <- '../data/spatial/processed'
+p2proc <- '../../data/spatial/processed'
 arc3 <- rastReader('dem_3arc', p2proc) 
 
 # we want to be SURE that we are finding more populations, or segments of populations
@@ -72,7 +72,7 @@ PA_possible <- sdm::background(arc3,
 # subjectively evaluated suitable habitat were removed. 
 nrow(PA_possible)
 st_write(PA_possible, 
-         '../data/spatial/raw/pseudo-absences/iteration1/absences.shp')
+         '../../data/spatial/raw/pseudo-absences/iteration1/absences.shp')
 
 # these points were identified in QGIS as likely occurring in suitable habitat. 
 removals <- c(19, 41, 42, 46, 67, 76)
@@ -83,7 +83,7 @@ if(nrow(PA_possible) > nrow(occ)){
 }
 
 st_write(PA_possible, append = F,
-         '../data/spatial/processed/pseudo-absences/iteration1/absences.shp')
+         '../../data/spatial/processed/pseudo-absences/iteration1/absences.shp')
 nrow(PA_possible)
 ```
 
@@ -108,11 +108,12 @@ Contrary to expectations, the number of background points needs to SWELL relativ
 We will generate 2x as many pseudoabsences as our test data!!! Making a ratio of roughly 3 absence to 1 presence. 
 
 ```{r}
-p2proc <- '../data/spatial/processed'
-m30 <- sf::st_read("../data/Data4modelling/30m-presence-iter1.gpkg") %>% 
+p2proc <- '../../data/spatial/processed'
+arc1 <- rastReader('dem_1arc', p2proc) 
+
+m30 <- sf::st_read("../../data/Data4modelling/30m-presence-iter1.gpkg") %>% 
   rename(Occurrence = Presenc) |>
   filter(Occurrence == 1) 
-arc1 <- rastReader('dem_1arc', p2proc) 
 
 PA_possible <- sdm::background(arc1, 
                 n = nrow(m30)*3.5,# we want some extra's just in case to push this ratio up. 
@@ -121,7 +122,7 @@ PA_possible <- sdm::background(arc1,
   st_as_sf(coords = c(x = 'x', y = 'y'), crs = 32613) %>% 
   mutate(Occurrence = 0, ID = 1:nrow(.))
 
-st_write(PA_possible, '../data/Data4modelling/iter1-pa.gpkg', append = FALSE)
+st_write(PA_possible, '../../data/Data4modelling/iter1-pa.gpkg', append = FALSE)
 # st_distance( # WELL SPACED!
 #   PA_possible[st_nearest_feature(PA_possible),], 
 #   PA_possible,

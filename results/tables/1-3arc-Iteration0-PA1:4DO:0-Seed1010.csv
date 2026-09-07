@@ -1,0 +1,3 @@
+"metric","estimator","estimate","resolution","iteration"
+"pr_auc","binary",0.625238120410518,"1-3arc",0
+"roc_auc","binary",0.770729270729271,"1-3arc",0

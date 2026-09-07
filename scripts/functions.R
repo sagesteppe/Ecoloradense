@@ -1,3 +1,5 @@
+PROJ_ROOT <- '/media/steppe/hdd/EriogonumColoradenseTaxonomy'
+
 rastReader <- function(x, p2proc){
 
   # create paths for the first level of files. 
@@ -38,7 +40,6 @@ ensure_multipolygons <- function(X) { # @ stackoverflow
 #' the exact quantity are saved in model objects. "1:2" 
 #' @param distOrder Character. The distance between the nearest absence to presence, as a multiple of the cell resolution
 #' e.g. distOrder 1 at a 90m resolution indicates the nearest absence is >90m away from a presence, at 10m it indicates > 10m away.
-#' @param remove_tiles Boolean. Defaults to FALSE, whether to remove tiles required for model prediction (applies only to high resolution data sets).
 #' @param seed Numeric. Passed to \code{set.seed()} before the train/test split and
 #' model fit, so replicate calls at the same PAratio/resolution can use independent
 #' seeds instead of silently reusing whichever model was fit first.
@@ -47,20 +48,25 @@ ensure_multipolygons <- function(X) { # @ stackoverflow
 #' fitting and holdout evaluation still happen, and are fast, so this is what a grid/
 #' replicate search over PAratio should use; only the final, chosen model needs the
 #' (slow) full-surface predictions.
+#' @param results_root Character, a directory with models/modelsTune/tables/test_data/
+#' evaluations/suitability_maps subfolders, written and read exactly like
+#' \code{PROJ_ROOT}'s own \code{results/} tree. Defaults to that tree; override to run a
+#' parallel comparison (e.g. a different train/test split strategy) without reading or
+#' overwriting anything under the default results.
 modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_split,
-                     PAratio, distOrder, remove_tiles, seed = 1, predict_surface = TRUE){
+                     PAratio, distOrder, seed = 1, predict_surface = TRUE,
+                     split = NULL, results_root = file.path(PROJ_ROOT, 'results')){
 
-  if(missing(remove_tiles)){remove_tiles <- FALSE}
   if(missing(se_prediction)){se_prediction <- FALSE}
   set.seed(seed)
   rast_dat <- rastReader(paste0('dem_', resolution), p2proc)
   cores <- parallel::detectCores()
-  
+
   df <- dplyr::bind_cols(
-    dplyr::select(x, Occurrence), 
-    dplyr::select(terra::extract(rast_dat, x), -ID), 
-  ) |> 
-    tidyr::drop_na() %>% 
+    dplyr::select(x, Occurrence, dplyr::any_of('.id')),
+    dplyr::select(terra::extract(rast_dat, x), -ID),
+  ) |>
+    tidyr::drop_na() %>%
     dplyr::mutate(
       Occurrence = as.factor(Occurrence)) |>
     sf::st_drop_geometry()
@@ -73,18 +79,30 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   # simply because they work very well with default settings, almost 'controlling' 
   # for stochasticity in this portion of the work. 
   
-  # only rerun modelling if a saved .rds object doesn't exist. 
-  if(file.exists(paste0('../results/models/', fname, '.rds'))){
-    rf_model <- readRDS(paste0('../results/models/', fname, '.rds'))
+  # only rerun modelling if a saved .rds object doesn't exist. Reload both objects: the
+  # cross-validated caret `model` for CAST::aoa()'s weighting/CV folds - not just `rf_model`.
+  if(file.exists(paste0(results_root, '/models/', fname, '.rds'))){
+    rf_model <- readRDS(paste0(results_root, '/models/', fname, '.rds'))
+    model <- readRDS(paste0(results_root, '/modelsTune/', fname, '.rds'))
     message(
-      'An exising model for this resolution and iteration already exists; 
+      'An existing model for this resolution and iteration already exists;
       reloading it now for prediction')
   } else {
   
-  # split the input data into both an explicit train and test data set. 
-  TrainIndex <- caret::createDataPartition(
-    df$Occurrence, p = train_split, list = FALSE, times = 1)
-  Train <- df[TrainIndex,]; Test <- df[-TrainIndex,]
+  # split the input data into both an explicit train and test data set. If a
+  # pre-computed spatial split is supplied (see spatial_class_split()), every ratio/seed
+  # fit in a resolution's grid search shares the same class-balanced, prediction-domain-
+  # matched partition; otherwise fall back to a random stratified split.
+  if(is.null(split)){
+    TrainIndex <- caret::createDataPartition(
+      df$Occurrence, p = train_split, list = FALSE, times = 1)
+    Train <- df[TrainIndex,]; Test <- df[-TrainIndex,]
+  } else {
+    Train <- df[df$.id %in% split$train_id, ]
+    Test  <- df[df$.id %in% split$test_id, ]
+  }
+  Train <- dplyr::select(Train, -dplyr::any_of('.id'))
+  Test  <- dplyr::select(Test, -dplyr::any_of('.id'))
 
   Train.sf <- sf::st_as_sf(Train, coords = c('Longitude', 'Latitude'), crs = 32613)
   
@@ -144,13 +162,13 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   
   # save the cv fold fit model for AOA preds
   saveRDS(model, 
-          file = paste0('../results/modelsTune/', fname, '.rds'))
+          file = paste0(results_root, '/modelsTune/', fname, '.rds'))
   # save the model
   saveRDS(rf_model,
-          file = paste0('../results/models/', fname, '.rds'))
+          file = paste0(results_root, '/models/', fname, '.rds'))
   
   # save the test data. 
-  write.csv(Test, paste0('../results/test_data/', fname, '.csv'))
+  write.csv(Test, paste0(results_root, '/test_data/', fname, '.csv'))
   
   
   # threshold the model and use these values for binary classification estimates
@@ -161,8 +179,8 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   )
   
   th <- dismo::threshold(e)
-  saveRDS(th, file = paste0('../results/evaluations/', fname, '-thresh.rds'))
-  saveRDS(e, file = paste0('../results/evaluations/', fname, '-eval.rds'))
+  saveRDS(th, file = paste0(results_root, '/evaluations/', fname, '-thresh.rds'))
+  saveRDS(e, file = paste0(results_root, '/evaluations/', fname, '-eval.rds'))
   
   # save the confusion matrix
   predictions <- predict(rf_model, Test, type = 'se', se.method = 'infjack', probability=TRUE)
@@ -171,7 +189,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   cmRestrat <- caret::confusionMatrix(predictions$binary, Test$Occurrence, 
                                       positive = '1', mode = 'everything')
   saveRDS(cmRestrat,
-          file = paste0('../results/tables/', fname, '.rds'))
+          file = paste0(results_root, '/tables/', fname, '.rds'))
   
   # we will also save the pr-auc and ROC-auc metrics. 
   df_auc <- data.frame(
@@ -193,18 +211,18 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
     ), nm = c('metric', 'estimator', 'estimate')
   ) |>
     mutate(resolution = resolution, iteration = iteration) |>
-    write.csv(paste0('../results/tables/', fname, '.csv'),
+    write.csv(paste0(results_root, '/tables/', fname, '.csv'),
               row.names = F)
   
   rm(df, df_auc, TrainIndex, Train, Test, predictions, cmRestrat)
   }
 
-  eval_path <- paste0('../results/tables/', fname, '.csv')
+  eval_path <- paste0(results_root, '/tables/', fname, '.csv')
   eval_tab <- if(file.exists(eval_path)) read.csv(eval_path) else NULL
 
   if(predict_surface){
 
-  pout <- '../results/suitability_maps'
+  pout <- paste0(results_root, '/suitability_maps')
   ###################      PREDICT ONTO SURFACE        #########################
   # the prediction is generally straightforward, it doesn't take an obscene
   # amount of RAM and can happen relatively quickly; overnight for the 
@@ -258,16 +276,16 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
      ), fun = 'mean')
       writeRaster(
         mos[[2]], 
-        wopt = c(names = 'Probability'),
+        wopt = list(names = 'Probability'),
        filename = file.path(pout, paste0(fname, '-Pr.tif')))
     
     rm(mos)
-    
-    # this should be an OPTION, which defaults to FALSE. 
-    if(remove_tiles == TRUE){
-      unlink(file.path(pout, 'pr_tiles')) # can remove the tiles we used for the probability surface.
-    }
-    
+
+    # the Pr.tif mosaic above is now the durable output; these scratch tiles (the split
+    # predictor stack, and the per-tile predictions) aren't needed once it exists.
+    unlink(tile_path_4pr, recursive = TRUE)
+    unlink(pr_tile_path, recursive = TRUE)
+
     } else { # in these cases, we only need to use a single tile for prediction, we can
      # just use the existing virtual raster to do this. 
     
@@ -277,7 +295,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
           cores = 1, f = pr, 
           rast_dat, rf_model, cpkgs = "ranger",
           filename = file.path(pout, paste0(resolution, '-IterationCoarse', iteration, '.tif')),
-          wopt = c(names = 'predicted_suitability'), na.rm=TRUE,
+          wopt = list(names = 'predicted_suitability'), na.rm=TRUE,
           overwrite = T)
     
         writeRaster( # we wrote a raster with both predicted class probabilities onto it. 
@@ -297,9 +315,8 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
         'Predicted Probability Raster already exists - skipping.'}
     }
   
-  unlink(file.path(pout, 'pr_tiles'))
   gc(verbose = FALSE)
-  
+
   }
   
   
@@ -307,17 +324,17 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   ################ AREA OF APPLICABILITY SURFACE    ############################
   message('Writing Area of Applicability to Raster')
   if(!exists('rf_model')){
-    rf_model <- readRDS(paste0('../results/models/', fname, '.rds'))
+    rf_model <- readRDS(paste0(results_root, '/models/', fname, '.rds'))
   }
-  AOAfun <- function(rf_model, r) {
+  AOAfun <- function(model, r) {
     CAST::aoa(r, model, LPD = FALSE, verbose=FALSE)$AOA
   }
-  
-  terra::predict( # rasters, skip straight to modelling. 
-    cores = 1, f = AOAfun, 
-    rast_dat, model = rf_model, cpkgs = "CAST",
+
+  terra::predict( # rasters, skip straight to modelling.
+    cores = 1, f = AOAfun,
+    rast_dat, model = model, cpkgs = "CAST",
     filename = file.path(pout, paste0(fname, '-AOA', '.tif')),
-    wopt = c(names = 'AOA'), na.rm=TRUE,
+    wopt = list(names = 'AOA'), na.rm=TRUE,
     overwrite = T)
   
   ###############      STANDARD ERROR PREDICTION        ########################
@@ -341,8 +358,8 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
     'Confidence Intervals cannot be produced for data of these size;
     it would require over 2k tiles and 1 week of compute'}  else {
   
-    # don't create the tiles if they already exist. 
-    if(exists(tile_path_4se)){
+    # don't create the tiles if they already exist.
+    if(file.exists(tile_path_4se)){
       message('Tiles for SE exist at this resolution, skipping to predict.')} else {
      
         message('Making tiles for prediction of standard errors')
@@ -381,12 +398,13 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
     ), fun = 'mean')
     writeRaster(
       mos[[2]],
-      wopt = c(names = 'standardError'),
+      wopt = list(names = 'standardError'),
       filename = file.path(pout, paste0(fname, '-SE.tif')),
       overwrite = T)
     gc(verbose = FALSE)
     }
-    unlink(final_se_path)
+    unlink(final_se_path, recursive = TRUE)
+    unlink(tile_path_4se, recursive = TRUE)
   }
   }
 
@@ -674,6 +692,107 @@ subset_pts <- function(x, res, root, mode){
     sf::st_as_sf()
 }
 
+#' Map a nominal resolution to the file-naming string used across results/ and data/
+res_string <- function(resolution){
+  switch(
+    as.character(resolution),
+    "3" = "3m",
+    "10" = "1-3arc",
+    "30" = "1arc",
+    "90" = "3arc",
+    stop("Input to `resolution` invalid. Need be one of: 3, 10, 30, 90")
+  )
+}
+
+#' Class-stratified, prediction-domain-matched spatial train/test split
+#'
+#' @description Splits presence and absence points into train/test sets independently
+#' using \code{CAST::knndm()} (Linnenbrink et al. 2024), each matched against the same
+#' prediction-domain raster, then unions the two class-wise splits. A single class-blind
+#' \code{knndm()} call risks stranding most of the rare, spatially clustered presence
+#' class in one partition, starving (or flooding) Test of positives; splitting per class
+#' and unioning keeps both classes proportionally represented in Train/Test while still
+#' spatially blocking each against the true prediction area. This is meant to be computed
+#' once per resolution and reused across every ratio/seed fit in that resolution's grid
+#' search, rather than re-split randomly per fit - a random per-fit split is a bigger
+#' source of PR-AUC variance for spatially clustered, rare-presence data than anything
+#' about the PA ratio itself. \code{knndm()}'s train/test mode is marked experimental
+#' upstream, so the achieved split is summarized (n, achieved test proportion, and the W
+#' match statistic per class) via \code{message()} for a quick sanity check on every run,
+#' and the raw \code{knndm} objects are returned for a closer look
+#' (e.g. \code{plot(split$presence_knndm)}) per the package's own recommendation to
+#' visually check the match before trusting it.
+#' @param x sf point object with an \code{Occurrence} (0/1) column and a \code{.id}
+#' column - a stable identifier that survives any later subsetting of \code{x}.
+#' @param rast_dat SpatRaster. The prediction domain, passed to \code{knndm()} as
+#' \code{modeldomain}.
+#' @param train_split Numeric in (0, 1). Target fraction of points in Train, per class.
+#' @param test_tolerance Numeric. Passed to \code{knndm()}'s \code{test_tolerance} - how
+#' far \code{knndm} may search from the target test proportion for a configuration that
+#' matches the prediction-domain distance distribution at all. This needs to stay loose:
+#' knndm's achievable test proportions are set by how the points happen to cluster, and
+#' finding any valid configuration can require a surprisingly wide search (observed:
+#' presences here needed ~0.1 before a single valid configuration existed, landing near
+#' 27% rather than the ~20% target). The exact final proportion is enforced afterward
+#' regardless of where knndm itself lands within that search.
+#' @return A list: \code{train_id}, \code{test_id} (the \code{.id} values assigned to
+#' each, pooled across both classes, after forcing the exact target proportion),
+#' \code{presence_knndm}, \code{absence_knndm} (the raw per-class \code{knndm} objects,
+#' pre-forcing), and \code{summary} (achieved n/proportion/W per class, post-forcing).
+spatial_class_split <- function(x, rast_dat, train_split, test_tolerance = 0.1){
+
+  test_prop <- 1 - train_split
+
+  split_one_class <- function(cls){
+    pts <- x[x$Occurrence == cls, ]
+    k <- CAST::knndm(pts, modeldomain = rast_dat, test_prop = test_prop, test_tolerance = test_tolerance)
+    train_id <- pts$.id[k$indx_train]
+    test_id  <- pts$.id[k$indx_test]
+
+    # knndm's achievable proportions are discrete and can land well off target even when
+    # test_tolerance is loose enough to find a configuration at all - force the exact
+    # requested proportion by randomly moving the minimum number of points across.
+    # A remainder from rounding goes to test (ceiling), not train.
+    n <- length(train_id) + length(test_id)
+    target_n_test <- ceiling(n * test_prop)
+    if(length(test_id) > target_n_test){
+      moved <- sample(test_id, length(test_id) - target_n_test)
+      test_id <- setdiff(test_id, moved)
+      train_id <- c(train_id, moved)
+    } else if(length(test_id) < target_n_test){
+      moved <- sample(train_id, target_n_test - length(test_id))
+      train_id <- setdiff(train_id, moved)
+      test_id <- c(test_id, moved)
+    }
+
+    list(train_id = train_id, test_id = test_id, knndm = k)
+  }
+
+  pres <- split_one_class(1)
+  abs  <- split_one_class(0)
+
+  summary <- data.frame(
+    class = c('presence', 'absence'),
+    n_train = c(length(pres$train_id), length(abs$train_id)),
+    n_test  = c(length(pres$test_id), length(abs$test_id)),
+    test_prop_achieved = c(
+      length(pres$test_id) / (length(pres$train_id) + length(pres$test_id)),
+      length(abs$test_id) / (length(abs$train_id) + length(abs$test_id))
+    ),
+    W = c(pres$knndm$W, abs$knndm$W)
+  )
+  message('Spatial train/test split (target test_prop = ', round(test_prop, 3), '):')
+  message(paste(utils::capture.output(print(summary, row.names = FALSE)), collapse = '\n'))
+
+  list(
+    train_id = c(pres$train_id, abs$train_id),
+    test_id = c(pres$test_id, abs$test_id),
+    presence_knndm = pres$knndm,
+    absence_knndm = abs$knndm,
+    summary = summary
+  )
+}
+
 #' Generate data sets for SD modelling at different configurations of distOrders and PAratios
 #' 
 #' @description This function helps subset the input data (x) to combinations of distOrders- where
@@ -687,62 +806,80 @@ subset_pts <- function(x, res, root, mode){
 #' @param seed Numeric. Seeds both the absence subsample drawn below and (via passthrough
 #' to \code{modeller()}) the train/test split and model fit, so repeated calls at the same
 #' PAratio use independent replicates rather than the identical absence subsample every time.
-distOrder_PAratio_simulator <- function(x, distOrder, PAratio, resolution, seed = 1, ...){
+#' @return Whatever \code{modeller()} returns, with one extra element: \code{PAratio} - the
+#' ratio actually used. This equals the requested \code{PAratio} unless the absence pool
+#' (after the distOrder filter) is too small to supply it, in which case it's capped to
+#' every available absence and this reports what was actually achieved, so callers label
+#' and record the fit by what it really is rather than what was asked for.
+distOrder_PAratio_simulator <- function(x, distOrder, PAratio, resolution, seed = 1, split = NULL, ...){
 
   set.seed(seed)
 
-  res_string <- switch(
-    as.character(resolution),
-    "3" = "3m",
-    "10" = "1-3arc",
-    "30" = "1arc",
-    "90" = "3arc",
-    stop("Input to `resolution` invalid. Need be one of: 3, 10, 30, 90")
-  )
-  
-  # subset to absence points at distance intervals from presence points. 
-  # This accomplishes the distOrder parameter. 
+  res_str <- res_string(resolution)
+
+  # subset to absence points at distance intervals from presence points.
+  # This accomplishes the distOrder parameter.
   abs <- x[x$Occurrence==0,]
   prs <- x[x$Occurrence==1,]
   abs <- abs[as.numeric(sf::st_distance(
     abs,
     prs[sf::st_nearest_feature(abs, prs),], by_element = TRUE
   )) > (distOrder*resolution),]
-  
-  # now recombine the data, we will sample down to get the PA ratio we need. 
+
+  # now recombine the data, we will sample down to get the PA ratio we need.
   x <- dplyr::bind_rows(prs, abs)
-  
+
   # results indicate that 3:1 is pretty good, but very conservative in terms of suitable habitat
   # PAratio may be fractional (e.g. from adaptive_PAratio_search's bracketing), hence round().
-  abs <- abs[sample(1:nrow(abs), size = round(nrow(prs) * PAratio), replace = F),]
+  # Cap at the available pool rather than erroring: a resolution can have too few absences
+  # left (post distOrder filter) to supply a high requested ratio, and duplicating points via
+  # sampling with replacement would just be fake data, not a real ratio of that size.
+  n_requested <- round(nrow(prs) * PAratio)
+  if(n_requested > nrow(abs)){
+    message(
+      'Requested PAratio ', PAratio, ' needs ', n_requested, ' absences but only ',
+      nrow(abs), ' are available after the distOrder filter; capping to ',
+      round(nrow(abs) / nrow(prs), 3), '.')
+    n_requested <- nrow(abs)
+    PAratio <- nrow(abs) / nrow(prs)
+  }
+  abs <- abs[sample(1:nrow(abs), size = n_requested, replace = F),]
   x <- dplyr::bind_rows(prs, abs)
 
-  modeller(x, PAratio = paste0("1:", PAratio),
-           resolution = res_string, distOrder = paste0('DO:', distOrder), seed = seed, ...)
-
+  out <- modeller(x, PAratio = paste0("1:", PAratio),
+           resolution = res_str, distOrder = paste0('DO:', distOrder), seed = seed, split = split, ...)
+  out$PAratio <- PAratio
+  out
 }
 
 #' Adaptive coarse-to-fine search over presence:absence ratio, with seed replication
 #'
 #' @description Fits a bracketing search over PAratio instead of a fixed value: an
-#' initial integer grid (\code{initial_ratios}) is fit once each; whichever ratios land
-#' within \code{good_frac} of the best mean holdout metric define a "good" band; the
-#' midpoints between adjacent tested ratios inside that band become the next stage's
-#' candidates. Each successive stage in \code{replicate_schedule} fits more seed
-#' replicates per candidate, so the search narrows toward the optimum while also
-#' building up an estimate of seed-to-seed performance variance near it. Every fit in
-#' this function uses \code{predict_surface = FALSE} (fit + holdout evaluation only,
-#' which is fast for a random forest) - only the single winning ratio's single most
-#' performant replicate is promoted to a full surface/SE prediction at the end; results
-#' are not ensembled across replicates.
+#' initial integer grid (\code{initial_ratios}) is fit \code{initial_replicates} times
+#' each, so every candidate - not just the eventual winner - has a variance estimate and
+#' the coarse-stage comparison isn't decided by a single lucky/unlucky split; whichever
+#' ratios land within \code{good_frac} of the best mean holdout metric define a "good"
+#' band; the midpoints between adjacent tested ratios inside that band become the next
+#' stage's candidates. Each successive stage in \code{replicate_schedule} fits more seed
+#' replicates per candidate, so the search narrows toward the optimum while also building
+#' up an estimate of seed-to-seed performance variance near it. Every fit in this function
+#' uses \code{predict_surface = FALSE} (fit + holdout evaluation only, which is fast for a
+#' random forest) - only the single winning ratio is promoted to a full surface/SE
+#' prediction at the end, using whichever of its replicates scored closest to the median
+#' (not the best-of-N replicate: selecting on the same metric being reported would bias it
+#' optimistically). Results are not ensembled across replicates.
 #'
 #' @param x,distOrder,p2proc,train_split as passed through to \code{distOrder_PAratio_simulator()}.
 #' @param resolution Numeric. One of 3, 10, 30, 90; the same resolution is used for every
 #' stage, since the optimal ratio is expected to depend on resolution.
-#' @param initial_ratios Numeric vector. First-stage PAratio grid, each fit once.
+#' @param initial_ratios Numeric vector. First-stage PAratio grid.
+#' @param initial_replicates Numeric. Seeds to fit per ratio in the first-stage grid, so
+#' every candidate ratio - not only the winner - has an estimate of seed-to-seed variance.
 #' @param replicate_schedule Numeric vector, one entry per refinement stage after the
 #' first; each value is how many seeds to fit per candidate ratio at that stage.
-#' @param final_replicates Numeric. Seeds to fit at the single overall best-performing ratio.
+#' @param final_replicates Numeric. Additional seeds to fit at the single overall
+#' best-performing ratio, on top of \code{initial_replicates} (or more, if it was also
+#' visited during refinement).
 #' @param good_frac Numeric in (0, 1]. A ratio's mean metric must be >= good_frac * the
 #' best mean metric seen so far to fall in the "good" band used to pick the next stage's
 #' midpoints.
@@ -750,15 +887,57 @@ distOrder_PAratio_simulator <- function(x, distOrder, PAratio, resolution, seed 
 #' writes to compare candidate ratios on. Defaults to 'pr_auc' since presences are rare.
 #' @param base_seed Numeric. Seeds are drawn sequentially as base_seed + 1, 2, 3, ... across
 #' every fit this function performs, so no two fits (any ratio, any stage) share a seed.
+#' @param test_tolerance Passed to \code{spatial_class_split()}. The Train/Test partition
+#' is computed once up front (see Details) and reused for every ratio/seed fit; the exact
+#' \code{1 - train_split} proportion is enforced regardless of this value (see
+#' \code{spatial_class_split()}), so this only controls how hard \code{knndm} searches for
+#' a spatially valid configuration to start from. Ignored when \code{spatial_split = FALSE}.
+#' @param spatial_split Boolean. Defaults to TRUE (see Details). Set FALSE to instead use
+#' modeller()'s classic \code{caret::createDataPartition()} split - a fresh random draw
+#' per fit rather than one shared partition - for a direct comparison against the spatial
+#' split's effect on seed-to-seed variance.
+#' @param results_root Passed through to \code{modeller()}; see its documentation. Use
+#' this to point a \code{spatial_split = FALSE} comparison run at its own directory rather
+#' than overwriting the default results tree.
+#' @details The Train/Test split is not re-randomized per fit. It's computed once, before
+#' any ratio/seed is tried, via \code{spatial_class_split()} - a class-stratified
+#' \code{CAST::knndm()} split matched against this resolution's prediction-domain raster -
+#' and every fit in the search (and the final promoted model) reuses that same partition.
+#' A random per-fit split was found to be a much bigger source of PR-AUC variance for this
+#' rare, spatially clustered presence class than the PA ratio itself; fixing the split
+#' isolates the variance the seed loop is meant to characterize (model/resampling
+#' stochasticity) from variance that was really just an artifact of a noisy evaluation set.
 #' @return A list: \code{results} (data.frame of every ratio/seed/metric fit), \code{best_ratio},
-#' \code{best_seed} (the promoted replicate), and \code{fname} (the promoted model's file stem).
+#' \code{best_seed} (the promoted, median-performing replicate), \code{fname} (the
+#' promoted model's file stem), and \code{split} (the \code{spatial_class_split()} object
+#' used throughout - inspect \code{split$summary} or \code{plot(split$presence_knndm)}
+#' to confirm the split is trustworthy).
 adaptive_PAratio_search <- function(x, resolution, distOrder, p2proc, train_split,
-                                     initial_ratios = 1:5,
+                                     iteration = 1,
+                                     initial_ratios = 1:4,
+                                     initial_replicates = 3,
                                      replicate_schedule = c(3, 5),
                                      final_replicates = 10,
                                      good_frac = 0.9,
                                      metric = 'pr_auc',
-                                     base_seed = 1000){
+                                     base_seed = 1000,
+                                     test_tolerance = 0.1,
+                                     spatial_split = TRUE,
+                                     results_root = file.path(PROJ_ROOT, 'results')){
+
+  # tag every row with a stable id before any filtering/resampling, so the one-time
+  # spatial split below (if used) can be looked up by id no matter which ratio/seed
+  # subsets x later.
+  x <- dplyr::mutate(x, .id = seq_len(nrow(x)))
+  if(spatial_split){
+    rast_dat <- rastReader(paste0('dem_', res_string(resolution)), p2proc)
+    split <- spatial_class_split(x, rast_dat, train_split, test_tolerance)
+  } else {
+    # fall back to modeller()'s own random caret::createDataPartition() split, re-drawn
+    # per fit from each fit's own seed - the classic approach, for comparison against the
+    # spatial split above.
+    split <- NULL
+  }
 
   seed_counter <- base_seed
   results <- data.frame(ratio = numeric(0), seed = numeric(0), metric = numeric(0))
@@ -766,18 +945,21 @@ adaptive_PAratio_search <- function(x, resolution, distOrder, p2proc, train_spli
   fit_one <- function(ratio, seed){
     out <- distOrder_PAratio_simulator(
       x = x, distOrder = distOrder, PAratio = ratio, resolution = resolution,
-      seed = seed, predict_surface = FALSE,
-      iteration = 1, se_prediction = FALSE, train_split = train_split, p2proc = p2proc
+      seed = seed, predict_surface = FALSE, split = split, results_root = results_root,
+      iteration = iteration, se_prediction = FALSE, train_split = train_split, p2proc = p2proc
     )
-    out$metrics$estimate[out$metrics$metric == metric]
+    # out$PAratio is the ratio actually achieved, not necessarily the one requested - it's
+    # capped if the resolution's absence pool can't supply the request (see
+    # distOrder_PAratio_simulator()). Record what was really fit, not the label asked for.
+    list(ratio = out$PAratio, metric = out$metrics$estimate[out$metrics$metric == metric])
   }
 
   run_stage <- function(ratios, n_rep){
     for(r in ratios){
       for(i in seq_len(n_rep)){
         seed_counter <<- seed_counter + 1
-        m <- fit_one(r, seed_counter)
-        results <<- rbind(results, data.frame(ratio = r, seed = seed_counter, metric = m))
+        fit <- fit_one(r, seed_counter)
+        results <<- rbind(results, data.frame(ratio = fit$ratio, seed = seed_counter, metric = fit$metric))
       }
     }
   }
@@ -795,8 +977,9 @@ adaptive_PAratio_search <- function(x, resolution, distOrder, p2proc, train_spli
     mids[!mids %in% tested]
   }
 
-  # stage 0: coarse integer grid, fit once each
-  run_stage(initial_ratios, 1)
+  # stage 0: coarse integer grid, replicated so every candidate (not just the
+  # eventual winner) has a variance estimate to compare on.
+  run_stage(initial_ratios, initial_replicates)
 
   # refinement stages: bisect toward the good band, replicating more each time
   for(n_rep in replicate_schedule){
@@ -811,27 +994,32 @@ adaptive_PAratio_search <- function(x, resolution, distOrder, p2proc, train_spli
   best_ratio <- agg$ratio[which.max(agg$metric)]
   run_stage(best_ratio, final_replicates)
 
-  # promote the single most performant replicate of the winning ratio - no ensembling -
-  # to a full surface + SE prediction. distOrder_PAratio_simulator() re-derives the same
+  # promote the winning ratio's median-performing replicate - not the best-of-N - to a
+  # full surface + SE prediction; picking the best score would optimistically bias the
+  # metric we report, since it'd be chosen by the same statistic being reported. No
+  # ensembling across replicates. distOrder_PAratio_simulator() re-derives the same
   # fname for this (ratio, seed) pair, so modeller() finds the cached fit and skips
   # straight to prediction rather than refitting.
   winners <- results[results$ratio == best_ratio, ]
-  best_seed <- winners$seed[which.max(winners$metric)]
+  best_seed <- winners$seed[which.min(abs(winners$metric - median(winners$metric)))]
+
+  # persist the full search history (every ratio/seed/metric tried) - this is the
+  # evidence behind best_ratio, and the source data for a PR-AUC-vs-ratio plot - before
+  # the raster prediction step below, which is the slowest and most failure-prone part
+  # of this function (full-surface + AOA + SE prediction). If it crashes, the search
+  # itself (the expensive, already-complete part) isn't lost along with it.
+  write.csv(
+    results, paste0(results_root, '/tables/', resolution, '-Iteration', iteration, '-PAratio-search.csv'),
+    row.names = FALSE)
 
   final <- distOrder_PAratio_simulator(
     x = x, distOrder = distOrder, PAratio = best_ratio, resolution = resolution,
-    seed = best_seed, predict_surface = TRUE, se_prediction = TRUE,
-    iteration = 1, train_split = train_split, p2proc = p2proc
+    seed = best_seed, predict_surface = TRUE, se_prediction = TRUE, split = split,
+    results_root = results_root, iteration = iteration, train_split = train_split, p2proc = p2proc
   )
 
-  # persist the full search history (every ratio/seed/metric tried) - this is the
-  # evidence behind best_ratio, and the source data for a PR-AUC-vs-ratio plot;
-  # otherwise it only lives in the returned list and is lost once the R session ends.
-  write.csv(
-    results, paste0('../results/tables/', resolution, '-PAratio-search.csv'),
-    row.names = FALSE)
-
-  list(results = results, best_ratio = best_ratio, best_seed = best_seed, fname = final$fname)
+  list(results = results, best_ratio = best_ratio, best_seed = best_seed,
+       fname = final$fname, split = split)
 }
 
 #' Convert a cross validation object generated by CAST into an rsample object
@@ -938,11 +1126,19 @@ splitData <- function(df, fp, bn){
     sf::st_union()
   
   train.sf <- sf::st_as_sf(train, coords = c('Longitude', 'Latitude'), crs = 32613)
-  indices_nndm_CAST <- CAST::nndm(
+  # Fixed-k (not CAST::nndm()'s near-leave-one-out - fold count == nrow(train),
+  # confirmed by testing, same finding density_bayes.R's brms_spatial_fold_ids()
+  # made for the Bayesian candidates) - RFE (caret::rfeControl(index=...)) and the
+  # ML candidates' spatial-CV resampling (CAST2rsample() below) both consume this,
+  # and near-LOO scale made RFE alone take over a day on this dataset. knndm()'s
+  # indx_train/indx_test are the same list-of-per-fold-indices shape nndm() returns,
+  # so this is a drop-in swap - just k=10 folds instead of ~n.
+  indices_nndm_CAST <- CAST::knndm(
     train.sf,
     sf::st_transform(bbs, sf::st_crs(train.sf)),
+    k = 10,
     samplesize = 1000)
-  
+
   return(
     list(
       nndm_indices = indices_nndm_CAST, 
@@ -1065,9 +1261,17 @@ mets <- function(x){
 #' @param fp base file path to directory to save contents. 
 #' @param bn Character. base file name which will unambiguously identify the objects saved from 
 #' this function (the model, an evaluation table, variable selection object).
-densityModeller <- function(x, bn, fp){
-  
-  # split the data into train/test and spatial CV. 
+#' @param brms_families NULL (default: brms_cv_compare()'s own 4-family list)
+#' or a named list of brms family objects, to scope Phase 1's Bayesian
+#' comparison down for a cheap smoke test instead of the full sweep.
+#' @param brms_refit_args list of extra arguments passed to
+#' brms_promote_and_refit() (e.g. list(full_chains = 2, full_iter = 1000,
+#' full_warmup = 500) for a lighter final refit than the 4/2000/1000 default).
+densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = list()){
+
+  t_total <- Sys.time()
+
+  # split the data into train/test and spatial CV.
   dsplit <- splitData(x, fp = fp, bn = bn)
   
   train <- dsplit$train
@@ -1103,25 +1307,28 @@ densityModeller <- function(x, bn, fp){
   # reattach them later.
   train_coords <- train[, c('Longitude', 'Latitude')]
 
-  # feature selection
+  # feature selection - timed: this is the step the near-LOO nndm() folds
+  # made take >1 day before splitData() switched to fixed-k knndm().
+  t0 <- Sys.time()
   if(!file.exists(file.path(fp, 'modelsTune', paste0(bn, '.rds')))){
-    
+
     ctrl <- caret::rfeControl(
       functions = caret::treebagFuncs,
-      method = "cv", 
-      index = nndm_indices$indx_train,  
+      method = "cv",
+      index = nndm_indices$indx_train,
       allowParallel = TRUE)
-    
+
     future::plan(future::multisession, workers = parallel::detectCores())
     rfProfile <- caret::rfe(
       x = train[,2:ncol(train)], y = train$Prsnc_All,
       rfeControl = ctrl, metric = 'MAE')
-    
+
     saveRDS(rfProfile, file.path(fp, 'modelsTune', paste0(bn, '.rds')))
   } else {
-    rfProfile <- readRDS(file.path(fp, 'modelsTune', paste0(bn, '.rds'))) 
+    rfProfile <- readRDS(file.path(fp, 'modelsTune', paste0(bn, '.rds')))
   }
-  
+  message(sprintf('[timing] RFE: %.1fs', as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
+
   train <- dplyr::select(train, all_of(c('Prsnc_All', predictors(rfProfile))))
   
   rec <- recipes::recipe(Prsnc_All ~ ., data = train) 
@@ -1141,61 +1348,86 @@ densityModeller <- function(x, bn, fp){
   
   # tune hyper parameters and fit all models  - the hyper param tuning on occasion
   # is super slow, and may crash so we want to write to disk as they are completed.
-  if(missing(fp)){fp <- file.path('..', 'results', 'count_models')}
+  if(missing(fp)){fp <- file.path(PROJ_ROOT, 'results', 'count_models')}
 
+  t0 <- Sys.time()
   f <- file.path(fp, 'models', paste0(bn, '-poisson_spat.rds'))
   if(!file.exists(f)){
     poiss_spat_cv <- poiss(rec, indx_nndm_rs, train, test, tune_gr)
     saveRDS(poiss_spat_cv, f)
   } else {poiss_spat_cv <- readRDS(f)}
-  
+  message(sprintf('[timing] XGB Poisson Spat.: %.1fs', as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
+
+  t0 <- Sys.time()
   f <- file.path(fp, 'models', paste0(bn, '-poisson.rds'))
   if(!file.exists(f)){
     poiss_cv <- poiss(rec, rs, train, test, tune_gr)
     saveRDS(poiss_cv, f)
   } else {poiss_cv <- readRDS(f)}
-  
+  message(sprintf('[timing] XGB Poisson: %.1fs', as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
+
+  t0 <- Sys.time()
   f <- file.path(fp, 'models', paste0(bn, '-tweedie_spat.rds'))
   if(!file.exists(f)){
     tweedie_spat_cv <- tweed(rec, indx_nndm_rs, train, test, tune_gr)
     saveRDS(tweedie_spat_cv, f)
   } else {tweedie_spat_cv <- readRDS(f)}
+  message(sprintf('[timing] XGB Tweedie Spat.: %.1fs', as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
 
+  t0 <- Sys.time()
   f <- file.path(fp, 'models', paste0(bn, '-tweedie.rds'))
-  if(!file.exists(f)){x
+  if(!file.exists(f)){
     tweedie_cv <- tweed(rec, rs, train, test, tune_gr)
     saveRDS(tweedie_cv, f)
   } else {tweedie_cv <- readRDS(f)}
-  
+  message(sprintf('[timing] XGB Tweedie: %.1fs', as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
+
   tune_gr <- parsnip::boost_tree(
     mode = 'regression',
     trees = tune(),
     min_n = tune(),
     tree_depth = tune()
   )
-  
+
+  t0 <- Sys.time()
   f <- file.path(fp, 'models', paste0(bn, '-lgbm-poisson_spat.rds'))
   if(!file.exists(f)){
     lgbm_cv <- gbs(rec, indx_nndm_rs, train, test, tune_gr, mode = 'regression', metric = 'mae',
                      engine = 'lightgbm', objective = 'poisson', resp = 'Prsnc_All')
     saveRDS(lgbm_cv, f)
   } else {lgbm_cv <- readRDS(f)}
+  message(sprintf('[timing] LGBM Poisson Spat.: %.1fs', as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
 
   # Bayesian candidates (census_uncertainty_roadmap.md Phase 1, scripts/Census_uncertainty/density_bayes.R).
-  # RFE (line ~1120 above) may have dropped Longitude/Latitude from `train` since they're
+  # RFE (above) may have dropped Longitude/Latitude from `train` since they're
   # coordinates, not predictive features - reattach them here, they're required by the
   # brms candidates' gp() term but aren't evaluated as XGBoost/LightGBM features.
   train_brms <- train
   train_brms$Longitude <- train_coords[,1]
   train_brms$Latitude  <- train_coords[,2]
 
-  brms_cv <- brms_cv_compare(train_brms, test)
-  brms_final <- brms_promote_and_refit(
-    switch(brms_cv$best$family_name,
-           Poisson = poisson(), NegBinomial = brms::negbinomial(),
-           HurdlePoisson = brms::hurdle_poisson(), HurdleNegBinomial = brms::hurdle_negbinomial()),
-    train_brms, seed = 1, fp = fp, bn = bn, family_label = tolower(brms_cv$best$family_name)
-  )
+  t0 <- Sys.time()
+  brms_cv <- if (is.null(brms_families)) {
+    brms_cv_compare(train_brms, test)
+  } else {
+    brms_cv_compare(train_brms, test, families = brms_families)
+  }
+  message(sprintf('[timing] brms_cv_compare (%d family x 2 CV modes): %.1fs',
+                   if (is.null(brms_families)) 4 else length(brms_families),
+                   as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
+
+  t0 <- Sys.time()
+  brms_final <- do.call(brms_promote_and_refit, c(
+    list(
+      best_family = switch(brms_cv$best$family_name,
+             Poisson = poisson(), NegBinomial = brms::negbinomial(),
+             HurdlePoisson = brms::hurdle_poisson(), HurdleNegBinomial = brms::hurdle_negbinomial()),
+      train = train_brms, seed = 1, fp = fp, bn = bn, family_label = tolower(brms_cv$best$family_name)
+    ),
+    brms_refit_args
+  ))
+  message(sprintf('[timing] brms_promote_and_refit (%s): %.1fs', brms_cv$best$family_name,
+                   as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
 
   # now calculate the evaluation statistics.
   namev <- c('Arithmetic Mean', 'Kriging',
@@ -1212,6 +1444,8 @@ densityModeller <- function(x, bn, fp){
   # also save the variable selection object for AOA calculation
 
   write.csv(metrrs, file.path(fp, 'tables', paste0(bn, '.csv')), row.names = FALSE)
+
+  message(sprintf('[timing] densityModeller() TOTAL: %.1fs', as.numeric(difftime(Sys.time(), t_total, units = 'secs'))))
 
   invisible(list(metrics = metrrs, brms_promoted = brms_final))
 }
@@ -1272,7 +1506,7 @@ gbs <- function(rec, cv, train, test, resp, tune_gr, mode, engine, objective, le
 }
 
 #' fit xgboosted models to predict plant count per space density.
-#' @param f a vector of predicted suitable habitat rasters to use for input.
+#' @param x a vector of predicted suitable habitat rasters to use for input.
 #' @param return_early logical, if TRUE (default) return the assembled plot-level
 #' data.frame without fitting any density models - the behavior `ModelInterpretation.Rmd`
 #' relies on for PDP-plot exploration. Set FALSE to actually run `densityModeller()`.
@@ -1288,15 +1522,15 @@ wrapper <- function(x, return_early = TRUE){
   )
   
   ct <- sf::st_read(
-    file.path('..', 'data', 'Data4modelling', paste0(res_string, '-count-iter1.gpkg')
+    file.path(PROJ_ROOT, 'data', 'Data4modelling', paste0(res_string, '-count-iter1.gpkg')
     ), quiet = TRUE
   ) |>
     dplyr::select(Prsnc_M, Prsnc_J, Lctn_bb)
   
-  p2proc = '../data/spatial/processed'
+  p2proc = paste0(PROJ_ROOT, '/data/spatial/processed')
   rast_dat <- rastReader(paste0('dem_', res), p2proc) 
   
-  r <- terra::rast(file.path('..', 'results', 'suitability_maps', x))
+  r <- terra::rast(file.path(PROJ_ROOT, 'results', 'suitability_maps', x))
   
   df <- dplyr::bind_cols(
     ct, 
@@ -1315,103 +1549,164 @@ wrapper <- function(x, return_early = TRUE){
   df$Longitude <- coords[,1]
   df$Latitude <- coords[,2]
 
-  densityModeller(df, fp = '../results/count_models', bn = gsub('DO.*$', '', x))
+  densityModeller(df, fp = paste0(PROJ_ROOT, '/results/count_models'), bn = gsub('DO.*$', '', x))
 
 }
 
 
-patchAttributes <- function(x){
-  
+patchAttributes <- function(x, region_k = 2, region_buffer_m = 5000, region_max_cells = 12e6){
+
   pr <- terra::rast(x[['Pr']])
   aoa <- terra::rast(x[['AOA']])
   threshs <- terra::rast(x[['thresholds']])
-  
-  # will iterate through each of the options. 
+
+  # will iterate through each of the options.
   evals <- data.frame(
     eval = c('spec_sens', 'equal_sens_spec', 'sensitivity'),
     layer = 1:3
   )
-  
+
   threshs <- terra::mask(threshs, aoa, maskvalues = 0)
-  
-  calcs <- vector(mode = 'list', length = 3)
-  names(calcs) <- evals$eval 
-  
-  landscape <- terra::rast(
-    terra::ext(pr), 
-    resolution=terra::res(pr), 
-    crs = terra::crs(pr), 
-    nlyrs = 3
-  )
-  
-  for(i in seq_along(evals$eval)){
-    
-    calcs[[i]] <- landscapemetrics::calculate_lsm(
-      threshs[[i]], 
-      what = c("lsm_p_area",  "lsm_p_enn", "lsm_p_cai", "lsm_p_para", "lsm_p_frac"), 
-      neighbourhood = 4, directions = 8) |>
-      dplyr::select(id, metric, value) 
-    
+
+  # --- crop to geographically disjoint regions around known occurrences,
+  # same approach (and same clusterRegionExtents()) as CostDistances.R uses
+  # for gdistance::transition(). The full 1-3arc domain (~330M cells) is far
+  # too large for landscapemetrics::get_patches()/calculate_lsm() to run on
+  # directly - occupied ground is a tiny fraction of the full grid, and an
+  # unscoped run on this was observed to run 10+ hours with no guarantee of
+  # ever finishing safely.
+  occ_pts <- sf::st_read(
+    file.path(PROJ_ROOT, 'data', 'Data4modelling', '3m-presence-iter1.gpkg'), quiet = TRUE) |>
+    dplyr::filter(Presenc == 1) |>
+    sf::st_transform(terra::crs(pr))
+
+  region_exts <- clusterRegionExtents(
+    occ_pts, k = region_k, buffer_m = region_buffer_m,
+    max_cells = region_max_cells, res_m = mean(terra::res(pr)))
+
+  landscape_tiles <- vector('list', length(region_exts))
+  calcs_list      <- vector('list', length(region_exts))
+  occ_list        <- vector('list', length(region_exts))
+  central_list    <- vector('list', length(region_exts))
+  id_offset       <- 0
+
+  # read once - reused against every region below; a point outside a given
+  # region's cropped extent just extracts NA and is dropped. Read via sf and
+  # filtered to Presenc == 1, same convention as elsewhere in this pipeline
+  # (e.g. sdm_groundtruth_design_1-3arc.R) - the file also carries 9 stray
+  # GEOMETRYCOLLECTION rows (NA Presenc) alongside the 679 real POINT rows;
+  # terra::vect() on the raw file guesses a single geometry type from that
+  # mix and silently returns the *polygons* it finds inside those 9 rows,
+  # dropping every real point. Filtering first sidesteps the type-guessing
+  # entirely.
+  pres <- sf::st_read(
+    file.path(PROJ_ROOT, 'data', 'Data4modelling', '3m-presence-iter1.gpkg'), quiet = TRUE) |>
+    dplyr::filter(Presenc == 1) |>
+    terra::vect()
+
+  for (r in seq_along(region_exts)) {
+
+    reg_ext     <- region_exts[[r]]
+    threshs_reg <- terra::crop(threshs, reg_ext)
+
+    calcs_reg <- vector(mode = 'list', length = 3)
+    names(calcs_reg) <- evals$eval
+
+    for(i in seq_along(evals$eval)){
+
+      calcs_reg[[i]] <- landscapemetrics::calculate_lsm(
+        threshs_reg[[i]],
+        what = c("lsm_p_area",  "lsm_p_enn", "lsm_p_cai", "lsm_p_para", "lsm_p_frac"),
+        neighbourhood = 4, directions = 8) |>
+        dplyr::select(id, metric, value)
+
+    }
+
+    patches_reg <- landscapemetrics::get_patches(threshs_reg, directions = 8)
+    calcs_reg <- dplyr::bind_rows(calcs_reg, .id = 'evals')
+
+    # kind of strange object, we'll just brute force it back to a happy terra object
+    landscape_reg <- c(
+      patches_reg$layer_1$class_1,
+      patches_reg$layer_2$class_1,
+      patches_reg$layer_3$class_1
+    )
+    names(landscape_reg) <- evals$eval
+
+    # offset patch IDs so they stay globally unique once regions are remerged
+    max_id_reg <- suppressWarnings(max(calcs_reg$id, na.rm = TRUE))
+    if (is.finite(max_id_reg)) {
+      landscape_reg <- landscape_reg + id_offset
+      calcs_reg$id  <- calcs_reg$id + id_offset
+      id_offset     <- id_offset + max_id_reg
+    }
+
+    landscape_tiles[[r]] <- landscape_reg
+    calcs_list[[r]]      <- calcs_reg
+
+    # --- occupied/unoccupied + central tendency, computed HERE while still
+    # region-cropped. Running extract()/zonal() against the full 330M-cell
+    # domain (post-extend()) is what OOM-killed (127GB RSS) the first pass
+    # at this - zonal stats grouped by a huge-cardinality categorical raster
+    # forces a full memory-resident scan. Confined to a cropped region, both
+    # are cheap, and results across regions are just row-bound after.
+    occ_list[[r]] <- terra::extract(landscape_reg, pres) |>
+      dplyr::select(-ID) |>
+      tidyr::pivot_longer(everything(), values_to = 'patch', names_to = 'threshold') |>
+      tidyr::drop_na()
+
+    pr_reg <- terra::crop(pr, reg_ext) |>
+      terra::mask(terra::crop(aoa, reg_ext), maskvalues = 0)
+
+    central_reg <- vector(mode = 'list', length = 3)
+    for (i in seq_along(evals$eval)) {
+      pr_sub <- terra::mask(pr_reg, threshs_reg[[i]], maskvalues = 0)
+      mn  <- terra::zonal(pr_sub, landscape_reg[[i]], fun = 'mean',   na.rm = TRUE)
+      mdn <- terra::zonal(pr_sub, landscape_reg[[i]], fun = 'median', na.rm = TRUE)
+      central_reg[[i]] <- setNames(
+        data.frame(cbind(mn, mdn[, 2], evals = evals$eval[[i]])),
+        c('patchID', 'mean', 'median', 'evals'))
+    }
+    central_list[[r]] <- dplyr::bind_rows(central_reg)
   }
-  
-  landscape <- landscapemetrics::get_patches(threshs, directions = 8)
-  calcs <- dplyr::bind_rows(calcs, .id = 'evals')
-  
-  # kind of strange object, we'll just brute force it back to a happy terra object
-  landscape <- c(
-    landscape$layer_2$class_1,
-    landscape$layer_2$class_1,
-    landscape$layer_3$class_1
-  )
+
+  landscape <- if (length(landscape_tiles) > 1) {
+    terra::mosaic(terra::sprc(landscape_tiles), fun = 'first')
+  } else {
+    landscape_tiles[[1]]
+  }
+  landscape <- terra::extend(landscape, pr)
   names(landscape) <- evals$eval
-  
+
+  calcs <- dplyr::bind_rows(calcs_list)
+
   write.csv(
     calcs,
-    file = file.path('..', 'results', 'patch_summaries', paste0(x[['version']][1], '-patches.csv')),
+    file = file.path(PROJ_ROOT, 'results', 'patch_summaries', paste0(x[['version']][1], '-patches.csv')),
     row.names = F)
-  
+
   writeRaster(
     landscape, overwrite = TRUE,
-    filename = file.path('..', 'results', 'patches', paste0(x[['version']][1], 'patches.tif')))
-  
-  # now make a table noting which patches are occupied and which are unoccupied. 
-  pres <- terra::vect(file.path('..', 'data', 'Data4modelling', '3m-presence-iter1.gpkg'))
-  occ_patches <- terra::extract(landscape, pres) |>
-    dplyr::select(-ID) |>
-    tidyr::pivot_longer(everything(), values_to = 'patch', names_to = 'threshold') |>
+    filename = file.path(PROJ_ROOT, 'results', 'patches', paste0(x[['version']][1], '-patches.tif')))
+
+  # now make a table noting which patches are occupied and which are unoccupied.
+  occ_patches <- dplyr::bind_rows(occ_list) |>
     dplyr::distinct(patch, threshold, .keep_all = TRUE) |>
-    tidyr::drop_na() |>
     dplyr::arrange(threshold, patch)
-  
+
   write.csv(
-    occ_patches, 
-    file = file.path('..', 'results', 'patch_summaries', paste0(x[['version']][1], '-occupied.csv')),
+    occ_patches,
+    file = file.path(PROJ_ROOT, 'results', 'patch_summaries', paste0(x[['version']][1], '-occupied.csv')),
     row.names = FALSE)
-  
-  # finally we grab aggregate data on the predicted probability per each patch. We will 
-  # gather the 'max', '25th quartile', '50th quartile' and '75th quartile' for each 
-  
-  pr <- terra::rast(x[['Pr']])
-  pr <- terra::mask(pr, aoa, maskvalues = 0)
-  
-  central <- vector(mode = 'list', length = 3)
-  pr_summaries <- vector(mode = 'list', length = 3)
-  for(i in seq_along(evals$eval)){
-    pr_sub <- terra::mask(pr, threshs[[i]], maskvalues = 0)
-    mn <- terra::zonal(pr_sub,  landscape[[i]], fun = 'mean', na.rm = TRUE)
-    mdn <- terra::zonal(pr_sub,  landscape[[i]], fun = 'median', na.rm = TRUE)
-    
-    central[[i]] <- setNames(
-      data.frame(cbind(mn, mdn[,2], evals = evals$eval[[i]])),
-      c('patchID', 'mean', 'median', 'evals'))
-  }
-  central <- dplyr::bind_rows(central)
-  
+
+  # aggregate predicted probability per patch ('mean'/'median' per patch).
+  central <- dplyr::bind_rows(central_list)
+
   write.csv(
-    central, 
-    file = file.path('..', 'results', 'patch_summaries', paste0(x[['version']][1], '-cntrlTend.csv')),
+    central,
+    file = file.path(PROJ_ROOT, 'results', 'patch_summaries', paste0(x[['version']][1], '-cntrlTend.csv')),
     row.names = FALSE)
-  
+
 }
 
 
@@ -1519,7 +1814,7 @@ patchDist <- function(x, patch_lkp, r_name, thresh_type){
       .groups = 'drop_last',
     )
   
-  fp <- file.path('..', 'results', 'patch_distances')
+  fp <- file.path(PROJ_ROOT, 'results', 'patch_distances')
 
   r_name <- paste0(r_name, '-', thresh_type)
   write.csv(min_dist, file.path(fp, paste0(r_name, 'MinDist.csv')), row.names = F)

@@ -1,0 +1,98 @@
+---
+title: "Modelling Eriogonum coloradense Presence and Abundance - Iteration 0"
+author: "steppe"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = '/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
+```
+
+```{r, warning = F, message = F}
+library(sf)
+library(tidyverse)
+library(terra)
+library(caret)
+library(ranger)
+library(future)
+source('../functions.R')
+```
+
+Model presence at each of three spatial resolutions (3 arc-second/90m, 1 arc-second/30m,
+1/3 arc-second/10m) for iteration 0 (historic records only, pre-2024 ground-truthing),
+searching the presence:absence ratio adaptively at each resolution rather than fixing it -
+see `adaptive_PAratio_search()` in functions.R. The absence pool is shared with iteration 1
+(`iter1-pa.gpkg`) since no iteration-0-specific pool exists.
+
+```{r Shared absence pool}
+abs <- st_read('../../data/Data4modelling/iter1-pa.gpkg')
+```
+
+## 3 arc-second (90m)
+
+```{r Resolution 90m, eval = F}
+m90 <- sf::st_read('../../data/Data4modelling/90m-presence-iter0.gpkg') %>%
+  rename(Occurrence = Presenc) |>
+  sf::st_as_sf()
+m90 <- bind_rows(m90, abs)
+m90 <- filter(m90, st_is(m90, "POINT")) |>
+  select(Occurrence)
+
+search_90 <- adaptive_PAratio_search(
+  x = m90, distOrder = 0, resolution = 90, iteration = 0,
+  train_split = 0.8, p2proc = '../../data/spatial/processed'
+  )
+
+search_90_classic <- adaptive_PAratio_search(
+  x = m90, distOrder = 0, resolution = 90, iteration = 0, train_split = 0.8,
+  p2proc = '../../data/spatial/processed',
+  spatial_split = FALSE,
+  results_root = file.path(PROJ_ROOT, 'results_classicsplit')
+)
+```
+
+## 1 arc-second (30m)
+
+```{r Resolution 30m, eval = F}
+m30 <- sf::st_read('../../data/Data4modelling/30m-presence-iter0.gpkg') %>%
+  rename(Occurrence = Presenc) |>
+  sf::st_as_sf()
+m30 <- bind_rows(m30, abs)
+m30 <- filter(m30, st_is(m30, "POINT")) |>
+  select(Occurrence)
+
+search_30 <- adaptive_PAratio_search(
+  x = m30, distOrder = 0, resolution = 30, iteration = 0,
+  train_split = 0.8, p2proc = '../../data/spatial/processed'
+  )
+
+search_30_classic <- adaptive_PAratio_search(
+  x = m30, distOrder = 0, resolution = 30, iteration = 0, train_split = 0.8,
+  p2proc = '../../data/spatial/processed',
+  spatial_split = FALSE,
+  results_root = file.path(PROJ_ROOT, 'results_classicsplit')
+)
+```
+
+## 1/3 arc-second (10m)
+
+```{r Resolution 10m, eval = F}
+m10 <- sf::st_read('../../data/Data4modelling/3m-presence-iter0.gpkg') %>%
+  rename(Occurrence = Presenc) |>
+  sf::st_as_sf()
+m10 <- bind_rows(m10, abs)
+m10 <- filter(m10, st_is(m10, "POINT")) |>
+  select(Occurrence)
+
+search_10 <- adaptive_PAratio_search(
+  x = m10, distOrder = 0, resolution = 10, iteration = 0,
+  train_split = 0.8, p2proc = '../../data/spatial/processed'
+  )
+
+search_10_classic <- adaptive_PAratio_search(
+  x = m10, distOrder = 0, resolution = 10, iteration = 0, train_split = 0.8,
+  p2proc = '../../data/spatial/processed',
+  spatial_split = FALSE,
+  results_root = file.path(PROJ_ROOT, 'results_classicsplit')
+)
+```

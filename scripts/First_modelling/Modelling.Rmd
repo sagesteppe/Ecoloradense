@@ -15,7 +15,7 @@ library(terra)
 library(caret)
 library(ranger)
 library(future)
-source('functions.R')
+source('../functions.R')
 ```
 
 Model presence at each of three spatial resolutions (3 arc-second/90m, 1 arc-second/30m,
@@ -24,29 +24,36 @@ searching the presence:absence ratio adaptively at each resolution rather than f
 see `adaptive_PAratio_search()` in functions.R.
 
 ```{r Shared absence pool}
-abs <- st_read('../data/Data4modelling/iter1-pa.gpkg')
+abs <- st_read('../../data/Data4modelling/iter1-pa.gpkg')
 ```
 
 ## 3 arc-second (90m)
 
 ```{r Resolution 90m, eval = F}
-m90 <- sf::st_read('../data/Data4modelling/90m-presence-iter1.gpkg') %>%
+m90 <- sf::st_read('../../data/Data4modelling/90m-presence-iter1.gpkg') %>%
   rename(Occurrence = Presenc) |>
   sf::st_as_sf()
-m90 <- bind_rows(m90, abs)
+m90 <- bind_rows(m90, abs) ## start 7:06
 m90 <- filter(m90, st_is(m90, "POINT")) |>
   select(Occurrence)
 
 search_90 <- adaptive_PAratio_search(
   x = m90, distOrder = 0, resolution = 90,
-  train_split = 0.8, p2proc = '../data/spatial/processed'
+  train_split = 0.8, p2proc = '../../data/spatial/processed'
   )
+
+search_90_classic <- adaptive_PAratio_search(
+  x = m90, distOrder = 0, resolution = 90, train_split = 0.8,
+  p2proc = '../../data/spatial/processed',
+  spatial_split = FALSE,
+  results_root = file.path(PROJ_ROOT, 'results_classicsplit')
+)
 ```
 
 ## 1 arc-second (30m)
 
 ```{r Resolution 30m, eval = F}
-m30 <- sf::st_read('../data/Data4modelling/30m-presence-iter1.gpkg') %>%
+m30 <- sf::st_read('../../data/Data4modelling/30m-presence-iter1.gpkg') %>%
   rename(Occurrence = Presenc) |>
   sf::st_as_sf()
 m30 <- bind_rows(m30, abs)
@@ -55,14 +62,21 @@ m30 <- filter(m30, st_is(m30, "POINT")) |>
 
 search_30 <- adaptive_PAratio_search(
   x = m30, distOrder = 0, resolution = 30,
-  train_split = 0.8, p2proc = '../data/spatial/processed'
+  train_split = 0.8, p2proc = '../../data/spatial/processed'
   )
+
+search_30_classic <- adaptive_PAratio_search(
+  x = m30, distOrder = 0, resolution = 30, train_split = 0.8,
+  p2proc = '../../data/spatial/processed',
+  spatial_split = FALSE,
+  results_root = file.path(PROJ_ROOT, 'results_classicsplit')
+)
 ```
 
 ## 1/3 arc-second (10m)
 
 ```{r Resolution 10m, eval = F}
-m10 <- sf::st_read('../data/Data4modelling/10m-presence-iter1.gpkg') %>%
+m10 <- sf::st_read('../../data/Data4modelling/3m-presence-iter1.gpkg') %>%
   rename(Occurrence = Presenc) |>
   sf::st_as_sf()
 m10 <- bind_rows(m10, abs)
@@ -71,17 +85,24 @@ m10 <- filter(m10, st_is(m10, "POINT")) |>
 
 search_10 <- adaptive_PAratio_search(
   x = m10, distOrder = 0, resolution = 10,
-  train_split = 0.8, p2proc = '../data/spatial/processed'
+  train_split = 0.8, p2proc = '../../data/spatial/processed'
   )
+
+search_10_classic <- adaptive_PAratio_search(
+  x = m10, distOrder = 0, resolution = 10, train_split = 0.8,
+  p2proc = '../../data/spatial/processed',
+  spatial_split = FALSE,
+  results_root = file.path(PROJ_ROOT, 'results_classicsplit')
+)
 ```
 
 ## Predictor variable names (reference)
 
 ```{r Predictor variable names, eval = F}
-d <- rastReader('dem_1arc', '../data/spatial/processed')
+d <- rastReader('dem_1arc', '../../data/spatial/processed')
 write.csv(
   data.frame('rast_lyr_name' = names(d)),
-  '../data/spatial/processed/raster_lyr_names.csv'
+  '../../data/spatial/processed/raster_lyr_names.csv'
   )
 ```
 
