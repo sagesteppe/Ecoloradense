@@ -1,0 +1,87 @@
+---
+title: "Visited random points and transects"
+format: html
+---
+
+## Overview
+
+Field crews have started revisiting the randomly-placed ground-truth
+points/transects and recording presence data (`Prsnc_M`, `Prsnc_J`, `Prsnc_S`
+- one column per visit). A point is treated as *visited* once any of those
+three columns is non-`NA`, regardless of the value recorded (0 or a count).
+
+Goal here is just to pull two subsets out of `ground_truth_median-VISITED.gpkg`:
+
+- **Visited points** - the random `base_pts`/`os_pts` that have been visited.
+- **Visited transects** - the *entire* transect (all points along it, not
+  just the visited ones) for any transect (`transects_known`/`transects_other`,
+  grouped by `patch_ID`) that has at least one visited point.
+
+```{r}
+library(sf)
+library(dplyr)
+library(tidyverse)
+```
+
+```{r import}
+gt_path <- file.path('..', '..', 'data', 'GroundTruthPts', 'ground_truth_median-VISITED.gpkg')
+
+base_pts <- st_read(gt_path, layer = 'base_pts', quiet = TRUE)
+os_pts <- st_read(gt_path, layer = 'os_pts', quiet = TRUE)
+transects_known <- st_read(gt_path, layer = 'transects_known', quiet = TRUE)
+transects_other <- st_read(gt_path, layer = 'transects_other', quiet = TRUE)
+```
+
+## Visited points
+
+```{r visited points}
+was_visited <- function(df) {
+  df |> mutate(visited = if_any(c(Prsnc_M, Prsnc_J, Prsnc_S), ~ !is.na(.)))
+}
+
+points <- bind_rows(
+  was_visited(base_pts) |> mutate(source = 'base_pts'),
+  was_visited(os_pts) |> mutate(source = 'os_pts')
+)
+
+visited_points <- points |> filter(visited)
+nrow(visited_points)
+```
+
+## Visited transects
+
+```{r visited transects}
+transects <- bind_rows(
+  was_visited(transects_known) |> mutate(source = 'transects_known'),
+  was_visited(transects_other) |> mutate(source = 'transects_other')
+)
+
+visited_patch_ids <- transects |>
+  st_drop_geometry() |>
+  filter(visited) |>
+  distinct(source, patch_ID)
+
+visited_transects <- transects |>
+  semi_join(visited_patch_ids, by = c('source', 'patch_ID'))
+
+n_distinct(paste(visited_transects$source, visited_transects$patch_ID))
+nrow(visited_transects)
+```
+
+## Quick check
+
+```{r}
+ggplot() +
+  geom_sf(data = visited_transects, aes(color = source)) +
+  geom_sf(data = visited_points, aes(color = source), size = 2) +
+  theme_void()
+```
+
+## Write out
+
+```{r write}
+out_path <- file.path('..', '..', 'data', 'GroundTruthPts', 'visited_subset.gpkg')
+
+st_write(visited_points, out_path, layer = 'visited_points', append = FALSE, quiet = TRUE)
+st_write(visited_transects, out_path, layer = 'visited_transects', append = FALSE, quiet = TRUE)
+```
