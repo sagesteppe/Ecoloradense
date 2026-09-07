@@ -390,13 +390,33 @@ The area under the precision-recall curve (AUC-PR), the True Skill Statistic, an
 ### 3.3 | Occupancy Based Field Sampling (H3)
 
 ```{r Sub-population Detection Table}
-# Detail the Number of sub populations detected at each iteration.
+## Occupancy ~ Euclidean distance (E) and the region-orthogonalized cost-distance
+## anomaly (R) at the 2026 ground-truth points (produced by
+## Second_groundtruth/cost_residual_occupancy.R, Seed1021 realization of
+## 1-3arc-Iteration1-PA1:1DO:0). Detection bands follow the Introduction's "Here we"
+## list: extension < 270m, sub-population 270-450m, new population >= 450m of a known
+## occurrence.
+## NOTE: these are per-POINT counts - adjacent detections that belong to the same real
+## population will be merged into named populations before this is final; a cluster of
+## "new population" points 500m apart is one new population, not several.
+bands <- read_csv(file.path('..', '..', 'results', 'tables', '2026-groundtruth-occupancy-bands.csv'),
+                   show_col_types = FALSE)
+get_band <- function(b) { v <- bands$n_presences[bands$band == b]; if (length(v) == 1) v else 'XX' }
+n_extension <- get_band('extension (<270m)')
+n_subpop    <- get_band('sub-population (270-450m)')
+n_newpop    <- get_band('new population (>=450m)')
+
+occ_lrt <- read_csv(file.path('..', '..', 'results', 'tables', '2026-groundtruth-occupancy-glm-lrt.csv'),
+                     show_col_types = FALSE)
+get_p <- function(term_lbl) { v <- occ_lrt$p_value[occ_lrt$term == term_lbl]; if (length(v) == 1) signif(v, 2) else 'XX' }
+p_E_given_R <- get_p('E (given R)')
+p_R_given_E <- get_p('R (given E)')
+p_E_alone   <- get_p('E (alone)')
+p_R_alone   <- get_p('R (alone)')
 ```
 
-X sub-populations (occurrences found between 270-450m) were detected while field sampling.
-No new populations were detected during sampling.
-The latter indicating that the species geographic distribution is well defined.
-A zero-inflated logistic model identifies that Euclidean distance has X contributions, while the cost-distance anomaly surface has X contribution.
+`r n_subpop` sub-populations (occurrences found between 270-450m) and `r n_newpop` new populations (>=450m) were detected while field sampling, plus `r n_extension` extensions of already-known populations (<270m); these per-point detections will be merged into named populations before final reporting.
+A logistic model of occupancy on Euclidean distance (E) and the cost-distance anomaly (R) finds that neither predictor is significant alone (E: p = `r p_E_alone`; R: p = `r p_R_alone`), but each becomes significant once the other is included (E given R: p = `r p_E_given_R`; R given E: p = `r p_R_given_E`), indicating the two distance measures are complementary rather than redundant predictors of occupancy.
 
 ### 3.4 | Plant Density (H4a)
 
