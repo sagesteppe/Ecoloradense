@@ -8,7 +8,7 @@ library(terra)
 library(tidyverse)
 library(yardstick)
 
-p2proj <- '/home/sagesteppe/Documents/Ecoloradense'
+p2proj <- '/media/steppe/hdd/EriogonumColoradenseTaxonomy'
 
 ## 1. Digitize -----------------------------------------------------------
 
@@ -60,22 +60,27 @@ suit_rasters <- list.files(file.path(p2proj, 'results', 'suitability_maps'),
 res_labels <- c('3arc' = '3 arc-second', '1arc' = '1 arc-second', '1-3arc' = '1/3 arc-second')
 
 evaluate_surface <- function(f, within_m = NULL) {
-  res_tag <- sub('-Iteration.*$', '', basename(f))
+  model <- sub('-Pr\\.tif$', '', basename(f))
+  res_tag <- sub('-Iteration.*$', '', model)
+  iteration <- as.integer(sub('.*-Iteration([0-9]+)-.*', '\\1', model))
   r <- rast(f)
   pts <- if (is.null(within_m)) gt else filter(gt, dist_known_occ <= within_m)
   pred <- terra::extract(r, vect(pts))[, 2]
   keep <- !is.na(pred)
   if (sum(keep) == 0 || length(unique(pts$Presence[keep])) < 2) {
-    return(tibble(resolution = unname(res_labels[res_tag]), n = sum(keep), pr_auc = NA_real_))
+    return(tibble(model = model, resolution = unname(res_labels[res_tag]), iteration = iteration,
+                   n = sum(keep), pr_auc = NA_real_))
   }
   df <- tibble(truth = factor(pts$Presence[keep], levels = c(0, 1)), pred = pred[keep])
-  tibble(resolution = unname(res_labels[res_tag]), n = nrow(df),
+  tibble(model = model, resolution = unname(res_labels[res_tag]), iteration = iteration,
+         n = nrow(df),
          pr_auc = yardstick::pr_auc(df, truth, pred, event_level = 'second')$.estimate)
 }
 
 if (length(suit_rasters) == 0) {
   message('No suitability rasters found under results/suitability_maps/ - nothing to evaluate yet.')
-  eval_all <- eval_270 <- tibble(resolution = character(), n = integer(), pr_auc = double())
+  eval_all <- eval_270 <- tibble(model = character(), resolution = character(), iteration = integer(),
+                                  n = integer(), pr_auc = double())
 } else {
   eval_all <- map_dfr(suit_rasters, evaluate_surface)
   eval_270 <- map_dfr(suit_rasters, evaluate_surface, within_m = 270)

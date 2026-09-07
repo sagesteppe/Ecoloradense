@@ -1,0 +1,538 @@
+"model","resolution","iteration","pa_ratio","dist_order","seed","cv_structure","n","pr_auc"
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1016","1/3 arc-second",0,"1:1.25","0",1016,"spatial knndm",305,0.422023183139147
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1017","1/3 arc-second",0,"1:1.25","0",1017,"spatial knndm",305,0.413484533958038
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1018","1/3 arc-second",0,"1:1.25","0",1018,"spatial knndm",305,0.406549884960147
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1019","1/3 arc-second",0,"1:1.25","0",1019,"spatial knndm",305,0.50375775769964
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1020","1/3 arc-second",0,"1:1.25","0",1020,"spatial knndm",305,0.500342347052803
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1026","1/3 arc-second",0,"1:1.25","0",1026,"spatial knndm",305,0.394416780845361
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1027","1/3 arc-second",0,"1:1.25","0",1027,"spatial knndm",305,0.500141520585121
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1028","1/3 arc-second",0,"1:1.25","0",1028,"spatial knndm",305,0.475038198636568
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1029","1/3 arc-second",0,"1:1.25","0",1029,"spatial knndm",305,0.511226297192938
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1030","1/3 arc-second",0,"1:1.25","0",1030,"spatial knndm",305,0.513808005701464
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1031","1/3 arc-second",0,"1:1.25","0",1031,"spatial knndm",305,0.539346037731514
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1032","1/3 arc-second",0,"1:1.25","0",1032,"spatial knndm",305,0.42323208875284
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1033","1/3 arc-second",0,"1:1.25","0",1033,"spatial knndm",305,0.439921020156339
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1034","1/3 arc-second",0,"1:1.25","0",1034,"spatial knndm",305,0.396846356039559
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1035","1/3 arc-second",0,"1:1.25","0",1035,"spatial knndm",305,0.471909788437496
+"1-3arc-Iteration0-PA1:1.5DO:0-Seed1013","1/3 arc-second",0,"1:1.5","0",1013,"spatial knndm",305,0.527005420940454
+"1-3arc-Iteration0-PA1:1.5DO:0-Seed1014","1/3 arc-second",0,"1:1.5","0",1014,"spatial knndm",305,0.403878113377046
+"1-3arc-Iteration0-PA1:1.5DO:0-Seed1015","1/3 arc-second",0,"1:1.5","0",1015,"spatial knndm",305,0.493496399574499
+"1-3arc-Iteration0-PA1:1.75DO:0-Seed1021","1/3 arc-second",0,"1:1.75","0",1021,"spatial knndm",305,0.406938021482922
+"1-3arc-Iteration0-PA1:1.75DO:0-Seed1022","1/3 arc-second",0,"1:1.75","0",1022,"spatial knndm",305,0.476058491310708
+"1-3arc-Iteration0-PA1:1.75DO:0-Seed1023","1/3 arc-second",0,"1:1.75","0",1023,"spatial knndm",305,0.401380000746337
+"1-3arc-Iteration0-PA1:1.75DO:0-Seed1024","1/3 arc-second",0,"1:1.75","0",1024,"spatial knndm",305,0.383824803385952
+"1-3arc-Iteration0-PA1:1.75DO:0-Seed1025","1/3 arc-second",0,"1:1.75","0",1025,"spatial knndm",305,0.395764329993928
+"1-3arc-Iteration0-PA1:1DO:0-Seed1001","1/3 arc-second",0,"1:1","0",1001,"spatial knndm",305,0.48716804946321
+"1-3arc-Iteration0-PA1:1DO:0-Seed1002","1/3 arc-second",0,"1:1","0",1002,"spatial knndm",305,0.439070302536937
+"1-3arc-Iteration0-PA1:1DO:0-Seed1003","1/3 arc-second",0,"1:1","0",1003,"spatial knndm",305,0.526540210489508
+"1-3arc-Iteration0-PA1:2DO:0-Seed1004","1/3 arc-second",0,"1:2","0",1004,"spatial knndm",305,0.390228972222588
+"1-3arc-Iteration0-PA1:2DO:0-Seed1005","1/3 arc-second",0,"1:2","0",1005,"spatial knndm",305,0.439937490292141
+"1-3arc-Iteration0-PA1:2DO:0-Seed1006","1/3 arc-second",0,"1:2","0",1006,"spatial knndm",305,0.428241250871592
+"1-3arc-Iteration0-PA1:3DO:0-Seed1007","1/3 arc-second",0,"1:3","0",1007,"spatial knndm",305,0.421663424212614
+"1-3arc-Iteration0-PA1:3DO:0-Seed1008","1/3 arc-second",0,"1:3","0",1008,"spatial knndm",305,0.444079744066341
+"1-3arc-Iteration0-PA1:3DO:0-Seed1009","1/3 arc-second",0,"1:3","0",1009,"spatial knndm",305,0.408170888326719
+"1-3arc-Iteration0-PA1:4DO:0-Seed1010","1/3 arc-second",0,"1:4","0",1010,"spatial knndm",305,0.443165689164056
+"1-3arc-Iteration0-PA1:4DO:0-Seed1011","1/3 arc-second",0,"1:4","0",1011,"spatial knndm",305,0.419782696739128
+"1-3arc-Iteration0-PA1:4DO:0-Seed1012","1/3 arc-second",0,"1:4","0",1012,"spatial knndm",305,0.458585092383902
+"1-3arc-Iteration1-PA1:1DO:0-Seed1001","1/3 arc-second",1,"1:1","0",1001,"spatial knndm",305,0.497647443497157
+"1-3arc-Iteration1-PA1:1DO:0-Seed1002","1/3 arc-second",1,"1:1","0",1002,"spatial knndm",305,0.452214245000645
+"1-3arc-Iteration1-PA1:1DO:0-Seed1003","1/3 arc-second",1,"1:1","0",1003,"spatial knndm",305,0.468536520702238
+"1-3arc-Iteration1-PA1:1DO:0-Seed1013","1/3 arc-second",1,"1:1","0",1013,"spatial knndm",305,0.474506829509354
+"1-3arc-Iteration1-PA1:1DO:0-Seed1014","1/3 arc-second",1,"1:1","0",1014,"spatial knndm",305,0.456275863917642
+"1-3arc-Iteration1-PA1:1DO:0-Seed1015","1/3 arc-second",1,"1:1","0",1015,"spatial knndm",305,0.498274474627067
+"1-3arc-Iteration1-PA1:1DO:0-Seed1016","1/3 arc-second",1,"1:1","0",1016,"spatial knndm",305,0.498102858738364
+"1-3arc-Iteration1-PA1:1DO:0-Seed1017","1/3 arc-second",1,"1:1","0",1017,"spatial knndm",305,0.476459306405757
+"1-3arc-Iteration1-PA1:1DO:0-Seed1018","1/3 arc-second",1,"1:1","0",1018,"spatial knndm",305,0.4850417798574
+"1-3arc-Iteration1-PA1:1DO:0-Seed1019","1/3 arc-second",1,"1:1","0",1019,"spatial knndm",305,0.470676640111342
+"1-3arc-Iteration1-PA1:1DO:0-Seed1020","1/3 arc-second",1,"1:1","0",1020,"spatial knndm",305,0.460331435720165
+"1-3arc-Iteration1-PA1:1DO:0-Seed1021","1/3 arc-second",1,"1:1","0",1021,"spatial knndm",305,0.478143546296135
+"1-3arc-Iteration1-PA1:1DO:0-Seed1022","1/3 arc-second",1,"1:1","0",1022,"spatial knndm",305,0.499490670938795
+"1-3arc-Iteration1-PA1:2DO:0-Seed1004","1/3 arc-second",1,"1:2","0",1004,"spatial knndm",305,0.481877291772211
+"1-3arc-Iteration1-PA1:2DO:0-Seed1005","1/3 arc-second",1,"1:2","0",1005,"spatial knndm",305,0.491885341767039
+"1-3arc-Iteration1-PA1:2DO:0-Seed1006","1/3 arc-second",1,"1:2","0",1006,"spatial knndm",305,0.479019384515423
+"1-3arc-Iteration1-PA1:3.95750708215297DO:0-Seed1010","1/3 arc-second",1,"1:3.95750708215297","0",1010,"spatial knndm",305,0.510351838277644
+"1-3arc-Iteration1-PA1:3.95750708215297DO:0-Seed1011","1/3 arc-second",1,"1:3.95750708215297","0",1011,"spatial knndm",305,0.478349178839133
+"1-3arc-Iteration1-PA1:3.95750708215297DO:0-Seed1012","1/3 arc-second",1,"1:3.95750708215297","0",1012,"spatial knndm",305,0.507442574965836
+"1-3arc-Iteration1-PA1:3DO:0-Seed1007","1/3 arc-second",1,"1:3","0",1007,"spatial knndm",305,0.509585354463062
+"1-3arc-Iteration1-PA1:3DO:0-Seed1008","1/3 arc-second",1,"1:3","0",1008,"spatial knndm",305,0.499121529589099
+"1-3arc-Iteration1-PA1:3DO:0-Seed1009","1/3 arc-second",1,"1:3","0",1009,"spatial knndm",305,0.507208531570925
+"1arc-Iteration0-PA1:1.25DO:0-Seed1022","1 arc-second",0,"1:1.25","0",1022,"spatial knndm",305,0.473951628433222
+"1arc-Iteration0-PA1:1.25DO:0-Seed1023","1 arc-second",0,"1:1.25","0",1023,"spatial knndm",305,0.464231765070437
+"1arc-Iteration0-PA1:1.25DO:0-Seed1024","1 arc-second",0,"1:1.25","0",1024,"spatial knndm",305,0.430548109183592
+"1arc-Iteration0-PA1:1.25DO:0-Seed1025","1 arc-second",0,"1:1.25","0",1025,"spatial knndm",305,0.443469736224802
+"1arc-Iteration0-PA1:1.25DO:0-Seed1026","1 arc-second",0,"1:1.25","0",1026,"spatial knndm",305,0.472961844504763
+"1arc-Iteration0-PA1:1.5DO:0-Seed1013","1 arc-second",0,"1:1.5","0",1013,"spatial knndm",305,0.42896730375354
+"1arc-Iteration0-PA1:1.5DO:0-Seed1014","1 arc-second",0,"1:1.5","0",1014,"spatial knndm",305,0.427633807131236
+"1arc-Iteration0-PA1:1.5DO:0-Seed1015","1 arc-second",0,"1:1.5","0",1015,"spatial knndm",305,0.490340838644073
+"1arc-Iteration0-PA1:1.75DO:0-Seed1027","1 arc-second",0,"1:1.75","0",1027,"spatial knndm",305,0.491878585678573
+"1arc-Iteration0-PA1:1.75DO:0-Seed1028","1 arc-second",0,"1:1.75","0",1028,"spatial knndm",305,0.486899882968809
+"1arc-Iteration0-PA1:1.75DO:0-Seed1029","1 arc-second",0,"1:1.75","0",1029,"spatial knndm",305,0.499117617332697
+"1arc-Iteration0-PA1:1.75DO:0-Seed1030","1 arc-second",0,"1:1.75","0",1030,"spatial knndm",305,0.493670358918573
+"1arc-Iteration0-PA1:1.75DO:0-Seed1031","1 arc-second",0,"1:1.75","0",1031,"spatial knndm",305,0.492550629036377
+"1arc-Iteration0-PA1:1DO:0-Seed1001","1 arc-second",0,"1:1","0",1001,"spatial knndm",305,0.47691862057003
+"1arc-Iteration0-PA1:1DO:0-Seed1002","1 arc-second",0,"1:1","0",1002,"spatial knndm",305,0.456340783925646
+"1arc-Iteration0-PA1:1DO:0-Seed1003","1 arc-second",0,"1:1","0",1003,"spatial knndm",305,0.437916486181817
+"1arc-Iteration0-PA1:1DO:0-Seed1052","1 arc-second",0,"1:1","0",1052,"spatial knndm",305,0.474803176988471
+"1arc-Iteration0-PA1:1DO:0-Seed1053","1 arc-second",0,"1:1","0",1053,"spatial knndm",305,0.489502744346102
+"1arc-Iteration0-PA1:1DO:0-Seed1054","1 arc-second",0,"1:1","0",1054,"spatial knndm",305,0.415256730456806
+"1arc-Iteration0-PA1:1DO:0-Seed1055","1 arc-second",0,"1:1","0",1055,"spatial knndm",305,0.433828292867228
+"1arc-Iteration0-PA1:1DO:0-Seed1056","1 arc-second",0,"1:1","0",1056,"spatial knndm",305,0.422094489655808
+"1arc-Iteration0-PA1:1DO:0-Seed1057","1 arc-second",0,"1:1","0",1057,"spatial knndm",305,0.464101185078419
+"1arc-Iteration0-PA1:1DO:0-Seed1058","1 arc-second",0,"1:1","0",1058,"spatial knndm",305,0.452580525292823
+"1arc-Iteration0-PA1:1DO:0-Seed1059","1 arc-second",0,"1:1","0",1059,"spatial knndm",305,0.43904064558405
+"1arc-Iteration0-PA1:1DO:0-Seed1060","1 arc-second",0,"1:1","0",1060,"spatial knndm",305,0.465325474409324
+"1arc-Iteration0-PA1:1DO:0-Seed1061","1 arc-second",0,"1:1","0",1061,"spatial knndm",305,0.493303050417736
+"1arc-Iteration0-PA1:2.25DO:0-Seed1032","1 arc-second",0,"1:2.25","0",1032,"spatial knndm",305,0.507452802085472
+"1arc-Iteration0-PA1:2.25DO:0-Seed1033","1 arc-second",0,"1:2.25","0",1033,"spatial knndm",305,0.40780556895744
+"1arc-Iteration0-PA1:2.25DO:0-Seed1034","1 arc-second",0,"1:2.25","0",1034,"spatial knndm",305,0.474443168160244
+"1arc-Iteration0-PA1:2.25DO:0-Seed1035","1 arc-second",0,"1:2.25","0",1035,"spatial knndm",305,0.470590405042999
+"1arc-Iteration0-PA1:2.25DO:0-Seed1036","1 arc-second",0,"1:2.25","0",1036,"spatial knndm",305,0.434613629948125
+"1arc-Iteration0-PA1:2.5DO:0-Seed1016","1 arc-second",0,"1:2.5","0",1016,"spatial knndm",305,0.474649275712153
+"1arc-Iteration0-PA1:2.5DO:0-Seed1017","1 arc-second",0,"1:2.5","0",1017,"spatial knndm",305,0.464137888276732
+"1arc-Iteration0-PA1:2.5DO:0-Seed1018","1 arc-second",0,"1:2.5","0",1018,"spatial knndm",305,0.478240152387658
+"1arc-Iteration0-PA1:2.75DO:0-Seed1037","1 arc-second",0,"1:2.75","0",1037,"spatial knndm",305,0.501669186372299
+"1arc-Iteration0-PA1:2.75DO:0-Seed1038","1 arc-second",0,"1:2.75","0",1038,"spatial knndm",305,0.435461256381097
+"1arc-Iteration0-PA1:2.75DO:0-Seed1039","1 arc-second",0,"1:2.75","0",1039,"spatial knndm",305,0.436619408967765
+"1arc-Iteration0-PA1:2.75DO:0-Seed1040","1 arc-second",0,"1:2.75","0",1040,"spatial knndm",305,0.492215321154366
+"1arc-Iteration0-PA1:2.75DO:0-Seed1041","1 arc-second",0,"1:2.75","0",1041,"spatial knndm",305,0.474118206722789
+"1arc-Iteration0-PA1:2DO:0-Seed1004","1 arc-second",0,"1:2","0",1004,"spatial knndm",305,0.494184729390548
+"1arc-Iteration0-PA1:2DO:0-Seed1005","1 arc-second",0,"1:2","0",1005,"spatial knndm",305,0.413441067290585
+"1arc-Iteration0-PA1:2DO:0-Seed1006","1 arc-second",0,"1:2","0",1006,"spatial knndm",305,0.464831150746107
+"1arc-Iteration0-PA1:3.25DO:0-Seed1042","1 arc-second",0,"1:3.25","0",1042,"spatial knndm",305,0.449558285696905
+"1arc-Iteration0-PA1:3.25DO:0-Seed1043","1 arc-second",0,"1:3.25","0",1043,"spatial knndm",305,0.433590185013921
+"1arc-Iteration0-PA1:3.25DO:0-Seed1044","1 arc-second",0,"1:3.25","0",1044,"spatial knndm",305,0.462996359031717
+"1arc-Iteration0-PA1:3.25DO:0-Seed1045","1 arc-second",0,"1:3.25","0",1045,"spatial knndm",305,0.478935961306406
+"1arc-Iteration0-PA1:3.25DO:0-Seed1046","1 arc-second",0,"1:3.25","0",1046,"spatial knndm",305,0.432378565346595
+"1arc-Iteration0-PA1:3.5DO:0-Seed1019","1 arc-second",0,"1:3.5","0",1019,"spatial knndm",305,0.465020597631481
+"1arc-Iteration0-PA1:3.5DO:0-Seed1020","1 arc-second",0,"1:3.5","0",1020,"spatial knndm",305,0.442900988691787
+"1arc-Iteration0-PA1:3.5DO:0-Seed1021","1 arc-second",0,"1:3.5","0",1021,"spatial knndm",305,0.472305560632124
+"1arc-Iteration0-PA1:3.75DO:0-Seed1047","1 arc-second",0,"1:3.75","0",1047,"spatial knndm",305,0.42624984828358
+"1arc-Iteration0-PA1:3.75DO:0-Seed1048","1 arc-second",0,"1:3.75","0",1048,"spatial knndm",305,0.419603278531625
+"1arc-Iteration0-PA1:3.75DO:0-Seed1049","1 arc-second",0,"1:3.75","0",1049,"spatial knndm",305,0.499893945490656
+"1arc-Iteration0-PA1:3.75DO:0-Seed1050","1 arc-second",0,"1:3.75","0",1050,"spatial knndm",305,0.434648083200335
+"1arc-Iteration0-PA1:3.75DO:0-Seed1051","1 arc-second",0,"1:3.75","0",1051,"spatial knndm",305,0.472642770391211
+"1arc-Iteration0-PA1:3DO:0-Seed1007","1 arc-second",0,"1:3","0",1007,"spatial knndm",305,0.437340232189077
+"1arc-Iteration0-PA1:3DO:0-Seed1008","1 arc-second",0,"1:3","0",1008,"spatial knndm",305,0.416660875790877
+"1arc-Iteration0-PA1:3DO:0-Seed1009","1 arc-second",0,"1:3","0",1009,"spatial knndm",305,0.455257643814901
+"1arc-Iteration0-PA1:4DO:0-Seed1010","1 arc-second",0,"1:4","0",1010,"spatial knndm",305,0.437088587381598
+"1arc-Iteration0-PA1:4DO:0-Seed1011","1 arc-second",0,"1:4","0",1011,"spatial knndm",305,0.42299691934769
+"1arc-Iteration0-PA1:4DO:0-Seed1012","1 arc-second",0,"1:4","0",1012,"spatial knndm",305,0.426256426878205
+"1arc-Iteration1-PA1:1.25DO:0-Seed1022","1 arc-second",1,"1:1.25","0",1022,"spatial knndm",305,0.530598550955425
+"1arc-Iteration1-PA1:1.25DO:0-Seed1023","1 arc-second",1,"1:1.25","0",1023,"spatial knndm",305,0.512292050904481
+"1arc-Iteration1-PA1:1.25DO:0-Seed1024","1 arc-second",1,"1:1.25","0",1024,"spatial knndm",305,0.518331170376089
+"1arc-Iteration1-PA1:1.25DO:0-Seed1025","1 arc-second",1,"1:1.25","0",1025,"spatial knndm",305,0.465970592810487
+"1arc-Iteration1-PA1:1.25DO:0-Seed1026","1 arc-second",1,"1:1.25","0",1026,"spatial knndm",305,0.427866733222832
+"1arc-Iteration1-PA1:1.5DO:0-Seed1013","1 arc-second",1,"1:1.5","0",1013,"spatial knndm",305,0.454563772213429
+"1arc-Iteration1-PA1:1.5DO:0-Seed1014","1 arc-second",1,"1:1.5","0",1014,"spatial knndm",305,0.434095159417243
+"1arc-Iteration1-PA1:1.5DO:0-Seed1015","1 arc-second",1,"1:1.5","0",1015,"spatial knndm",305,0.536074255524031
+"1arc-Iteration1-PA1:1.75DO:0-Seed1027","1 arc-second",1,"1:1.75","0",1027,"spatial knndm",305,0.460440658933907
+"1arc-Iteration1-PA1:1.75DO:0-Seed1028","1 arc-second",1,"1:1.75","0",1028,"spatial knndm",305,0.466924056759599
+"1arc-Iteration1-PA1:1.75DO:0-Seed1029","1 arc-second",1,"1:1.75","0",1029,"spatial knndm",305,0.431738312154001
+"1arc-Iteration1-PA1:1.75DO:0-Seed1030","1 arc-second",1,"1:1.75","0",1030,"spatial knndm",305,0.493549739028106
+"1arc-Iteration1-PA1:1.75DO:0-Seed1031","1 arc-second",1,"1:1.75","0",1031,"spatial knndm",305,0.477941257392698
+"1arc-Iteration1-PA1:1DO:0-Seed1001","1 arc-second",1,"1:1","0",1001,"spatial knndm",305,0.527986033058775
+"1arc-Iteration1-PA1:1DO:0-Seed1002","1 arc-second",1,"1:1","0",1002,"spatial knndm",305,0.40350683486262
+"1arc-Iteration1-PA1:1DO:0-Seed1003","1 arc-second",1,"1:1","0",1003,"spatial knndm",305,0.53707751567545
+"1arc-Iteration1-PA1:1DO:0-Seed1052","1 arc-second",1,"1:1","0",1052,"spatial knndm",305,0.428827296195637
+"1arc-Iteration1-PA1:1DO:0-Seed1053","1 arc-second",1,"1:1","0",1053,"spatial knndm",305,0.536292288748606
+"1arc-Iteration1-PA1:1DO:0-Seed1054","1 arc-second",1,"1:1","0",1054,"spatial knndm",305,0.543968231441167
+"1arc-Iteration1-PA1:1DO:0-Seed1055","1 arc-second",1,"1:1","0",1055,"spatial knndm",305,0.480693766442986
+"1arc-Iteration1-PA1:1DO:0-Seed1056","1 arc-second",1,"1:1","0",1056,"spatial knndm",305,0.452777893521297
+"1arc-Iteration1-PA1:1DO:0-Seed1057","1 arc-second",1,"1:1","0",1057,"spatial knndm",305,0.447669428270178
+"1arc-Iteration1-PA1:1DO:0-Seed1058","1 arc-second",1,"1:1","0",1058,"spatial knndm",305,0.387071310020624
+"1arc-Iteration1-PA1:1DO:0-Seed1059","1 arc-second",1,"1:1","0",1059,"spatial knndm",305,0.452501630106334
+"1arc-Iteration1-PA1:1DO:0-Seed1060","1 arc-second",1,"1:1","0",1060,"spatial knndm",305,0.462808715692822
+"1arc-Iteration1-PA1:1DO:0-Seed1061","1 arc-second",1,"1:1","0",1061,"spatial knndm",305,0.447502075854238
+"1arc-Iteration1-PA1:2.25DO:0-Seed1032","1 arc-second",1,"1:2.25","0",1032,"spatial knndm",305,0.527184518119139
+"1arc-Iteration1-PA1:2.25DO:0-Seed1033","1 arc-second",1,"1:2.25","0",1033,"spatial knndm",305,0.538558144864003
+"1arc-Iteration1-PA1:2.25DO:0-Seed1034","1 arc-second",1,"1:2.25","0",1034,"spatial knndm",305,0.50655578529332
+"1arc-Iteration1-PA1:2.25DO:0-Seed1035","1 arc-second",1,"1:2.25","0",1035,"spatial knndm",305,0.520896887804875
+"1arc-Iteration1-PA1:2.25DO:0-Seed1036","1 arc-second",1,"1:2.25","0",1036,"spatial knndm",305,0.456731303201834
+"1arc-Iteration1-PA1:2.5DO:0-Seed1016","1 arc-second",1,"1:2.5","0",1016,"spatial knndm",305,0.475507240338312
+"1arc-Iteration1-PA1:2.5DO:0-Seed1017","1 arc-second",1,"1:2.5","0",1017,"spatial knndm",305,0.519308325732302
+"1arc-Iteration1-PA1:2.5DO:0-Seed1018","1 arc-second",1,"1:2.5","0",1018,"spatial knndm",305,0.467693467272081
+"1arc-Iteration1-PA1:2.75DO:0-Seed1037","1 arc-second",1,"1:2.75","0",1037,"spatial knndm",305,0.476519265526829
+"1arc-Iteration1-PA1:2.75DO:0-Seed1038","1 arc-second",1,"1:2.75","0",1038,"spatial knndm",305,0.513386846782162
+"1arc-Iteration1-PA1:2.75DO:0-Seed1039","1 arc-second",1,"1:2.75","0",1039,"spatial knndm",305,0.496689794714769
+"1arc-Iteration1-PA1:2.75DO:0-Seed1040","1 arc-second",1,"1:2.75","0",1040,"spatial knndm",305,0.479382565292843
+"1arc-Iteration1-PA1:2.75DO:0-Seed1041","1 arc-second",1,"1:2.75","0",1041,"spatial knndm",305,0.533818251204255
+"1arc-Iteration1-PA1:2DO:0-Seed1004","1 arc-second",1,"1:2","0",1004,"spatial knndm",305,0.497478330423945
+"1arc-Iteration1-PA1:2DO:0-Seed1005","1 arc-second",1,"1:2","0",1005,"spatial knndm",305,0.525462544147922
+"1arc-Iteration1-PA1:2DO:0-Seed1006","1 arc-second",1,"1:2","0",1006,"spatial knndm",305,0.453325791213476
+"1arc-Iteration1-PA1:3.25DO:0-Seed1042","1 arc-second",1,"1:3.25","0",1042,"spatial knndm",305,0.458655569822076
+"1arc-Iteration1-PA1:3.25DO:0-Seed1043","1 arc-second",1,"1:3.25","0",1043,"spatial knndm",305,0.52391088568194
+"1arc-Iteration1-PA1:3.25DO:0-Seed1044","1 arc-second",1,"1:3.25","0",1044,"spatial knndm",305,0.463001762965564
+"1arc-Iteration1-PA1:3.25DO:0-Seed1045","1 arc-second",1,"1:3.25","0",1045,"spatial knndm",305,0.524372452099481
+"1arc-Iteration1-PA1:3.25DO:0-Seed1046","1 arc-second",1,"1:3.25","0",1046,"spatial knndm",305,0.474371007732046
+"1arc-Iteration1-PA1:3.5DO:0-Seed1019","1 arc-second",1,"1:3.5","0",1019,"spatial knndm",305,0.524402247287109
+"1arc-Iteration1-PA1:3.5DO:0-Seed1020","1 arc-second",1,"1:3.5","0",1020,"spatial knndm",305,0.463147437227616
+"1arc-Iteration1-PA1:3.5DO:0-Seed1021","1 arc-second",1,"1:3.5","0",1021,"spatial knndm",305,0.464840521857127
+"1arc-Iteration1-PA1:3.75DO:0-Seed1047","1 arc-second",1,"1:3.75","0",1047,"spatial knndm",305,0.469422678704999
+"1arc-Iteration1-PA1:3.75DO:0-Seed1048","1 arc-second",1,"1:3.75","0",1048,"spatial knndm",305,0.517372620466223
+"1arc-Iteration1-PA1:3.75DO:0-Seed1049","1 arc-second",1,"1:3.75","0",1049,"spatial knndm",305,0.485517009884248
+"1arc-Iteration1-PA1:3.75DO:0-Seed1050","1 arc-second",1,"1:3.75","0",1050,"spatial knndm",305,0.48250626992647
+"1arc-Iteration1-PA1:3.75DO:0-Seed1051","1 arc-second",1,"1:3.75","0",1051,"spatial knndm",305,0.525960809375372
+"1arc-Iteration1-PA1:3DO:0-Seed1007","1 arc-second",1,"1:3","0",1007,"spatial knndm",305,0.526812617190727
+"1arc-Iteration1-PA1:3DO:0-Seed1008","1 arc-second",1,"1:3","0",1008,"spatial knndm",305,0.447378540559636
+"1arc-Iteration1-PA1:3DO:0-Seed1009","1 arc-second",1,"1:3","0",1009,"spatial knndm",305,0.474367976085299
+"1arc-Iteration1-PA1:4DO:0-Seed1010","1 arc-second",1,"1:4","0",1010,"spatial knndm",305,0.52648583370086
+"1arc-Iteration1-PA1:4DO:0-Seed1011","1 arc-second",1,"1:4","0",1011,"spatial knndm",305,0.434315158211205
+"1arc-Iteration1-PA1:4DO:0-Seed1012","1 arc-second",1,"1:4","0",1012,"spatial knndm",305,0.464321003400222
+"3arc-Iteration0-PA1:1.25DO:0-Seed1022","3 arc-second",0,"1:1.25","0",1022,"spatial knndm",305,0.369194095011435
+"3arc-Iteration0-PA1:1.25DO:0-Seed1023","3 arc-second",0,"1:1.25","0",1023,"spatial knndm",305,0.402533565117295
+"3arc-Iteration0-PA1:1.25DO:0-Seed1024","3 arc-second",0,"1:1.25","0",1024,"spatial knndm",305,0.35082800930345
+"3arc-Iteration0-PA1:1.25DO:0-Seed1025","3 arc-second",0,"1:1.25","0",1025,"spatial knndm",305,0.370468565236987
+"3arc-Iteration0-PA1:1.25DO:0-Seed1026","3 arc-second",0,"1:1.25","0",1026,"spatial knndm",305,0.356721900250099
+"3arc-Iteration0-PA1:1.5DO:0-Seed1013","3 arc-second",0,"1:1.5","0",1013,"spatial knndm",305,0.344521072225213
+"3arc-Iteration0-PA1:1.5DO:0-Seed1014","3 arc-second",0,"1:1.5","0",1014,"spatial knndm",305,0.390444056278516
+"3arc-Iteration0-PA1:1.5DO:0-Seed1015","3 arc-second",0,"1:1.5","0",1015,"spatial knndm",305,0.392970961642867
+"3arc-Iteration0-PA1:1.75DO:0-Seed1027","3 arc-second",0,"1:1.75","0",1027,"spatial knndm",305,0.430610272583495
+"3arc-Iteration0-PA1:1.75DO:0-Seed1028","3 arc-second",0,"1:1.75","0",1028,"spatial knndm",305,0.374351818346477
+"3arc-Iteration0-PA1:1.75DO:0-Seed1029","3 arc-second",0,"1:1.75","0",1029,"spatial knndm",305,0.376029817312371
+"3arc-Iteration0-PA1:1.75DO:0-Seed1030","3 arc-second",0,"1:1.75","0",1030,"spatial knndm",305,0.368850878466959
+"3arc-Iteration0-PA1:1.75DO:0-Seed1031","3 arc-second",0,"1:1.75","0",1031,"spatial knndm",305,0.39571818559937
+"3arc-Iteration0-PA1:1DO:0-Seed1001","3 arc-second",0,"1:1","0",1001,"spatial knndm",305,0.395107902596865
+"3arc-Iteration0-PA1:1DO:0-Seed1002","3 arc-second",0,"1:1","0",1002,"spatial knndm",305,0.388729789176023
+"3arc-Iteration0-PA1:1DO:0-Seed1003","3 arc-second",0,"1:1","0",1003,"spatial knndm",305,0.417024670320241
+"3arc-Iteration0-PA1:1DO:0-Seed1052","3 arc-second",0,"1:1","0",1052,"spatial knndm",305,0.376135866469152
+"3arc-Iteration0-PA1:1DO:0-Seed1053","3 arc-second",0,"1:1","0",1053,"spatial knndm",305,0.404384499125287
+"3arc-Iteration0-PA1:1DO:0-Seed1054","3 arc-second",0,"1:1","0",1054,"spatial knndm",305,0.399110528742861
+"3arc-Iteration0-PA1:1DO:0-Seed1055","3 arc-second",0,"1:1","0",1055,"spatial knndm",305,0.386690134361595
+"3arc-Iteration0-PA1:1DO:0-Seed1056","3 arc-second",0,"1:1","0",1056,"spatial knndm",305,0.369278565379059
+"3arc-Iteration0-PA1:1DO:0-Seed1057","3 arc-second",0,"1:1","0",1057,"spatial knndm",305,0.41578461878362
+"3arc-Iteration0-PA1:1DO:0-Seed1058","3 arc-second",0,"1:1","0",1058,"spatial knndm",305,0.413775807866124
+"3arc-Iteration0-PA1:1DO:0-Seed1059","3 arc-second",0,"1:1","0",1059,"spatial knndm",305,0.376239946337659
+"3arc-Iteration0-PA1:1DO:0-Seed1060","3 arc-second",0,"1:1","0",1060,"spatial knndm",305,0.387022977224907
+"3arc-Iteration0-PA1:1DO:0-Seed1061","3 arc-second",0,"1:1","0",1061,"spatial knndm",305,0.363205733501622
+"3arc-Iteration0-PA1:2.25DO:0-Seed1032","3 arc-second",0,"1:2.25","0",1032,"spatial knndm",305,0.434756753569167
+"3arc-Iteration0-PA1:2.25DO:0-Seed1033","3 arc-second",0,"1:2.25","0",1033,"spatial knndm",305,0.398862669455085
+"3arc-Iteration0-PA1:2.25DO:0-Seed1034","3 arc-second",0,"1:2.25","0",1034,"spatial knndm",305,0.373277146712887
+"3arc-Iteration0-PA1:2.25DO:0-Seed1035","3 arc-second",0,"1:2.25","0",1035,"spatial knndm",305,0.424107542477702
+"3arc-Iteration0-PA1:2.25DO:0-Seed1036","3 arc-second",0,"1:2.25","0",1036,"spatial knndm",305,0.372416252125825
+"3arc-Iteration0-PA1:2.5DO:0-Seed1016","3 arc-second",0,"1:2.5","0",1016,"spatial knndm",305,0.376719764949976
+"3arc-Iteration0-PA1:2.5DO:0-Seed1017","3 arc-second",0,"1:2.5","0",1017,"spatial knndm",305,0.40655144122495
+"3arc-Iteration0-PA1:2.5DO:0-Seed1018","3 arc-second",0,"1:2.5","0",1018,"spatial knndm",305,0.42990368398833
+"3arc-Iteration0-PA1:2.75DO:0-Seed1037","3 arc-second",0,"1:2.75","0",1037,"spatial knndm",305,0.41110733675508
+"3arc-Iteration0-PA1:2.75DO:0-Seed1038","3 arc-second",0,"1:2.75","0",1038,"spatial knndm",305,0.361087610469149
+"3arc-Iteration0-PA1:2.75DO:0-Seed1039","3 arc-second",0,"1:2.75","0",1039,"spatial knndm",305,0.436959351141174
+"3arc-Iteration0-PA1:2.75DO:0-Seed1040","3 arc-second",0,"1:2.75","0",1040,"spatial knndm",305,0.397955604324283
+"3arc-Iteration0-PA1:2.75DO:0-Seed1041","3 arc-second",0,"1:2.75","0",1041,"spatial knndm",305,0.374606560845401
+"3arc-Iteration0-PA1:2DO:0-Seed1004","3 arc-second",0,"1:2","0",1004,"spatial knndm",305,0.390877796254678
+"3arc-Iteration0-PA1:2DO:0-Seed1005","3 arc-second",0,"1:2","0",1005,"spatial knndm",305,0.401339222192025
+"3arc-Iteration0-PA1:2DO:0-Seed1006","3 arc-second",0,"1:2","0",1006,"spatial knndm",305,0.37961518935081
+"3arc-Iteration0-PA1:3.25DO:0-Seed1042","3 arc-second",0,"1:3.25","0",1042,"spatial knndm",305,0.348964721393552
+"3arc-Iteration0-PA1:3.25DO:0-Seed1043","3 arc-second",0,"1:3.25","0",1043,"spatial knndm",305,0.425683449035286
+"3arc-Iteration0-PA1:3.25DO:0-Seed1044","3 arc-second",0,"1:3.25","0",1044,"spatial knndm",305,0.387541269175497
+"3arc-Iteration0-PA1:3.25DO:0-Seed1045","3 arc-second",0,"1:3.25","0",1045,"spatial knndm",305,0.356894812758492
+"3arc-Iteration0-PA1:3.25DO:0-Seed1046","3 arc-second",0,"1:3.25","0",1046,"spatial knndm",305,0.43634816232001
+"3arc-Iteration0-PA1:3.5DO:0-Seed1019","3 arc-second",0,"1:3.5","0",1019,"spatial knndm",305,0.418472212072395
+"3arc-Iteration0-PA1:3.5DO:0-Seed1020","3 arc-second",0,"1:3.5","0",1020,"spatial knndm",305,0.37913800679243
+"3arc-Iteration0-PA1:3.5DO:0-Seed1021","3 arc-second",0,"1:3.5","0",1021,"spatial knndm",305,0.377746528709068
+"3arc-Iteration0-PA1:3.75DO:0-Seed1047","3 arc-second",0,"1:3.75","0",1047,"spatial knndm",305,0.407668547423544
+"3arc-Iteration0-PA1:3.75DO:0-Seed1048","3 arc-second",0,"1:3.75","0",1048,"spatial knndm",305,0.372032525775761
+"3arc-Iteration0-PA1:3.75DO:0-Seed1049","3 arc-second",0,"1:3.75","0",1049,"spatial knndm",305,0.353803245676258
+"3arc-Iteration0-PA1:3.75DO:0-Seed1050","3 arc-second",0,"1:3.75","0",1050,"spatial knndm",305,0.377855466168152
+"3arc-Iteration0-PA1:3.75DO:0-Seed1051","3 arc-second",0,"1:3.75","0",1051,"spatial knndm",305,0.380074124855196
+"3arc-Iteration0-PA1:3DO:0-Seed1007","3 arc-second",0,"1:3","0",1007,"spatial knndm",305,0.435451971036305
+"3arc-Iteration0-PA1:3DO:0-Seed1008","3 arc-second",0,"1:3","0",1008,"spatial knndm",305,0.401392684124992
+"3arc-Iteration0-PA1:3DO:0-Seed1009","3 arc-second",0,"1:3","0",1009,"spatial knndm",305,0.387715636532507
+"3arc-Iteration0-PA1:4DO:0-Seed1010","3 arc-second",0,"1:4","0",1010,"spatial knndm",305,0.367660152541267
+"3arc-Iteration0-PA1:4DO:0-Seed1011","3 arc-second",0,"1:4","0",1011,"spatial knndm",305,0.434590816928838
+"3arc-Iteration0-PA1:4DO:0-Seed1012","3 arc-second",0,"1:4","0",1012,"spatial knndm",305,0.421793185904966
+"3arc-Iteration1-PA1:1DO:0-Seed1001","3 arc-second",1,"1:1","0",1001,"spatial knndm",305,0.484992215169757
+"3arc-Iteration1-PA1:1DO:0-Seed1002","3 arc-second",1,"1:1","0",1002,"spatial knndm",305,0.474229541392098
+"3arc-Iteration1-PA1:1DO:0-Seed1003","3 arc-second",1,"1:1","0",1003,"spatial knndm",305,0.478120029119974
+"3arc-Iteration1-PA1:1DO:0-Seed1006","3 arc-second",1,"1:1","0",1006,"spatial knndm",305,0.455285063549229
+"3arc-Iteration1-PA1:1DO:0-Seed1007","3 arc-second",1,"1:1","0",1007,"spatial knndm",305,0.49327620064938
+"3arc-Iteration1-PA1:1DO:0-Seed1008","3 arc-second",1,"1:1","0",1008,"spatial knndm",305,0.511017256988422
+"3arc-Iteration1-PA1:1DO:0-Seed1009","3 arc-second",1,"1:1","0",1009,"spatial knndm",305,0.466693426653666
+"3arc-Iteration1-PA1:1DO:0-Seed1010","3 arc-second",1,"1:1","0",1010,"spatial knndm",305,0.484451697005335
+"3arc-Iteration1-PA1:1DO:0-Seed1011","3 arc-second",1,"1:1","0",1011,"spatial knndm",305,0.514352879718184
+"3arc-Iteration1-PA1:1DO:0-Seed1012","3 arc-second",1,"1:1","0",1012,"spatial knndm",305,0.519135716424765
+"3arc-Iteration1-PA1:1DO:0-Seed1013","3 arc-second",1,"1:1","0",1013,"spatial knndm",305,0.46041589971153
+"3arc-Iteration1-PA1:1DO:0-Seed1014","3 arc-second",1,"1:1","0",1014,"spatial knndm",305,0.502094859593996
+"3arc-Iteration1-PA1:1DO:0-Seed1015","3 arc-second",1,"1:1","0",1015,"spatial knndm",305,0.471981062142691
+"3arc-Iteration1-PA1:1DO:0-Seed1016","3 arc-second",1,"1:1","0",1016,"spatial knndm",305,0.476858497772223
+"3arc-Iteration1-PA1:1DO:0-Seed1017","3 arc-second",1,"1:1","0",1017,"spatial knndm",305,0.470598130519713
+"3arc-Iteration1-PA1:1DO:0-Seed1018","3 arc-second",1,"1:1","0",1018,"spatial knndm",305,0.437161170872137
+"3arc-Iteration1-PA1:1DO:0-Seed1019","3 arc-second",1,"1:1","0",1019,"spatial knndm",305,0.473056672361404
+"3arc-Iteration1-PA1:1DO:0-Seed1020","3 arc-second",1,"1:1","0",1020,"spatial knndm",305,0.398632184249802
+"3arc-Iteration1-PA1:1DO:0-Seed1021","3 arc-second",1,"1:1","0",1021,"spatial knndm",305,0.425768434950207
+"3arc-Iteration1-PA1:1DO:0-Seed1022","3 arc-second",1,"1:1","0",1022,"spatial knndm",305,0.457372388104888
+"3arc-Iteration1-PA1:1DO:0-Seed1023","3 arc-second",1,"1:1","0",1023,"spatial knndm",305,0.405547489075062
+"3arc-Iteration1-PA1:1DO:0-Seed1024","3 arc-second",1,"1:1","0",1024,"spatial knndm",305,0.512123129230994
+"3arc-Iteration1-PA1:1DO:0-Seed1025","3 arc-second",1,"1:1","0",1025,"spatial knndm",305,0.490045374531666
+"3arc-Iteration1-PA1:2DO:0-Seed1002","3 arc-second",1,"1:2","0",1002,"spatial knndm",305,0.488260977818533
+"3arc-Iteration1-PA1:2DO:0-Seed1004","3 arc-second",1,"1:2","0",1004,"spatial knndm",305,0.466500619017007
+"3arc-Iteration1-PA1:2DO:0-Seed1005","3 arc-second",1,"1:2","0",1005,"spatial knndm",305,0.492179895278228
+"3arc-Iteration1-PA1:2DO:0-Seed1006","3 arc-second",1,"1:2","0",1006,"spatial knndm",305,0.468526506109475
+"3arc-Iteration1-PA1:3DO:0-Seed1003","3 arc-second",1,"1:3","0",1003,"spatial knndm",305,0.503672780623774
+"3arc-Iteration1-PA1:3DO:0-Seed1007","3 arc-second",1,"1:3","0",1007,"spatial knndm",305,0.506887812574908
+"3arc-Iteration1-PA1:3DO:0-Seed1008","3 arc-second",1,"1:3","0",1008,"spatial knndm",305,0.463043906673869
+"3arc-Iteration1-PA1:3DO:0-Seed1009","3 arc-second",1,"1:3","0",1009,"spatial knndm",305,0.490120303033202
+"3arc-Iteration1-PA1:4DO:0-Seed1004","3 arc-second",1,"1:4","0",1004,"spatial knndm",305,0.521449322213091
+"3arc-Iteration1-PA1:4DO:0-Seed1010","3 arc-second",1,"1:4","0",1010,"spatial knndm",305,0.500955694754974
+"3arc-Iteration1-PA1:4DO:0-Seed1011","3 arc-second",1,"1:4","0",1011,"spatial knndm",305,0.469404000406208
+"3arc-Iteration1-PA1:4DO:0-Seed1012","3 arc-second",1,"1:4","0",1012,"spatial knndm",305,0.497802269541088
+"3arc-Iteration1-PA1:5DO:0-Seed1005","3 arc-second",1,"1:5","0",1005,"spatial knndm",305,0.532401483017171
+"3arc-Iteration1-PA1:5DO:0-Seed1013","3 arc-second",1,"1:5","0",1013,"spatial knndm",305,0.478820913552422
+"3arc-Iteration1-PA1:5DO:0-Seed1014","3 arc-second",1,"1:5","0",1014,"spatial knndm",305,0.466274356895768
+"3arc-Iteration1-PA1:5DO:0-Seed1015","3 arc-second",1,"1:5","0",1015,"spatial knndm",305,0.489419962366547
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1022","1/3 arc-second",0,"1:1.25","0",1022,"classic",305,0.490195119266796
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1023","1/3 arc-second",0,"1:1.25","0",1023,"classic",305,0.407205641102227
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1024","1/3 arc-second",0,"1:1.25","0",1024,"classic",305,0.442037517279438
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1025","1/3 arc-second",0,"1:1.25","0",1025,"classic",305,0.378972142030903
+"1-3arc-Iteration0-PA1:1.25DO:0-Seed1026","1/3 arc-second",0,"1:1.25","0",1026,"classic",305,0.416142922040012
+"1-3arc-Iteration0-PA1:1.5DO:0-Seed1013","1/3 arc-second",0,"1:1.5","0",1013,"classic",305,0.397760118314751
+"1-3arc-Iteration0-PA1:1.5DO:0-Seed1014","1/3 arc-second",0,"1:1.5","0",1014,"classic",305,0.412547925756698
+"1-3arc-Iteration0-PA1:1.5DO:0-Seed1015","1/3 arc-second",0,"1:1.5","0",1015,"classic",305,0.405070953973201
+"1-3arc-Iteration0-PA1:1.75DO:0-Seed1027","1/3 arc-second",0,"1:1.75","0",1027,"classic",305,0.487755308252304
+"1-3arc-Iteration0-PA1:1.75DO:0-Seed1028","1/3 arc-second",0,"1:1.75","0",1028,"classic",305,0.436523002900932
+"1-3arc-Iteration0-PA1:1.75DO:0-Seed1029","1/3 arc-second",0,"1:1.75","0",1029,"classic",305,0.457262524192736
+"1-3arc-Iteration0-PA1:1.75DO:0-Seed1030","1/3 arc-second",0,"1:1.75","0",1030,"classic",305,0.411499720118982
+"1-3arc-Iteration0-PA1:1.75DO:0-Seed1031","1/3 arc-second",0,"1:1.75","0",1031,"classic",305,0.407139499155768
+"1-3arc-Iteration0-PA1:1DO:0-Seed1001","1/3 arc-second",0,"1:1","0",1001,"classic",305,0.411271491713913
+"1-3arc-Iteration0-PA1:1DO:0-Seed1002","1/3 arc-second",0,"1:1","0",1002,"classic",305,0.444557419931579
+"1-3arc-Iteration0-PA1:1DO:0-Seed1003","1/3 arc-second",0,"1:1","0",1003,"classic",305,0.449154732345466
+"1-3arc-Iteration0-PA1:2.5DO:0-Seed1016","1/3 arc-second",0,"1:2.5","0",1016,"classic",305,0.468939092766849
+"1-3arc-Iteration0-PA1:2.5DO:0-Seed1017","1/3 arc-second",0,"1:2.5","0",1017,"classic",305,0.431777162648538
+"1-3arc-Iteration0-PA1:2.5DO:0-Seed1018","1/3 arc-second",0,"1:2.5","0",1018,"classic",305,0.423573464837514
+"1-3arc-Iteration0-PA1:2DO:0-Seed1004","1/3 arc-second",0,"1:2","0",1004,"classic",305,0.407190930326823
+"1-3arc-Iteration0-PA1:2DO:0-Seed1005","1/3 arc-second",0,"1:2","0",1005,"classic",305,0.496401525186962
+"1-3arc-Iteration0-PA1:2DO:0-Seed1006","1/3 arc-second",0,"1:2","0",1006,"classic",305,0.40621280499174
+"1-3arc-Iteration0-PA1:3.5DO:0-Seed1019","1/3 arc-second",0,"1:3.5","0",1019,"classic",305,0.426235083225967
+"1-3arc-Iteration0-PA1:3.5DO:0-Seed1020","1/3 arc-second",0,"1:3.5","0",1020,"classic",305,0.428453229187565
+"1-3arc-Iteration0-PA1:3.5DO:0-Seed1021","1/3 arc-second",0,"1:3.5","0",1021,"classic",305,0.438975114481577
+"1-3arc-Iteration0-PA1:3DO:0-Seed1007","1/3 arc-second",0,"1:3","0",1007,"classic",305,0.452996585194992
+"1-3arc-Iteration0-PA1:3DO:0-Seed1008","1/3 arc-second",0,"1:3","0",1008,"classic",305,0.428247741862346
+"1-3arc-Iteration0-PA1:3DO:0-Seed1009","1/3 arc-second",0,"1:3","0",1009,"classic",305,0.445122363458549
+"1-3arc-Iteration0-PA1:4DO:0-Seed1010","1/3 arc-second",0,"1:4","0",1010,"classic",305,0.42077604364693
+"1-3arc-Iteration0-PA1:4DO:0-Seed1011","1/3 arc-second",0,"1:4","0",1011,"classic",305,0.417665654552251
+"1-3arc-Iteration0-PA1:4DO:0-Seed1012","1/3 arc-second",0,"1:4","0",1012,"classic",305,0.485738677479897
+"1-3arc-Iteration1-PA1:1.25DO:0-Seed1022","1/3 arc-second",1,"1:1.25","0",1022,"classic",305,0.586442960399084
+"1-3arc-Iteration1-PA1:1.25DO:0-Seed1023","1/3 arc-second",1,"1:1.25","0",1023,"classic",305,0.5802652101963
+"1-3arc-Iteration1-PA1:1.25DO:0-Seed1024","1/3 arc-second",1,"1:1.25","0",1024,"classic",305,0.57668325471985
+"1-3arc-Iteration1-PA1:1.25DO:0-Seed1025","1/3 arc-second",1,"1:1.25","0",1025,"classic",305,0.571085030952601
+"1-3arc-Iteration1-PA1:1.25DO:0-Seed1026","1/3 arc-second",1,"1:1.25","0",1026,"classic",305,0.554165965839732
+"1-3arc-Iteration1-PA1:1.5DO:0-Seed1013","1/3 arc-second",1,"1:1.5","0",1013,"classic",305,0.577543785785351
+"1-3arc-Iteration1-PA1:1.5DO:0-Seed1014","1/3 arc-second",1,"1:1.5","0",1014,"classic",305,0.511503443566049
+"1-3arc-Iteration1-PA1:1.5DO:0-Seed1015","1/3 arc-second",1,"1:1.5","0",1015,"classic",305,0.582580869253924
+"1-3arc-Iteration1-PA1:1.75DO:0-Seed1027","1/3 arc-second",1,"1:1.75","0",1027,"classic",305,0.546536837416912
+"1-3arc-Iteration1-PA1:1.75DO:0-Seed1028","1/3 arc-second",1,"1:1.75","0",1028,"classic",305,0.582815463148627
+"1-3arc-Iteration1-PA1:1.75DO:0-Seed1029","1/3 arc-second",1,"1:1.75","0",1029,"classic",305,0.533424388401684
+"1-3arc-Iteration1-PA1:1.75DO:0-Seed1030","1/3 arc-second",1,"1:1.75","0",1030,"classic",305,0.581770774308334
+"1-3arc-Iteration1-PA1:1.75DO:0-Seed1031","1/3 arc-second",1,"1:1.75","0",1031,"classic",305,0.565782487316605
+"1-3arc-Iteration1-PA1:1DO:0-Seed1001","1/3 arc-second",1,"1:1","0",1001,"classic",305,0.585719954876589
+"1-3arc-Iteration1-PA1:1DO:0-Seed1002","1/3 arc-second",1,"1:1","0",1002,"classic",305,0.565008218815773
+"1-3arc-Iteration1-PA1:1DO:0-Seed1003","1/3 arc-second",1,"1:1","0",1003,"classic",305,0.57437781935547
+"1-3arc-Iteration1-PA1:1DO:0-Seed1052","1/3 arc-second",1,"1:1","0",1052,"classic",305,0.586673917375635
+"1-3arc-Iteration1-PA1:1DO:0-Seed1053","1/3 arc-second",1,"1:1","0",1053,"classic",305,0.561175807176351
+"1-3arc-Iteration1-PA1:1DO:0-Seed1054","1/3 arc-second",1,"1:1","0",1054,"classic",305,0.542936101586305
+"1-3arc-Iteration1-PA1:1DO:0-Seed1055","1/3 arc-second",1,"1:1","0",1055,"classic",305,0.56987373168986
+"1-3arc-Iteration1-PA1:1DO:0-Seed1056","1/3 arc-second",1,"1:1","0",1056,"classic",305,0.562499039339669
+"1-3arc-Iteration1-PA1:1DO:0-Seed1057","1/3 arc-second",1,"1:1","0",1057,"classic",305,0.551187776310538
+"1-3arc-Iteration1-PA1:1DO:0-Seed1058","1/3 arc-second",1,"1:1","0",1058,"classic",305,0.549503104694693
+"1-3arc-Iteration1-PA1:1DO:0-Seed1059","1/3 arc-second",1,"1:1","0",1059,"classic",305,0.575610612296809
+"1-3arc-Iteration1-PA1:1DO:0-Seed1060","1/3 arc-second",1,"1:1","0",1060,"classic",305,0.527632454376934
+"1-3arc-Iteration1-PA1:1DO:0-Seed1061","1/3 arc-second",1,"1:1","0",1061,"classic",305,0.51286252614321
+"1-3arc-Iteration1-PA1:2.25DO:0-Seed1032","1/3 arc-second",1,"1:2.25","0",1032,"classic",305,0.592788955392066
+"1-3arc-Iteration1-PA1:2.25DO:0-Seed1033","1/3 arc-second",1,"1:2.25","0",1033,"classic",305,0.580304219555337
+"1-3arc-Iteration1-PA1:2.25DO:0-Seed1034","1/3 arc-second",1,"1:2.25","0",1034,"classic",305,0.556952227173637
+"1-3arc-Iteration1-PA1:2.25DO:0-Seed1035","1/3 arc-second",1,"1:2.25","0",1035,"classic",305,0.529854287229996
+"1-3arc-Iteration1-PA1:2.25DO:0-Seed1036","1/3 arc-second",1,"1:2.25","0",1036,"classic",305,0.557728223711716
+"1-3arc-Iteration1-PA1:2.5DO:0-Seed1016","1/3 arc-second",1,"1:2.5","0",1016,"classic",305,0.562272112352002
+"1-3arc-Iteration1-PA1:2.5DO:0-Seed1017","1/3 arc-second",1,"1:2.5","0",1017,"classic",305,0.576427537818372
+"1-3arc-Iteration1-PA1:2.5DO:0-Seed1018","1/3 arc-second",1,"1:2.5","0",1018,"classic",305,0.578022953136645
+"1-3arc-Iteration1-PA1:2.75DO:0-Seed1037","1/3 arc-second",1,"1:2.75","0",1037,"classic",305,0.545517986227773
+"1-3arc-Iteration1-PA1:2.75DO:0-Seed1038","1/3 arc-second",1,"1:2.75","0",1038,"classic",305,0.526241403009197
+"1-3arc-Iteration1-PA1:2.75DO:0-Seed1039","1/3 arc-second",1,"1:2.75","0",1039,"classic",305,0.57306762154555
+"1-3arc-Iteration1-PA1:2.75DO:0-Seed1040","1/3 arc-second",1,"1:2.75","0",1040,"classic",305,0.586269795595265
+"1-3arc-Iteration1-PA1:2.75DO:0-Seed1041","1/3 arc-second",1,"1:2.75","0",1041,"classic",305,0.577088954853044
+"1-3arc-Iteration1-PA1:2DO:0-Seed1004","1/3 arc-second",1,"1:2","0",1004,"classic",305,0.542373968072037
+"1-3arc-Iteration1-PA1:2DO:0-Seed1005","1/3 arc-second",1,"1:2","0",1005,"classic",305,0.56405803578542
+"1-3arc-Iteration1-PA1:2DO:0-Seed1006","1/3 arc-second",1,"1:2","0",1006,"classic",305,0.568214700381598
+"1-3arc-Iteration1-PA1:3.23937677053824DO:0-Seed1042","1/3 arc-second",1,"1:3.23937677053824","0",1042,"classic",305,0.575587432468981
+"1-3arc-Iteration1-PA1:3.23937677053824DO:0-Seed1043","1/3 arc-second",1,"1:3.23937677053824","0",1043,"classic",305,0.602699859243579
+"1-3arc-Iteration1-PA1:3.23937677053824DO:0-Seed1044","1/3 arc-second",1,"1:3.23937677053824","0",1044,"classic",305,0.522968877370809
+"1-3arc-Iteration1-PA1:3.23937677053824DO:0-Seed1045","1/3 arc-second",1,"1:3.23937677053824","0",1045,"classic",305,0.525803785428723
+"1-3arc-Iteration1-PA1:3.23937677053824DO:0-Seed1046","1/3 arc-second",1,"1:3.23937677053824","0",1046,"classic",305,0.540700647894899
+"1-3arc-Iteration1-PA1:3.47875354107649DO:0-Seed1019","1/3 arc-second",1,"1:3.47875354107649","0",1019,"classic",305,0.526509488126376
+"1-3arc-Iteration1-PA1:3.47875354107649DO:0-Seed1020","1/3 arc-second",1,"1:3.47875354107649","0",1020,"classic",305,0.502333628289787
+"1-3arc-Iteration1-PA1:3.47875354107649DO:0-Seed1021","1/3 arc-second",1,"1:3.47875354107649","0",1021,"classic",305,0.541485866118822
+"1-3arc-Iteration1-PA1:3.71813031161473DO:0-Seed1047","1/3 arc-second",1,"1:3.71813031161473","0",1047,"classic",305,0.567300050298899
+"1-3arc-Iteration1-PA1:3.71813031161473DO:0-Seed1048","1/3 arc-second",1,"1:3.71813031161473","0",1048,"classic",305,0.546803654210524
+"1-3arc-Iteration1-PA1:3.71813031161473DO:0-Seed1049","1/3 arc-second",1,"1:3.71813031161473","0",1049,"classic",305,0.552282943013646
+"1-3arc-Iteration1-PA1:3.71813031161473DO:0-Seed1050","1/3 arc-second",1,"1:3.71813031161473","0",1050,"classic",305,0.585095702132496
+"1-3arc-Iteration1-PA1:3.71813031161473DO:0-Seed1051","1/3 arc-second",1,"1:3.71813031161473","0",1051,"classic",305,0.564347293660053
+"1-3arc-Iteration1-PA1:3.95750708215297DO:0-Seed1010","1/3 arc-second",1,"1:3.95750708215297","0",1010,"classic",305,0.573324658970855
+"1-3arc-Iteration1-PA1:3.95750708215297DO:0-Seed1011","1/3 arc-second",1,"1:3.95750708215297","0",1011,"classic",305,0.564229900726982
+"1-3arc-Iteration1-PA1:3.95750708215297DO:0-Seed1012","1/3 arc-second",1,"1:3.95750708215297","0",1012,"classic",305,0.575108181102585
+"1-3arc-Iteration1-PA1:3DO:0-Seed1007","1/3 arc-second",1,"1:3","0",1007,"classic",305,0.568430023681005
+"1-3arc-Iteration1-PA1:3DO:0-Seed1008","1/3 arc-second",1,"1:3","0",1008,"classic",305,0.528606439242245
+"1-3arc-Iteration1-PA1:3DO:0-Seed1009","1/3 arc-second",1,"1:3","0",1009,"classic",305,0.560776148097891
+"1arc-Iteration0-PA1:1.25DO:0-Seed1022","1 arc-second",0,"1:1.25","0",1022,"classic",305,0.43056257236684
+"1arc-Iteration0-PA1:1.25DO:0-Seed1023","1 arc-second",0,"1:1.25","0",1023,"classic",305,0.418730499155485
+"1arc-Iteration0-PA1:1.25DO:0-Seed1024","1 arc-second",0,"1:1.25","0",1024,"classic",305,0.396696247275616
+"1arc-Iteration0-PA1:1.25DO:0-Seed1025","1 arc-second",0,"1:1.25","0",1025,"classic",305,0.452610037779998
+"1arc-Iteration0-PA1:1.25DO:0-Seed1026","1 arc-second",0,"1:1.25","0",1026,"classic",305,0.43470965294456
+"1arc-Iteration0-PA1:1.5DO:0-Seed1013","1 arc-second",0,"1:1.5","0",1013,"classic",305,0.405125264023523
+"1arc-Iteration0-PA1:1.5DO:0-Seed1014","1 arc-second",0,"1:1.5","0",1014,"classic",305,0.428159953557049
+"1arc-Iteration0-PA1:1.5DO:0-Seed1015","1 arc-second",0,"1:1.5","0",1015,"classic",305,0.478991753605225
+"1arc-Iteration0-PA1:1.75DO:0-Seed1027","1 arc-second",0,"1:1.75","0",1027,"classic",305,0.4142324862032
+"1arc-Iteration0-PA1:1.75DO:0-Seed1028","1 arc-second",0,"1:1.75","0",1028,"classic",305,0.442349070657483
+"1arc-Iteration0-PA1:1.75DO:0-Seed1029","1 arc-second",0,"1:1.75","0",1029,"classic",305,0.482810016975011
+"1arc-Iteration0-PA1:1.75DO:0-Seed1030","1 arc-second",0,"1:1.75","0",1030,"classic",305,0.412724307505257
+"1arc-Iteration0-PA1:1.75DO:0-Seed1031","1 arc-second",0,"1:1.75","0",1031,"classic",305,0.381227561111114
+"1arc-Iteration0-PA1:1DO:0-Seed1001","1 arc-second",0,"1:1","0",1001,"classic",305,0.431934149121783
+"1arc-Iteration0-PA1:1DO:0-Seed1002","1 arc-second",0,"1:1","0",1002,"classic",305,0.407080640586165
+"1arc-Iteration0-PA1:1DO:0-Seed1003","1 arc-second",0,"1:1","0",1003,"classic",305,0.408223170341047
+"1arc-Iteration0-PA1:1DO:0-Seed1052","1 arc-second",0,"1:1","0",1052,"classic",305,0.437277884980719
+"1arc-Iteration0-PA1:1DO:0-Seed1053","1 arc-second",0,"1:1","0",1053,"classic",305,0.483356012516405
+"1arc-Iteration0-PA1:1DO:0-Seed1054","1 arc-second",0,"1:1","0",1054,"classic",305,0.473209578390851
+"1arc-Iteration0-PA1:1DO:0-Seed1055","1 arc-second",0,"1:1","0",1055,"classic",305,0.383097271693629
+"1arc-Iteration0-PA1:1DO:0-Seed1056","1 arc-second",0,"1:1","0",1056,"classic",305,0.451845145029461
+"1arc-Iteration0-PA1:1DO:0-Seed1057","1 arc-second",0,"1:1","0",1057,"classic",305,0.462185869801921
+"1arc-Iteration0-PA1:1DO:0-Seed1058","1 arc-second",0,"1:1","0",1058,"classic",305,0.408576429582405
+"1arc-Iteration0-PA1:1DO:0-Seed1059","1 arc-second",0,"1:1","0",1059,"classic",305,0.387443016434328
+"1arc-Iteration0-PA1:1DO:0-Seed1060","1 arc-second",0,"1:1","0",1060,"classic",305,0.453353983511677
+"1arc-Iteration0-PA1:1DO:0-Seed1061","1 arc-second",0,"1:1","0",1061,"classic",305,0.396400813754966
+"1arc-Iteration0-PA1:2.25DO:0-Seed1032","1 arc-second",0,"1:2.25","0",1032,"classic",305,0.394478083502761
+"1arc-Iteration0-PA1:2.25DO:0-Seed1033","1 arc-second",0,"1:2.25","0",1033,"classic",305,0.420016577916686
+"1arc-Iteration0-PA1:2.25DO:0-Seed1034","1 arc-second",0,"1:2.25","0",1034,"classic",305,0.382208676427002
+"1arc-Iteration0-PA1:2.25DO:0-Seed1035","1 arc-second",0,"1:2.25","0",1035,"classic",305,0.413061515484031
+"1arc-Iteration0-PA1:2.25DO:0-Seed1036","1 arc-second",0,"1:2.25","0",1036,"classic",305,0.413048468584705
+"1arc-Iteration0-PA1:2.5DO:0-Seed1016","1 arc-second",0,"1:2.5","0",1016,"classic",305,0.472204122232265
+"1arc-Iteration0-PA1:2.5DO:0-Seed1017","1 arc-second",0,"1:2.5","0",1017,"classic",305,0.423498001943842
+"1arc-Iteration0-PA1:2.5DO:0-Seed1018","1 arc-second",0,"1:2.5","0",1018,"classic",305,0.427715696589563
+"1arc-Iteration0-PA1:2.75DO:0-Seed1037","1 arc-second",0,"1:2.75","0",1037,"classic",305,0.468381106327472
+"1arc-Iteration0-PA1:2.75DO:0-Seed1038","1 arc-second",0,"1:2.75","0",1038,"classic",305,0.408404918019266
+"1arc-Iteration0-PA1:2.75DO:0-Seed1039","1 arc-second",0,"1:2.75","0",1039,"classic",305,0.483477162053952
+"1arc-Iteration0-PA1:2.75DO:0-Seed1040","1 arc-second",0,"1:2.75","0",1040,"classic",305,0.404718985871665
+"1arc-Iteration0-PA1:2.75DO:0-Seed1041","1 arc-second",0,"1:2.75","0",1041,"classic",305,0.446308982829695
+"1arc-Iteration0-PA1:2DO:0-Seed1004","1 arc-second",0,"1:2","0",1004,"classic",305,0.480968082982757
+"1arc-Iteration0-PA1:2DO:0-Seed1005","1 arc-second",0,"1:2","0",1005,"classic",305,0.426476696332582
+"1arc-Iteration0-PA1:2DO:0-Seed1006","1 arc-second",0,"1:2","0",1006,"classic",305,0.394106052908674
+"1arc-Iteration0-PA1:3.25DO:0-Seed1042","1 arc-second",0,"1:3.25","0",1042,"classic",305,0.424732869471878
+"1arc-Iteration0-PA1:3.25DO:0-Seed1043","1 arc-second",0,"1:3.25","0",1043,"classic",305,0.41200748643572
+"1arc-Iteration0-PA1:3.25DO:0-Seed1044","1 arc-second",0,"1:3.25","0",1044,"classic",305,0.427810898989704
+"1arc-Iteration0-PA1:3.25DO:0-Seed1045","1 arc-second",0,"1:3.25","0",1045,"classic",305,0.428048509855658
+"1arc-Iteration0-PA1:3.25DO:0-Seed1046","1 arc-second",0,"1:3.25","0",1046,"classic",305,0.479777680341598
+"1arc-Iteration0-PA1:3.5DO:0-Seed1019","1 arc-second",0,"1:3.5","0",1019,"classic",305,0.517429872814453
+"1arc-Iteration0-PA1:3.5DO:0-Seed1020","1 arc-second",0,"1:3.5","0",1020,"classic",305,0.405159237020826
+"1arc-Iteration0-PA1:3.5DO:0-Seed1021","1 arc-second",0,"1:3.5","0",1021,"classic",305,0.429657060490568
+"1arc-Iteration0-PA1:3.75DO:0-Seed1047","1 arc-second",0,"1:3.75","0",1047,"classic",305,0.445416623895463
+"1arc-Iteration0-PA1:3.75DO:0-Seed1048","1 arc-second",0,"1:3.75","0",1048,"classic",305,0.430570809295594
+"1arc-Iteration0-PA1:3.75DO:0-Seed1049","1 arc-second",0,"1:3.75","0",1049,"classic",305,0.411893567972632
+"1arc-Iteration0-PA1:3.75DO:0-Seed1050","1 arc-second",0,"1:3.75","0",1050,"classic",305,0.452719180949155
+"1arc-Iteration0-PA1:3.75DO:0-Seed1051","1 arc-second",0,"1:3.75","0",1051,"classic",305,0.459502370930436
+"1arc-Iteration0-PA1:3DO:0-Seed1007","1 arc-second",0,"1:3","0",1007,"classic",305,0.434256842119102
+"1arc-Iteration0-PA1:3DO:0-Seed1008","1 arc-second",0,"1:3","0",1008,"classic",305,0.431191634941885
+"1arc-Iteration0-PA1:3DO:0-Seed1009","1 arc-second",0,"1:3","0",1009,"classic",305,0.394690859991096
+"1arc-Iteration0-PA1:4DO:0-Seed1010","1 arc-second",0,"1:4","0",1010,"classic",305,0.451004162139281
+"1arc-Iteration0-PA1:4DO:0-Seed1011","1 arc-second",0,"1:4","0",1011,"classic",305,0.380648383318382
+"1arc-Iteration0-PA1:4DO:0-Seed1012","1 arc-second",0,"1:4","0",1012,"classic",305,0.422454815138759
+"1arc-Iteration1-PA1:1DO:0-Seed1001","1 arc-second",1,"1:1","0",1001,"classic",305,0.502526007148045
+"1arc-Iteration1-PA1:1DO:0-Seed1002","1 arc-second",1,"1:1","0",1002,"classic",305,0.467710102871207
+"1arc-Iteration1-PA1:1DO:0-Seed1003","1 arc-second",1,"1:1","0",1003,"classic",305,0.535268841597991
+"1arc-Iteration1-PA1:1DO:0-Seed1013","1 arc-second",1,"1:1","0",1013,"classic",305,0.511821190055802
+"1arc-Iteration1-PA1:1DO:0-Seed1014","1 arc-second",1,"1:1","0",1014,"classic",305,0.532434299035093
+"1arc-Iteration1-PA1:1DO:0-Seed1015","1 arc-second",1,"1:1","0",1015,"classic",305,0.543465523608403
+"1arc-Iteration1-PA1:1DO:0-Seed1016","1 arc-second",1,"1:1","0",1016,"classic",305,0.501970264894697
+"1arc-Iteration1-PA1:1DO:0-Seed1017","1 arc-second",1,"1:1","0",1017,"classic",305,0.527400612336768
+"1arc-Iteration1-PA1:1DO:0-Seed1018","1 arc-second",1,"1:1","0",1018,"classic",305,0.556142700053152
+"1arc-Iteration1-PA1:1DO:0-Seed1019","1 arc-second",1,"1:1","0",1019,"classic",305,0.497235014689218
+"1arc-Iteration1-PA1:1DO:0-Seed1020","1 arc-second",1,"1:1","0",1020,"classic",305,0.521747784644423
+"1arc-Iteration1-PA1:1DO:0-Seed1021","1 arc-second",1,"1:1","0",1021,"classic",305,0.533286993149241
+"1arc-Iteration1-PA1:1DO:0-Seed1022","1 arc-second",1,"1:1","0",1022,"classic",305,0.540885832714099
+"1arc-Iteration1-PA1:2DO:0-Seed1004","1 arc-second",1,"1:2","0",1004,"classic",305,0.537383442573906
+"1arc-Iteration1-PA1:2DO:0-Seed1005","1 arc-second",1,"1:2","0",1005,"classic",305,0.509899048759089
+"1arc-Iteration1-PA1:2DO:0-Seed1006","1 arc-second",1,"1:2","0",1006,"classic",305,0.534336597815147
+"1arc-Iteration1-PA1:3DO:0-Seed1007","1 arc-second",1,"1:3","0",1007,"classic",305,0.520093000557174
+"1arc-Iteration1-PA1:3DO:0-Seed1008","1 arc-second",1,"1:3","0",1008,"classic",305,0.522429477089947
+"1arc-Iteration1-PA1:3DO:0-Seed1009","1 arc-second",1,"1:3","0",1009,"classic",305,0.556577344665995
+"1arc-Iteration1-PA1:4DO:0-Seed1010","1 arc-second",1,"1:4","0",1010,"classic",305,0.497246182199358
+"1arc-Iteration1-PA1:4DO:0-Seed1011","1 arc-second",1,"1:4","0",1011,"classic",305,0.477670264372203
+"1arc-Iteration1-PA1:4DO:0-Seed1012","1 arc-second",1,"1:4","0",1012,"classic",305,0.535080523771129
+"3arc-Iteration0-PA1:1.25DO:0-Seed1022","3 arc-second",0,"1:1.25","0",1022,"classic",305,0.378133005669732
+"3arc-Iteration0-PA1:1.25DO:0-Seed1023","3 arc-second",0,"1:1.25","0",1023,"classic",305,0.412990475571537
+"3arc-Iteration0-PA1:1.25DO:0-Seed1024","3 arc-second",0,"1:1.25","0",1024,"classic",305,0.389546582337075
+"3arc-Iteration0-PA1:1.25DO:0-Seed1025","3 arc-second",0,"1:1.25","0",1025,"classic",305,0.391824851479135
+"3arc-Iteration0-PA1:1.25DO:0-Seed1026","3 arc-second",0,"1:1.25","0",1026,"classic",305,0.386531631439551
+"3arc-Iteration0-PA1:1.25DO:0-Seed1052","3 arc-second",0,"1:1.25","0",1052,"classic",305,0.432288842247771
+"3arc-Iteration0-PA1:1.25DO:0-Seed1053","3 arc-second",0,"1:1.25","0",1053,"classic",305,0.430020256294831
+"3arc-Iteration0-PA1:1.25DO:0-Seed1054","3 arc-second",0,"1:1.25","0",1054,"classic",305,0.391634689149751
+"3arc-Iteration0-PA1:1.25DO:0-Seed1055","3 arc-second",0,"1:1.25","0",1055,"classic",305,0.377807032305045
+"3arc-Iteration0-PA1:1.25DO:0-Seed1056","3 arc-second",0,"1:1.25","0",1056,"classic",305,0.407349926993718
+"3arc-Iteration0-PA1:1.25DO:0-Seed1057","3 arc-second",0,"1:1.25","0",1057,"classic",305,0.436505224757521
+"3arc-Iteration0-PA1:1.25DO:0-Seed1058","3 arc-second",0,"1:1.25","0",1058,"classic",305,0.389183376700464
+"3arc-Iteration0-PA1:1.25DO:0-Seed1059","3 arc-second",0,"1:1.25","0",1059,"classic",305,0.356338438090987
+"3arc-Iteration0-PA1:1.25DO:0-Seed1060","3 arc-second",0,"1:1.25","0",1060,"classic",305,0.406170227721102
+"3arc-Iteration0-PA1:1.25DO:0-Seed1061","3 arc-second",0,"1:1.25","0",1061,"classic",305,0.415829209407707
+"3arc-Iteration0-PA1:1.5DO:0-Seed1013","3 arc-second",0,"1:1.5","0",1013,"classic",305,0.364552057249329
+"3arc-Iteration0-PA1:1.5DO:0-Seed1014","3 arc-second",0,"1:1.5","0",1014,"classic",305,0.427652325089678
+"3arc-Iteration0-PA1:1.5DO:0-Seed1015","3 arc-second",0,"1:1.5","0",1015,"classic",305,0.422181208409322
+"3arc-Iteration0-PA1:1.75DO:0-Seed1027","3 arc-second",0,"1:1.75","0",1027,"classic",305,0.44436832745856
+"3arc-Iteration0-PA1:1.75DO:0-Seed1028","3 arc-second",0,"1:1.75","0",1028,"classic",305,0.421431252876626
+"3arc-Iteration0-PA1:1.75DO:0-Seed1029","3 arc-second",0,"1:1.75","0",1029,"classic",305,0.38021820260248
+"3arc-Iteration0-PA1:1.75DO:0-Seed1030","3 arc-second",0,"1:1.75","0",1030,"classic",305,0.407535252296597
+"3arc-Iteration0-PA1:1.75DO:0-Seed1031","3 arc-second",0,"1:1.75","0",1031,"classic",305,0.421026470577181
+"3arc-Iteration0-PA1:1DO:0-Seed1001","3 arc-second",0,"1:1","0",1001,"classic",305,0.385017629209931
+"3arc-Iteration0-PA1:1DO:0-Seed1002","3 arc-second",0,"1:1","0",1002,"classic",305,0.402357009232072
+"3arc-Iteration0-PA1:1DO:0-Seed1003","3 arc-second",0,"1:1","0",1003,"classic",305,0.433378507033184
+"3arc-Iteration0-PA1:2.25DO:0-Seed1032","3 arc-second",0,"1:2.25","0",1032,"classic",305,0.406624552364204
+"3arc-Iteration0-PA1:2.25DO:0-Seed1033","3 arc-second",0,"1:2.25","0",1033,"classic",305,0.382284617886222
+"3arc-Iteration0-PA1:2.25DO:0-Seed1034","3 arc-second",0,"1:2.25","0",1034,"classic",305,0.368348119859759
+"3arc-Iteration0-PA1:2.25DO:0-Seed1035","3 arc-second",0,"1:2.25","0",1035,"classic",305,0.400808179713131
+"3arc-Iteration0-PA1:2.25DO:0-Seed1036","3 arc-second",0,"1:2.25","0",1036,"classic",305,0.36630791183907
+"3arc-Iteration0-PA1:2.5DO:0-Seed1016","3 arc-second",0,"1:2.5","0",1016,"classic",305,0.365139976010167
+"3arc-Iteration0-PA1:2.5DO:0-Seed1017","3 arc-second",0,"1:2.5","0",1017,"classic",305,0.432676228851629
+"3arc-Iteration0-PA1:2.5DO:0-Seed1018","3 arc-second",0,"1:2.5","0",1018,"classic",305,0.39516628683226
+"3arc-Iteration0-PA1:2.75DO:0-Seed1037","3 arc-second",0,"1:2.75","0",1037,"classic",305,0.426937422945134
+"3arc-Iteration0-PA1:2.75DO:0-Seed1038","3 arc-second",0,"1:2.75","0",1038,"classic",305,0.364303156730733
+"3arc-Iteration0-PA1:2.75DO:0-Seed1039","3 arc-second",0,"1:2.75","0",1039,"classic",305,0.416075813438517
+"3arc-Iteration0-PA1:2.75DO:0-Seed1040","3 arc-second",0,"1:2.75","0",1040,"classic",305,0.403324793875975
+"3arc-Iteration0-PA1:2.75DO:0-Seed1041","3 arc-second",0,"1:2.75","0",1041,"classic",305,0.398234468238177
+"3arc-Iteration0-PA1:2DO:0-Seed1004","3 arc-second",0,"1:2","0",1004,"classic",305,0.395384070493329
+"3arc-Iteration0-PA1:2DO:0-Seed1005","3 arc-second",0,"1:2","0",1005,"classic",305,0.400139159984307
+"3arc-Iteration0-PA1:2DO:0-Seed1006","3 arc-second",0,"1:2","0",1006,"classic",305,0.389541972048534
+"3arc-Iteration0-PA1:3.25DO:0-Seed1042","3 arc-second",0,"1:3.25","0",1042,"classic",305,0.46343708613564
+"3arc-Iteration0-PA1:3.25DO:0-Seed1043","3 arc-second",0,"1:3.25","0",1043,"classic",305,0.395742647050319
+"3arc-Iteration0-PA1:3.25DO:0-Seed1044","3 arc-second",0,"1:3.25","0",1044,"classic",305,0.430531729099273
+"3arc-Iteration0-PA1:3.25DO:0-Seed1045","3 arc-second",0,"1:3.25","0",1045,"classic",305,0.349500246789332
+"3arc-Iteration0-PA1:3.25DO:0-Seed1046","3 arc-second",0,"1:3.25","0",1046,"classic",305,0.41318216688313
+"3arc-Iteration0-PA1:3.5DO:0-Seed1019","3 arc-second",0,"1:3.5","0",1019,"classic",305,0.431115351412716
+"3arc-Iteration0-PA1:3.5DO:0-Seed1020","3 arc-second",0,"1:3.5","0",1020,"classic",305,0.399517003808908
+"3arc-Iteration0-PA1:3.5DO:0-Seed1021","3 arc-second",0,"1:3.5","0",1021,"classic",305,0.429248279685942
+"3arc-Iteration0-PA1:3.75DO:0-Seed1047","3 arc-second",0,"1:3.75","0",1047,"classic",305,0.395904911512226
+"3arc-Iteration0-PA1:3.75DO:0-Seed1048","3 arc-second",0,"1:3.75","0",1048,"classic",305,0.397575093023295
+"3arc-Iteration0-PA1:3.75DO:0-Seed1049","3 arc-second",0,"1:3.75","0",1049,"classic",305,0.435888224952975
+"3arc-Iteration0-PA1:3.75DO:0-Seed1050","3 arc-second",0,"1:3.75","0",1050,"classic",305,0.355516025335948
+"3arc-Iteration0-PA1:3.75DO:0-Seed1051","3 arc-second",0,"1:3.75","0",1051,"classic",305,0.434305626618845
+"3arc-Iteration0-PA1:3DO:0-Seed1007","3 arc-second",0,"1:3","0",1007,"classic",305,0.395091170628583
+"3arc-Iteration0-PA1:3DO:0-Seed1008","3 arc-second",0,"1:3","0",1008,"classic",305,0.480209573129325
+"3arc-Iteration0-PA1:3DO:0-Seed1009","3 arc-second",0,"1:3","0",1009,"classic",305,0.386174009297245
+"3arc-Iteration0-PA1:4DO:0-Seed1010","3 arc-second",0,"1:4","0",1010,"classic",305,0.377710340079945
+"3arc-Iteration0-PA1:4DO:0-Seed1011","3 arc-second",0,"1:4","0",1011,"classic",305,0.379192443419063
+"3arc-Iteration0-PA1:4DO:0-Seed1012","3 arc-second",0,"1:4","0",1012,"classic",305,0.405662038727772
+"3arc-Iteration1-PA1:1DO:0-Seed1001","3 arc-second",1,"1:1","0",1001,"classic",305,0.519709901133465
+"3arc-Iteration1-PA1:1DO:0-Seed1002","3 arc-second",1,"1:1","0",1002,"classic",305,0.481616412046055
+"3arc-Iteration1-PA1:1DO:0-Seed1003","3 arc-second",1,"1:1","0",1003,"classic",305,0.479220348514719
+"3arc-Iteration1-PA1:1DO:0-Seed1013","3 arc-second",1,"1:1","0",1013,"classic",305,0.46041589971153
+"3arc-Iteration1-PA1:1DO:0-Seed1014","3 arc-second",1,"1:1","0",1014,"classic",305,0.502094859593996
+"3arc-Iteration1-PA1:1DO:0-Seed1015","3 arc-second",1,"1:1","0",1015,"classic",305,0.471981062142691
+"3arc-Iteration1-PA1:1DO:0-Seed1016","3 arc-second",1,"1:1","0",1016,"classic",305,0.492887782127993
+"3arc-Iteration1-PA1:1DO:0-Seed1017","3 arc-second",1,"1:1","0",1017,"classic",305,0.472649543422301
+"3arc-Iteration1-PA1:1DO:0-Seed1018","3 arc-second",1,"1:1","0",1018,"classic",305,0.498682362818696
+"3arc-Iteration1-PA1:1DO:0-Seed1019","3 arc-second",1,"1:1","0",1019,"classic",305,0.467265720723153
+"3arc-Iteration1-PA1:1DO:0-Seed1020","3 arc-second",1,"1:1","0",1020,"classic",305,0.492585067289988
+"3arc-Iteration1-PA1:1DO:0-Seed1021","3 arc-second",1,"1:1","0",1021,"classic",305,0.502379271281914
+"3arc-Iteration1-PA1:1DO:0-Seed1022","3 arc-second",1,"1:1","0",1022,"classic",305,0.477187370035053
+"3arc-Iteration1-PA1:2DO:0-Seed1004","3 arc-second",1,"1:2","0",1004,"classic",305,0.510805112889548
+"3arc-Iteration1-PA1:2DO:0-Seed1005","3 arc-second",1,"1:2","0",1005,"classic",305,0.519168274628709
+"3arc-Iteration1-PA1:2DO:0-Seed1006","3 arc-second",1,"1:2","0",1006,"classic",305,0.513457173863878
+"3arc-Iteration1-PA1:3DO:0-Seed1007","3 arc-second",1,"1:3","0",1007,"classic",305,0.497515024958055
+"3arc-Iteration1-PA1:3DO:0-Seed1008","3 arc-second",1,"1:3","0",1008,"classic",305,0.491438472398785
+"3arc-Iteration1-PA1:3DO:0-Seed1009","3 arc-second",1,"1:3","0",1009,"classic",305,0.538803720383572
+"3arc-Iteration1-PA1:4DO:0-Seed1010","3 arc-second",1,"1:4","0",1010,"classic",305,0.515428620681075
+"3arc-Iteration1-PA1:4DO:0-Seed1011","3 arc-second",1,"1:4","0",1011,"classic",305,0.497330809201355
+"3arc-Iteration1-PA1:4DO:0-Seed1012","3 arc-second",1,"1:4","0",1012,"classic",305,0.496918832530321
