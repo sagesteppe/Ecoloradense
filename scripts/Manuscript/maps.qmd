@@ -1,0 +1,294 @@
+---
+title: "SDManuscript maps"
+format: html
+---
+
+Builds the manuscript's map figures and writes each composite to `figures/`
+as a PNG. Kept separate from SDManuscript.Rmd because the final rasters are
+large and slow to crop/mask/render - knitting the manuscript itself
+shouldn't have to pay that cost every time. Render this file whenever the
+source rasters change; SDManuscript.Rmd just pulls in whatever PNGs it
+finds in `figures/` via `knitr::include_graphics()`.
+
+```{r setup}
+library(ggplot2)
+library(patchwork)
+library(sf)
+library(terra)
+source('theme_manuscript.R')
+
+fig_dir <- 'figures'
+dir.create(fig_dir, showWarnings = FALSE, recursive = TRUE)
+
+## Site label shown on every map panel/legend for the Crested Butte-area
+## site - "Gothic" (the actual named locality, home of RMBL) rather than
+## the town of Crested Butte itself. The internal object/list key stays
+## 'gothic' throughout so it doesn't drift from this label again.
+site_label_gothic <- 'Gothic'
+```
+
+## Final suitability and density maps
+
+
+```{r zoom bboxes}
+## Manually chosen zoom windows for the density figure's inset panels, read
+## off a basemap in WGS84 lon/lat - each entry is NW corner then SE corner
+## (lat, lon). Kept in WGS84 here; reprojected to the raster's CRS wherever
+## they're actually used to crop (see `zoom_bbs` below).
+zoom_corners <- list(
+  gothic = c(nw_lat = 39.015644, nw_lon = -107.034565, se_lat = 39.007642, se_lon = -107.0207323),
+  coche  = c(nw_lat = 38.177820, nw_lon = -106.705831, se_lat = 38.174130, se_lon = -106.696740),
+  antero = c(nw_lat = 38.984090, nw_lon = -105.993880, se_lat = 38.974038, se_lon = -105.976990)
+)
+
+zoom_bbs_ll <- lapply(zoom_corners, function(z) {
+  sf::st_bbox(
+    c(xmin = z[['nw_lon']], xmax = z[['se_lon']], ymin = z[['se_lat']], ymax = z[['nw_lat']]),
+    crs = 4326
+  )
+})
+```
+
+```{r Final Suitability and Density Maps, eval = FALSE}
+## TODO: paths below point to the final refit outputs (2.8) - not yet
+## produced (that model uses ground-truth data still being collected) -
+## so this chunk stays eval=FALSE until they exist.
+
+bbs_sf <- sf::st_read(
+  file.path('..', '..', 'data', 'Cartography', 'bboxes_for_manuscript.gpkg'),
+  quiet = TRUE
+)
+## 'coche' box was shifted 8km west and padded 2km N/S (see
+## data/Cartography/bboxes_for_manuscript.gpkg) so its zoomed inset stops
+## clipping the western edge of the surveyed area.
+region_names <- c('gothic', 'coche', 'antero')
+bbs <- setNames(lapply(1:3, function(i) sf::st_bbox(bbs_sf[i, ])), region_names)
+## letter each region's own inset panel carries in the composite below -
+## used to cross-reference that inset from its box on the full-domain panel
+bbs_tags <- c(gothic = 'B', coche = 'C', antero = 'D')
+
+suit_r <- terra::rast(file.path('..', '..', 'results', 'suitability_maps', 'final-Pr.tif'))
+aoa_r  <- terra::rast(file.path('..', '..', 'results', 'suitability_maps', 'final-AOA.tif'))
+dens_r <- terra::rast(file.path('..', '..', 'results', 'count_models', 'final-density.tif'))
+
+## AOA == 0 pixels are outside the model's area of applicability - not real
+## predictions - so null them out, and speckle that area on the plot rather
+## than leaving it a blank gap.
+suit_r  <- mask_aoa(suit_r, aoa_r)
+speck   <- aoa_speckle(aoa_r)
+
+## Binary threshold-cut outline (sens/spec_sens), drawn as a black line over
+## the continuous suitability fill. `cost_thresh` in
+## Second_groundtruth/DesignGroundTruth.R uses 'spec_sens' as the chosen
+## binary cut for this project, so that's the layer used here.
+## TODO: wire this up once a final-resolution thresholds raster (see
+## Second_groundtruth/make_threshold_raster_masks.R for the pattern used at
+## the search-iteration resolutions) exists alongside final-Pr.tif; no such
+## raster exists yet for the final refit; needs the same care taken in
+## transect_placement.R (dedupe identical patches, drop patches < 2 pixels)
+## before treating its outline as meaningful.
+## thresh_r      <- terra::rast(file.path('..', '..', 'results', 'suitability_maps', 'final-thresholds.tif'))
+## cut_outline   <- sf::st_as_sf(terra::as.polygons(thresh_r[['spec_sens']] == 1, dissolve = TRUE))
+## cut_outline   <- cut_outline[cut_outline[[1]] == 1, ]
+## cut_line_layer <- geom_sf(data = cut_outline, inherit.aes = FALSE, fill = NA, color = 'black', linewidth = 0.4)
+
+## ---- final habitat suitability: full domain (left, full height) + the
+## three focal regions to the right, each panel the same size so smaller
+## regions read at a visibly larger scale than the full domain. North arrow
+## sits on the Gothic inset (not panel A) so it doesn't compete with the
+## bbox/tag chrome already crowding the full-domain overview. ----
+suit_full   <- mapPanel(
+  rasterToDF(suit_r),
+  scale_fill_suitability,
+  'Full domain',
+  bboxes = bbs,
+  bbox_tags = bbs_tags,
+  speckle = speck
+  )
+suit_gothic <- mapPanel(rasterToDF(suit_r, bbs$gothic), scale_fill_suitability, site_label_gothic, speckle = speck, north_arrow = TRUE)
+suit_coche  <- mapPanel(rasterToDF(suit_r, bbs$coche),  scale_fill_suitability, 'Cochetopa', speckle = speck)
+suit_antero <- mapPanel(rasterToDF(suit_r, bbs$antero), scale_fill_suitability, 'Antero', speckle = speck)
+
+p_suit_final <- (suit_full + (suit_gothic / suit_coche / suit_antero) +
+  plot_layout(widths = c(2, 1), guides = 'collect')) +
+  plot_annotation(
+    tag_levels = 'A',
+    title = 'Final ENM for Eriogonum coloradense',
+    subtitle = 'Post field work phase 1, and ground truth iteration') &
+  theme_manuscript_tags() &
+  theme_manuscript_legend() &
+  theme(legend.position = 'bottom')
+p_suit_final
+ggsave(file.path(fig_dir, 'suitability_final.png'), p_suit_final, width = 9, height = 7, dpi = 300)
+```
+
+```{r Suitability Iteration Diffs Appendix, eval = FALSE}
+## Appendix figure: iter0 (pre-existing occurrence records only) vs. iter1
+## (refit after the first round of ground-truthing) suitability, and their
+## difference, alongside the final (iter1 + boundary-transect data) map
+## from the chunk above - so a reader can see how much each ground-truth
+## round actually moved the prediction.
+## TODO: no iteration-0 final-resolution suitability raster exists yet in
+## results/suitability_maps (only a single 3-arc-second iter1 test run is
+## available - see the 'Theme preview' section below); build this once
+## iter0 and iter1 final-resolution rasters both exist, following the same
+## mask_aoa()/rasterToDF()/mapPanel() pattern as the chunk above.
+## iter0_r   <- terra::rast(file.path('..', '..', 'results', 'suitability_maps', 'iter0-Pr.tif'))
+## iter1_r   <- suit_r  # from the chunk above
+## diff_r    <- iter1_r - iter0_r
+## diff_full <- mapPanel(rasterToDF(diff_r), scale_fill_diff, 'Iter1 - Iter0', bboxes = bbs, bbox_tags = bbs_tags)
+```
+
+```{r Final Density Maps, eval = FALSE}
+## ---- final census/density surfaces: one row per site, stacked
+## vertically (no full-domain panel here - density is only modelled/
+## meaningful within the surveyed regions). Each row pairs the site-level
+## map (with a nested zoom bbox outlined) against a further zoomed-in crop
+## of that nested box. All sites share one fill scale/legend so density is
+## comparable across sites, not just within one. ----
+## Panels A, C, E (the main, non-zoomed column) reuse the exact same `bbs`
+## object the suitability figure above crops with, so their extents match
+## that figure's panels B/C/D by construction - don't recompute bboxes
+## separately for this figure.
+## Zoom windows are the manually chosen boxes from `zoom_bbs_ll` (WGS84),
+## reprojected to the density raster's CRS.
+dens_nested <- lapply(zoom_bbs_ll[names(bbs)], function(z) {
+  sf::st_bbox(sf::st_transform(sf::st_as_sfc(z), terra::crs(dens_r)))
+})
+
+dens_df_gothic <- rasterToDF(dens_r, bbs$gothic)
+dens_df_coche  <- rasterToDF(dens_r, bbs$coche)
+dens_df_antero <- rasterToDF(dens_r, bbs$antero)
+dens_limits <- range(c(dens_df_gothic$value, dens_df_coche$value, dens_df_antero$value), na.rm = TRUE)
+dens_scale <- function() scale_fill_density(limits = dens_limits)
+
+## TODO: panels B/D/F (the zoomed crops) are tight enough that a named
+## sub-locality within each crop may be worth labelling on the map itself
+## (distinct from the region-level 'Gothic'/'Cochetopa'/'Antero' label the
+## main panel already carries) - needs the actual locality names, not
+## guessed here.
+dens_gothic_main <- mapPanel(dens_df_gothic, dens_scale, site_label_gothic, bboxes = list(zoom = dens_nested$gothic))
+dens_coche_main  <- mapPanel(dens_df_coche,  dens_scale, 'Cochetopa', bboxes = list(zoom = dens_nested$coche))
+dens_antero_main <- mapPanel(dens_df_antero, dens_scale, 'Antero', bboxes = list(zoom = dens_nested$antero))
+## Zoom panels (B/D/F): a tight enough crop puts ggspatial's default scale-
+## bar target (25% of panel width) right at its internal 1600m km-vs-m
+## bucket boundary, which is what rendered panel F as '1000 m' instead of
+## '1 km'. A larger width_hint pushes the target comfortably past that
+## boundary so these consistently land on km.
+dens_gothic_zoom <- mapPanel(rasterToDF(dens_r, dens_nested$gothic), dens_scale, paste(site_label_gothic, '(zoom)'), scale_width_hint = 0.35)
+dens_coche_zoom  <- mapPanel(rasterToDF(dens_r, dens_nested$coche),  dens_scale, 'Cochetopa (zoom)', scale_width_hint = 0.35)
+dens_antero_zoom <- mapPanel(rasterToDF(dens_r, dens_nested$antero), dens_scale, 'Antero (zoom)', scale_width_hint = 0.35)
+
+p_dens_final <- (
+  (dens_gothic_main | dens_gothic_zoom) /
+  (dens_coche_main | dens_coche_zoom) /
+  (dens_antero_main | dens_antero_zoom) +
+  plot_layout(guides = 'collect')) +
+  plot_annotation(
+    tag_levels = 'A',
+    title = 'Final Predicted Density, plants per pixel',
+    subtitle = 'Post field work phase 1, and ground truth iteration') &
+  theme_manuscript_tags() &
+  theme_manuscript_legend() &
+  theme(legend.position = 'bottom', legend.justification = 'center')
+p_dens_final
+ggsave(file.path(fig_dir, 'density_final.png'), p_dens_final, width = 8, height = 10, dpi = 300)
+```
+
+## Theme preview (real test raster, no final refit yet)
+
+```{r Example Maps Theme Preview, fig.height = 6}
+## Preview of theme_manuscript_map() styling using a real single-run
+## suitability/AOA/SE triple dropped in results/suitability_maps for this
+## purpose (not the final refit - that's still above, eval=FALSE until it
+## exists). Delete this chunk once those are back to eval=TRUE.
+## No real density test raster yet, so that panel stays on example_surface().
+demo_fp <- file.path('..', '..', 'results', 'suitability_maps')
+suit_r_demo <- terra::rast(file.path(demo_fp, '3arc-Iteration1-PA1:DO:0-Seed1017-Pr.tif'))
+aoa_r_demo  <- terra::rast(file.path(demo_fp, '3arc-Iteration1-PA1:DO:0-Seed1017-AOA.tif'))
+se_r_demo   <- terra::rast(file.path(demo_fp, '3arc-Iteration1-PA1:DO:0-Seed1017-SE.tif'))
+
+## AOA == 0 pixels are outside the model's area of applicability - not real
+## predictions - so null them out before plotting.
+suit_r_demo <- mask_aoa(suit_r_demo, aoa_r_demo)
+se_r_demo   <- mask_aoa(se_r_demo, aoa_r_demo)
+demo_crs    <- terra::crs(suit_r_demo)
+speck_demo  <- aoa_speckle(aoa_r_demo)
+
+bbs_sf_demo <- sf::st_transform(
+  sf::st_read(file.path('..', '..', 'data', 'Cartography', 'bboxes_for_manuscript.gpkg'), quiet = TRUE),
+  demo_crs
+)
+region_names_demo <- c('gothic', 'coche', 'antero')
+bbs_demo <- setNames(lapply(1:3, function(i) sf::st_bbox(bbs_sf_demo[i, ])), region_names_demo)
+bbs_tags_demo <- c(gothic = 'B', coche = 'C', antero = 'D')
+dens_r_demo <- example_surface(sf::st_bbox(bbs_sf_demo), res = 100, range = c(0, 40), seed = 28)
+
+## ---- suitability: full domain (left) + the three focal regions to the
+## right. North arrow sits on the Gothic inset, not the full-domain
+## overview panel, so it doesn't collide with the bbox/tag chrome there. ----
+suit_full_demo   <- mapPanel(rasterToDF(suit_r_demo), scale_fill_suitability,
+                              'Full domain', crs = demo_crs, bboxes = bbs_demo, bbox_tags = bbs_tags_demo, speckle = speck_demo)
+suit_gothic_demo <- mapPanel(rasterToDF(suit_r_demo, bbs_demo$gothic), scale_fill_suitability, site_label_gothic, crs = demo_crs, speckle = speck_demo, north_arrow = TRUE)
+suit_coche_demo  <- mapPanel(rasterToDF(suit_r_demo, bbs_demo$coche),  scale_fill_suitability, 'Cochetopa', crs = demo_crs, speckle = speck_demo)
+suit_antero_demo <- mapPanel(rasterToDF(suit_r_demo, bbs_demo$antero), scale_fill_suitability, 'Antero', crs = demo_crs, speckle = speck_demo)
+
+p_suit_preview <- (suit_full_demo + (suit_gothic_demo / suit_coche_demo / suit_antero_demo) +
+  plot_layout(widths = c(2, 1), guides = 'collect')) +
+  plot_annotation(
+    tag_levels = 'A',
+    title = 'Final ENM for Eriogonum coloradense',
+    subtitle = 'Post field work phase 1, and ground truth iteration') &
+  theme_manuscript_tags() &
+  theme_manuscript_legend() &
+  theme(legend.position = 'bottom')
+p_suit_preview
+ggsave(file.path(fig_dir, 'suitability_preview.png'), p_suit_preview, width = 9, height = 7, dpi = 300)
+
+## ---- density: one row per site, stacked vertically, each row pairing
+## the site-level map (nested zoom bbox outlined) with a further zoomed-in
+## crop of that nested box. All sites share one fill scale/legend. ----
+dens_nested_demo <- lapply(bbs_demo, shrink_bbox, factor = 0.35)
+
+dens_df_gothic_demo <- rasterToDF(dens_r_demo, bbs_demo$gothic)
+dens_df_coche_demo  <- rasterToDF(dens_r_demo, bbs_demo$coche)
+dens_df_antero_demo <- rasterToDF(dens_r_demo, bbs_demo$antero)
+dens_limits_demo <- range(c(dens_df_gothic_demo$value, dens_df_coche_demo$value, dens_df_antero_demo$value), na.rm = TRUE)
+dens_scale_demo <- function() scale_fill_density(limits = dens_limits_demo)
+
+dens_gothic_main_demo <- mapPanel(dens_df_gothic_demo, dens_scale_demo, site_label_gothic, crs = demo_crs, bboxes = list(zoom = dens_nested_demo$gothic))
+dens_coche_main_demo  <- mapPanel(dens_df_coche_demo,  dens_scale_demo, 'Cochetopa', crs = demo_crs, bboxes = list(zoom = dens_nested_demo$coche))
+dens_antero_main_demo <- mapPanel(dens_df_antero_demo, dens_scale_demo, 'Antero', crs = demo_crs, bboxes = list(zoom = dens_nested_demo$antero))
+## scale_width_hint bumped on the zoom panels - see the matching comment in
+## the 'Final Density Maps' chunk above (ggspatial's m/km bucket boundary).
+dens_gothic_zoom_demo <- mapPanel(rasterToDF(dens_r_demo, dens_nested_demo$gothic), dens_scale_demo, paste(site_label_gothic, '(zoom)'), crs = demo_crs, scale_width_hint = 0.35)
+dens_coche_zoom_demo  <- mapPanel(rasterToDF(dens_r_demo, dens_nested_demo$coche),  dens_scale_demo, 'Cochetopa (zoom)', crs = demo_crs, scale_width_hint = 0.35)
+dens_antero_zoom_demo <- mapPanel(rasterToDF(dens_r_demo, dens_nested_demo$antero), dens_scale_demo, 'Antero (zoom)', crs = demo_crs, scale_width_hint = 0.35)
+
+p_dens_preview <- (
+  (dens_gothic_main_demo | dens_gothic_zoom_demo) /
+  (dens_coche_main_demo | dens_coche_zoom_demo) /
+  (dens_antero_main_demo | dens_antero_zoom_demo) +
+  plot_layout(guides = 'collect')) +
+  plot_annotation(
+    tag_levels = 'A',
+    title = 'Final Predicted Density, plants per pixel',
+    subtitle = 'Post field work phase 1, and ground truth iteration') &
+  theme_manuscript_tags() &
+  theme_manuscript_legend() &
+  theme(legend.position = 'bottom', legend.justification = 'center')
+p_dens_preview
+ggsave(file.path(fig_dir, 'density_preview.png'), p_dens_preview, width = 8, height = 10, dpi = 300)
+```
+
+```{r Example Bivariate Map Theme Preview, fig.height = 5}
+## Bivariate preview: suitability as fill (red = low, green = high) with
+## prediction SE mapped to alpha, so uncertain pixels fade toward white
+## rather than needing a second 3x3 legend grid.
+df_biv_demo <- merge(rasterToDF(suit_r_demo), rasterToDF(se_r_demo), by = c('x', 'y'))
+names(df_biv_demo)[3:4] <- c('value', 'se')
+
+p_biv_preview <- mapPanelBivariate(df_biv_demo, label = 'Full domain (suitability x SE)', crs = demo_crs, speckle = speck_demo)
+p_biv_preview
+ggsave(file.path(fig_dir, 'bivariate_preview.png'), p_biv_preview, width = 7, height = 6, dpi = 300)
+```

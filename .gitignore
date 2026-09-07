@@ -68,3 +68,15 @@ ClimateNA_v750/
 results/cost_distances/
 
 TRANSECT_SCRATCH
+
+
+## for formatting latex
+WileyDesign/
+
+.*fff
+.*log
+*.fff
+*.log
+scripts.zip
+wombling.pdf
+

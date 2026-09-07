@@ -38,13 +38,22 @@ ensure_multipolygons <- function(X) { # @ stackoverflow
 #' the exact quantity are saved in model objects. "1:2" 
 #' @param distOrder Character. The distance between the nearest absence to presence, as a multiple of the cell resolution
 #' e.g. distOrder 1 at a 90m resolution indicates the nearest absence is >90m away from a presence, at 10m it indicates > 10m away.
-#' @param remove_tiles Boolean. Defaults to FALSE, whether to remove tiles required for model prediction (applies only to high resolution data sets). 
+#' @param remove_tiles Boolean. Defaults to FALSE, whether to remove tiles required for model prediction (applies only to high resolution data sets).
+#' @param seed Numeric. Passed to \code{set.seed()} before the train/test split and
+#' model fit, so replicate calls at the same PAratio/resolution can use independent
+#' seeds instead of silently reusing whichever model was fit first.
+#' @param predict_surface Boolean. Defaults to TRUE. When FALSE, skip the probability
+#' surface, area-of-applicability, and standard-error raster predictions entirely -
+#' fitting and holdout evaluation still happen, and are fast, so this is what a grid/
+#' replicate search over PAratio should use; only the final, chosen model needs the
+#' (slow) full-surface predictions.
 modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_split,
-                     PAratio, distOrder, remove_tiles){
-  
+                     PAratio, distOrder, remove_tiles, seed = 1, predict_surface = TRUE){
+
   if(missing(remove_tiles)){remove_tiles <- FALSE}
   if(missing(se_prediction)){se_prediction <- FALSE}
-  rast_dat <- rastReader(paste0('dem_', resolution), p2proc) 
+  set.seed(seed)
+  rast_dat <- rastReader(paste0('dem_', resolution), p2proc)
   cores <- parallel::detectCores()
   
   df <- dplyr::bind_cols(
@@ -56,7 +65,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
       Occurrence = as.factor(Occurrence)) |>
     sf::st_drop_geometry()
 
-  fname <- paste0(resolution, '-Iteration', iteration, '-PA', PAratio, distOrder)
+  fname <- paste0(resolution, '-Iteration', iteration, '-PA', PAratio, distOrder, '-Seed', seed)
   #######################         MODELLING           ##########################
   # this is the fastest portion of this process. It will take at most a few minutes
   # at any resolution, the goal of this paper wasn't really focused on comparing
@@ -189,7 +198,12 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   
   rm(df, df_auc, TrainIndex, Train, Test, predictions, cmRestrat)
   }
-  
+
+  eval_path <- paste0('../results/tables/', fname, '.csv')
+  eval_tab <- if(file.exists(eval_path)) read.csv(eval_path) else NULL
+
+  if(predict_surface){
+
   pout <- '../results/suitability_maps'
   ###################      PREDICT ONTO SURFACE        #########################
   # the prediction is generally straightforward, it doesn't take an obscene
@@ -366,14 +380,17 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
       file.path(final_se_path, list.files(final_se_path))
     ), fun = 'mean')
     writeRaster(
-      mos[[2]], 
+      mos[[2]],
       wopt = c(names = 'standardError'),
-      filename = file.path(fname, '-SE.tif'),
+      filename = file.path(pout, paste0(fname, '-SE.tif')),
       overwrite = T)
     gc(verbose = FALSE)
     }
     unlink(final_se_path)
   }
+  }
+
+  invisible(list(fname = fname, metrics = eval_tab))
 }
 
 
@@ -667,8 +684,13 @@ subset_pts <- function(x, res, root, mode){
 #' @param PAratio Numeric. The denominator of the ratio, Presence is always 1, so 1.5 would indicate
 #' 100 presence records and 150 absence records. 
 #' @param resolution Numeric. The approximate resolution of the input data set, one of: 3, 10, 30, 90.
-distOrder_PAratio_simulator <- function(x, distOrder, PAratio, resolution, ...){
-  
+#' @param seed Numeric. Seeds both the absence subsample drawn below and (via passthrough
+#' to \code{modeller()}) the train/test split and model fit, so repeated calls at the same
+#' PAratio use independent replicates rather than the identical absence subsample every time.
+distOrder_PAratio_simulator <- function(x, distOrder, PAratio, resolution, seed = 1, ...){
+
+  set.seed(seed)
+
   res_string <- switch(
     as.character(resolution),
     "3" = "3m",
@@ -691,12 +713,125 @@ distOrder_PAratio_simulator <- function(x, distOrder, PAratio, resolution, ...){
   x <- dplyr::bind_rows(prs, abs)
   
   # results indicate that 3:1 is pretty good, but very conservative in terms of suitable habitat
-  abs <- abs[sample(1:nrow(abs), size =  nrow(prs) * PAratio, replace = F),]
+  # PAratio may be fractional (e.g. from adaptive_PAratio_search's bracketing), hence round().
+  abs <- abs[sample(1:nrow(abs), size = round(nrow(prs) * PAratio), replace = F),]
   x <- dplyr::bind_rows(prs, abs)
-  
+
   modeller(x, PAratio = paste0("1:", PAratio),
-           resolution = res_string, distOrder = paste0('DO:', distOrder), ...)
-  
+           resolution = res_string, distOrder = paste0('DO:', distOrder), seed = seed, ...)
+
+}
+
+#' Adaptive coarse-to-fine search over presence:absence ratio, with seed replication
+#'
+#' @description Fits a bracketing search over PAratio instead of a fixed value: an
+#' initial integer grid (\code{initial_ratios}) is fit once each; whichever ratios land
+#' within \code{good_frac} of the best mean holdout metric define a "good" band; the
+#' midpoints between adjacent tested ratios inside that band become the next stage's
+#' candidates. Each successive stage in \code{replicate_schedule} fits more seed
+#' replicates per candidate, so the search narrows toward the optimum while also
+#' building up an estimate of seed-to-seed performance variance near it. Every fit in
+#' this function uses \code{predict_surface = FALSE} (fit + holdout evaluation only,
+#' which is fast for a random forest) - only the single winning ratio's single most
+#' performant replicate is promoted to a full surface/SE prediction at the end; results
+#' are not ensembled across replicates.
+#'
+#' @param x,distOrder,p2proc,train_split as passed through to \code{distOrder_PAratio_simulator()}.
+#' @param resolution Numeric. One of 3, 10, 30, 90; the same resolution is used for every
+#' stage, since the optimal ratio is expected to depend on resolution.
+#' @param initial_ratios Numeric vector. First-stage PAratio grid, each fit once.
+#' @param replicate_schedule Numeric vector, one entry per refinement stage after the
+#' first; each value is how many seeds to fit per candidate ratio at that stage.
+#' @param final_replicates Numeric. Seeds to fit at the single overall best-performing ratio.
+#' @param good_frac Numeric in (0, 1]. A ratio's mean metric must be >= good_frac * the
+#' best mean metric seen so far to fall in the "good" band used to pick the next stage's
+#' midpoints.
+#' @param metric Character, 'pr_auc' or 'roc_auc' - which row of the eval CSV modeller()
+#' writes to compare candidate ratios on. Defaults to 'pr_auc' since presences are rare.
+#' @param base_seed Numeric. Seeds are drawn sequentially as base_seed + 1, 2, 3, ... across
+#' every fit this function performs, so no two fits (any ratio, any stage) share a seed.
+#' @return A list: \code{results} (data.frame of every ratio/seed/metric fit), \code{best_ratio},
+#' \code{best_seed} (the promoted replicate), and \code{fname} (the promoted model's file stem).
+adaptive_PAratio_search <- function(x, resolution, distOrder, p2proc, train_split,
+                                     initial_ratios = 1:5,
+                                     replicate_schedule = c(3, 5),
+                                     final_replicates = 10,
+                                     good_frac = 0.9,
+                                     metric = 'pr_auc',
+                                     base_seed = 1000){
+
+  seed_counter <- base_seed
+  results <- data.frame(ratio = numeric(0), seed = numeric(0), metric = numeric(0))
+
+  fit_one <- function(ratio, seed){
+    out <- distOrder_PAratio_simulator(
+      x = x, distOrder = distOrder, PAratio = ratio, resolution = resolution,
+      seed = seed, predict_surface = FALSE,
+      iteration = 1, se_prediction = FALSE, train_split = train_split, p2proc = p2proc
+    )
+    out$metrics$estimate[out$metrics$metric == metric]
+  }
+
+  run_stage <- function(ratios, n_rep){
+    for(r in ratios){
+      for(i in seq_len(n_rep)){
+        seed_counter <<- seed_counter + 1
+        m <- fit_one(r, seed_counter)
+        results <<- rbind(results, data.frame(ratio = r, seed = seed_counter, metric = m))
+      }
+    }
+  }
+
+  # midpoints between adjacent tested ratios that both fall within the current good band
+  next_candidates <- function(){
+    agg <- aggregate(metric ~ ratio, results, mean)
+    best <- max(agg$metric)
+    good <- sort(agg$ratio[agg$metric >= good_frac * best])
+    if(length(good) < 2) return(numeric(0))
+    tested <- sort(unique(results$ratio))
+    in_band <- tested[tested >= min(good) & tested <= max(good)]
+    if(length(in_band) < 2) return(numeric(0))
+    mids <- (head(in_band, -1) + tail(in_band, -1)) / 2
+    mids[!mids %in% tested]
+  }
+
+  # stage 0: coarse integer grid, fit once each
+  run_stage(initial_ratios, 1)
+
+  # refinement stages: bisect toward the good band, replicating more each time
+  for(n_rep in replicate_schedule){
+    cands <- next_candidates()
+    if(length(cands) == 0) break
+    run_stage(cands, n_rep)
+  }
+
+  # final stage: replicate the single best-performing ratio to characterize
+  # seed-to-seed uncertainty at the winner.
+  agg <- aggregate(metric ~ ratio, results, mean)
+  best_ratio <- agg$ratio[which.max(agg$metric)]
+  run_stage(best_ratio, final_replicates)
+
+  # promote the single most performant replicate of the winning ratio - no ensembling -
+  # to a full surface + SE prediction. distOrder_PAratio_simulator() re-derives the same
+  # fname for this (ratio, seed) pair, so modeller() finds the cached fit and skips
+  # straight to prediction rather than refitting.
+  winners <- results[results$ratio == best_ratio, ]
+  best_seed <- winners$seed[which.max(winners$metric)]
+
+  final <- distOrder_PAratio_simulator(
+    x = x, distOrder = distOrder, PAratio = best_ratio, resolution = resolution,
+    seed = best_seed, predict_surface = TRUE, se_prediction = TRUE,
+    iteration = 1, train_split = train_split, p2proc = p2proc
+  )
+
+  # persist the full search history (every ratio/seed/metric tried) - this is the
+  # evidence behind best_ratio, and the source data for a PR-AUC-vs-ratio plot;
+  # otherwise it only lives in the returned list and is lost once the R session ends.
+  write.csv(
+    results, paste0('../results/tables/', resolution, '-PAratio-search.csv'),
+    row.names = FALSE)
+
+  list(results = results, best_ratio = best_ratio, best_seed = best_seed, fname = final$fname)
 }
 
 #' Convert a cross validation object generated by CAST into an rsample object
@@ -958,12 +1093,17 @@ densityModeller <- function(x, bn, fp){
     'Pr.suit' = test$Pr.SuitHab
   )
   
-  # this was the grouping variable required for the arithmetic mean, we drop it now. 
+  # this was the grouping variable required for the arithmetic mean, we drop it now.
   train <- sf::st_drop_geometry(train) |>
     select(-Lctn_bb)
   test <- sf::st_drop_geometry(test)
-  
-  # feature selection 
+
+  # RFE below may drop Longitude/Latitude as non-predictive features; keep a copy
+  # so the brms candidates' gp() term (needs coordinates, not a "selected" feature) can
+  # reattach them later.
+  train_coords <- train[, c('Longitude', 'Latitude')]
+
+  # feature selection
   if(!file.exists(file.path(fp, 'modelsTune', paste0(bn, '.rds')))){
     
     ctrl <- caret::rfeControl(
@@ -1040,22 +1180,40 @@ densityModeller <- function(x, bn, fp){
                      engine = 'lightgbm', objective = 'poisson', resp = 'Prsnc_All')
     saveRDS(lgbm_cv, f)
   } else {lgbm_cv <- readRDS(f)}
-  
-  # now calculate the evaluation statistics. 
+
+  # Bayesian candidates (census_uncertainty_roadmap.md Phase 1, scripts/Census_uncertainty/density_bayes.R).
+  # RFE (line ~1120 above) may have dropped Longitude/Latitude from `train` since they're
+  # coordinates, not predictive features - reattach them here, they're required by the
+  # brms candidates' gp() term but aren't evaluated as XGBoost/LightGBM features.
+  train_brms <- train
+  train_brms$Longitude <- train_coords[,1]
+  train_brms$Latitude  <- train_coords[,2]
+
+  brms_cv <- brms_cv_compare(train_brms, test)
+  brms_final <- brms_promote_and_refit(
+    switch(brms_cv$best$family_name,
+           Poisson = poisson(), NegBinomial = brms::negbinomial(),
+           HurdlePoisson = brms::hurdle_poisson(), HurdleNegBinomial = brms::hurdle_negbinomial()),
+    train_brms, seed = 1, fp = fp, bn = bn, family_label = tolower(brms_cv$best$family_name)
+  )
+
+  # now calculate the evaluation statistics.
   namev <- c('Arithmetic Mean', 'Kriging',
              'XGB Poisson Spat.', 'XGB Poisson', 'XBG Tweedie Spat.',  'XGB Tweedie', 'LGBM Poisson Spat.')
-  mods <- list(mean_preds, krig_preds, poiss_spat_cv$Predictions, poiss_cv$Predictions, 
+  mods <- list(mean_preds, krig_preds, poiss_spat_cv$Predictions, poiss_cv$Predictions,
                tweedie_spat_cv$Predictions, tweedie_cv$Predictions, lgbm_cv$Predictions)
-  
+
   metrrs <- lapply(mods, mets) |>
-    dplyr::bind_rows() |> 
-    dplyr::mutate(Model = rep(namev, each = 3), .before = 1)
-  
-  # now we will save the models, evaluation table, and information, note we 
+    dplyr::bind_rows() |>
+    dplyr::mutate(Model = rep(namev, each = 3), .before = 1) |>
+    dplyr::bind_rows(brms_cv$table)
+
+  # now we will save the models, evaluation table, and information, note we
   # also save the variable selection object for AOA calculation
-  
+
   write.csv(metrrs, file.path(fp, 'tables', paste0(bn, '.csv')), row.names = FALSE)
-  
+
+  invisible(list(metrics = metrrs, brms_promoted = brms_final))
 }
 
 #' fit tweedie models to the data
@@ -1113,10 +1271,13 @@ gbs <- function(rec, cv, train, test, resp, tune_gr, mode, engine, objective, le
   )
 }
 
-#' fit xgboosted models to predict plant count per space density. 
-#' @param f a vector of predicted suitable habitat rasters to use for input. 
-wrapper <- function(x){
-  
+#' fit xgboosted models to predict plant count per space density.
+#' @param f a vector of predicted suitable habitat rasters to use for input.
+#' @param return_early logical, if TRUE (default) return the assembled plot-level
+#' data.frame without fitting any density models - the behavior `ModelInterpretation.Rmd`
+#' relies on for PDP-plot exploration. Set FALSE to actually run `densityModeller()`.
+wrapper <- function(x, return_early = TRUE){
+
   res <- gsub('-I.*$', '', x)
   res_string <- switch(res,
                        "3m" = "3m",
@@ -1148,10 +1309,14 @@ wrapper <- function(x){
     select(-Prsnc_J, -Prsnc_M)
   
   ## this just here for playing wiht PDP plots!!!
-  return(df)
-  
+  if(return_early){ return(df) }
+
+  coords <- sf::st_coordinates(df)
+  df$Longitude <- coords[,1]
+  df$Latitude <- coords[,2]
+
   densityModeller(df, fp = '../results/count_models', bn = gsub('DO.*$', '', x))
-  
+
 }
 
 
