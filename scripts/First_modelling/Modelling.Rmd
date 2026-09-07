@@ -25,6 +25,7 @@ see `adaptive_PAratio_search()` in functions.R.
 
 ```{r Shared absence pool}
 abs <- st_read('../../data/Data4modelling/iter1-pa.gpkg')
+areas <- st_read('../../data/GroundTruthPts/ground_truth_median-VISITED.gpkg', layer = 'areas')
 ```
 
 ## 3 arc-second (90m)
@@ -47,6 +48,13 @@ search_90_classic <- adaptive_PAratio_search(
   p2proc = '../../data/spatial/processed',
   spatial_split = FALSE,
   results_root = file.path(PROJ_ROOT, 'results_classicsplit')
+)
+
+lopo_90 <- population_lopo_search(
+  x = m90, distOrder = 0, resolution = 90, iteration = 1,
+  PAratio = search_90$best_ratio, areas = areas,
+  p2proc = '../../data/spatial/processed',
+  results_root = file.path(PROJ_ROOT, 'results_populationsplit')
 )
 ```
 
@@ -71,6 +79,13 @@ search_30_classic <- adaptive_PAratio_search(
   spatial_split = FALSE,
   results_root = file.path(PROJ_ROOT, 'results_classicsplit')
 )
+
+lopo_30 <- population_lopo_search(
+  x = m30, distOrder = 0, resolution = 30, iteration = 1,
+  PAratio = search_30$best_ratio, areas = areas,
+  p2proc = '../../data/spatial/processed',
+  results_root = file.path(PROJ_ROOT, 'results_populationsplit')
+)
 ```
 
 ## 1/3 arc-second (10m)
@@ -93,6 +108,13 @@ search_10_classic <- adaptive_PAratio_search(
   p2proc = '../../data/spatial/processed',
   spatial_split = FALSE,
   results_root = file.path(PROJ_ROOT, 'results_classicsplit')
+)
+
+lopo_10 <- population_lopo_search(
+  x = m10, distOrder = 0, resolution = 10, iteration = 1,
+  PAratio = search_10$best_ratio, areas = areas,
+  p2proc = '../../data/spatial/processed',
+  results_root = file.path(PROJ_ROOT, 'results_populationsplit')
 )
 ```
 

@@ -72,6 +72,7 @@ TRANSECT_SCRATCH
 
 ## for formatting latex
 WileyDesign/
+GroundTruthPapers/
 
 .*fff
 .*log

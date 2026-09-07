@@ -793,6 +793,192 @@ spatial_class_split <- function(x, rast_dat, train_split, test_tolerance = 0.1){
   )
 }
 
+#' Join real-population identity onto occurrence/background points
+#'
+#' @description Phase 0 of \code{population_rarefaction_roadmap.md}: primary assignment
+#' is point-in-polygon against the \code{areas} layer's named population/site polygons
+#' (\code{data/GroundTruthPts/ground_truth_median-VISITED.gpkg}). That layer was built for
+#' ground-truthing/transect work, not as an exhaustive population census, so coverage is
+#' incomplete - checked empirically against the iter1 3m presence pool, ~75% of points
+#' fall inside a polygon; of the rest, ~55% sit within 500m of one and ~71% within 1km, but
+#' the tail runs out to ~27km, and those are real, distinct, unsurveyed populations rather
+#' than boundary/GPS slop. \code{max_dist} defaults to 500m to recover the boundary-slop
+#' cases via nearest-polygon fallback without silently annexing a genuinely separate,
+#' unsurveyed population into whichever named site happens to be closest.
+#' @param x sf points (presence and/or absence/background).
+#' @param areas sf polygons with a \code{Site} name column - the \code{areas} layer.
+#' @param max_dist Numeric, meters. Fallback radius for the strict \code{population} field.
+#' @return \code{x} with two new columns. \code{population}: \code{Site} name if inside a
+#' polygon or within \code{max_dist} of one, else \code{NA} - use this wherever true
+#' population membership matters (Phase 0/2/3's per-population rarefaction; dropping
+#' \code{NA} rows there is the right call, per the roadmap, rather than guessing).
+#' \code{population_zone}: always the single nearest \code{Site}, regardless of distance -
+#' a full-landscape, no-\code{NA} partition meant only as a spatial blocking key for
+#' \code{population_lopo_search()}, not a membership claim.
+assign_population <- function(x, areas, max_dist = 500){
+
+  x <- sf::st_transform(x, sf::st_crs(areas))
+  within <- sf::st_intersects(x, areas)
+  nearest_idx <- sf::st_nearest_feature(x, areas)
+  nearest_dist <- as.numeric(sf::st_distance(x, areas[nearest_idx, ], by_element = TRUE))
+
+  in_idx <- vapply(within, function(i) if(length(i)) i[1] else NA_integer_, integer(1))
+  strict_idx <- ifelse(!is.na(in_idx), in_idx, ifelse(nearest_dist <= max_dist, nearest_idx, NA_integer_))
+
+  x$population <- areas$Site[strict_idx]
+  x$population_zone <- areas$Site[nearest_idx]
+  x
+}
+
+#' Leave-one-population-out CV (Phase 1's population-blocked robustness check)
+#'
+#' @description Every presence-bearing population gets a turn as the sole test
+#' population - all other points, presence and absence/background alike, are train,
+#' zoned by \code{population_zone} (see \code{assign_population()}: the nearest named
+#' population regardless of distance, so every location on the landscape falls in exactly
+#' one zone and no point is left unassigned by this scheme). This replaces an earlier
+#' single-random-block design: reusing one random subset of populations as test across
+#' every seed replicate (the same pattern \code{spatial_class_split()} uses for
+#' \code{adaptive_PAratio_search()}) would only characterize model/seed stochasticity for
+#' whichever populations happened to land in test on that one draw, not variability from a
+#' different, equally arbitrary draw - which is the thing a "held-out population"
+#' robustness check is actually supposed to speak to. Giving every population a turn
+#' removes that source of variance instead of estimating the risk of a bad one.
+#' This does NOT re-run \code{adaptive_PAratio_search()}'s PA-ratio bracketing search per
+#' population - it fits one fixed \code{(PAratio, distOrder)} per fold, normally whichever
+#' ratio a prior \code{adaptive_PAratio_search()} call already chose as best for this
+#' resolution/iteration (its \code{best_ratio}). That's deliberate: the expensive part of
+#' any single fit here is Boruta feature selection plus \code{modeller()}'s knndm-tuned
+#' hyperparameter grid, paid once per fit regardless of what's being compared - the
+#' adaptive search already pays that cost dozens of times across its own ratio/seed grid,
+#' so ~15-20 more single fits (one per population) is a drop in the bucket by comparison,
+#' not a multiplier on the expensive part of the pipeline.
+#' @param x sf presence+absence pool with an \code{Occurrence} (0/1) column - not yet
+#' \code{.id}-tagged or population-joined; both happen inside.
+#' @param resolution,distOrder,iteration,p2proc as passed through to
+#' \code{distOrder_PAratio_simulator()}/\code{modeller()}.
+#' @param PAratio Numeric. The single fixed ratio fit at every fold - see Description.
+#' @param areas sf polygons with a \code{Site} column - passed to \code{assign_population()}.
+#' @param max_dist Numeric, meters - passed to \code{assign_population()}. Only affects
+#' which points get \code{NA} in the strict \code{population} field used for the
+#' \code{min_presence} count below; folds themselves key off \code{population_zone}, which
+#' has no \code{NA}s (see \code{assign_population()}).
+#' @param min_presence Numeric. Populations with fewer than this many presence records
+#' don't get a fold - too little held-out signal for a meaningful PR-AUC/ROC-AUC from a
+#' handful of points.
+#' @param base_seed Numeric. Each fold gets \code{base_seed + } its index. This isn't just
+#' replicate bookkeeping - \code{modeller()}'s cache file stem includes the seed but not
+#' the held-out population, so folds sharing a seed would collide: the first fold's fit
+#' would get silently reloaded and reused for every later fold instead of each being fit
+#' and evaluated against its own held-out population.
+#' @param results_root As \code{modeller()}'s; point this at its own tree (e.g.
+#' \code{results_populationsplit/}) rather than overwriting the primary results.
+#' @return A list: \code{per_population} (data.frame, one row per held-out population:
+#' \code{population}, \code{n_train}, \code{n_presence_test}, \code{n_absence_test},
+#' \code{pr_auc}, \code{roc_auc} - a population whose zone happens to catch only one class
+#' in test gets \code{NA} metrics rather than a fit, see Description) and \code{summary}
+#' (\code{summarize_lopo()}'s presence-n-weighted aggregate over the scored folds - see
+#' its own docs for why an unweighted mean across populations this size-mismatched would
+#' be misleading). Both are also written to
+#' \code{results_root/tables/<res>-Iteration<iteration>-LOPO-PA<ratio>DO:<distOrder>.csv}
+#' and the same path with a \code{-summary} suffix.
+population_lopo_search <- function(x, resolution, distOrder, iteration, p2proc, PAratio,
+                                    areas, max_dist = 500, min_presence = 3,
+                                    base_seed = 1000,
+                                    results_root = file.path(PROJ_ROOT, 'results_populationsplit')){
+
+  x <- dplyr::mutate(x, .id = seq_len(nrow(x)))
+  x <- assign_population(x, areas, max_dist = max_dist)
+  x_df <- sf::st_drop_geometry(x)
+
+  pres_n <- stats::aggregate(
+    .id ~ population_zone, data = x_df[x_df$Occurrence == 1, ], FUN = length)
+  names(pres_n)[names(pres_n) == '.id'] <- 'n'
+  pops <- sort(pres_n$population_zone[pres_n$n >= min_presence])
+
+  message(
+    length(pops), ' of ', nrow(pres_n), ' populations have >= ', min_presence,
+    ' presence records and get a LOPO fold.')
+
+  results <- vector('list', length(pops))
+  for(i in seq_along(pops)){
+    pop <- pops[i]
+    test_id  <- x_df$.id[x_df$population_zone == pop]
+    train_id <- x_df$.id[x_df$population_zone != pop]
+    n_presence_test <- sum(x_df$Occurrence[x_df$.id %in% test_id] == 1)
+    n_absence_test  <- sum(x_df$Occurrence[x_df$.id %in% test_id] == 0)
+
+    # a population whose zone happens to catch zero background/absence points (nearest-
+    # population zoning isn't population size, so this does happen for small/edge zones)
+    # can't be evaluated - pr_auc/roc_auc need both classes present in Test - so skip it
+    # rather than let modeller()'s dismo::evaluate() fail on an empty class.
+    if(n_presence_test == 0 || n_absence_test == 0){
+      message(
+        'Skipping ', pop, ': test fold has ', n_presence_test, ' presence / ',
+        n_absence_test, ' absence records - need both classes to evaluate.')
+      results[[i]] <- data.frame(
+        population = pop, n_train = length(train_id),
+        n_presence_test = n_presence_test, n_absence_test = n_absence_test,
+        pr_auc = NA_real_, roc_auc = NA_real_)
+      next
+    }
+
+    split <- list(train_id = train_id, test_id = test_id)
+    out <- distOrder_PAratio_simulator(
+      x = x, distOrder = distOrder, PAratio = PAratio, resolution = resolution,
+      seed = base_seed + i, predict_surface = FALSE, split = split,
+      results_root = results_root, iteration = iteration, se_prediction = FALSE,
+      train_split = NA, p2proc = p2proc
+    )
+
+    results[[i]] <- data.frame(
+      population = pop,
+      n_train = length(train_id),
+      n_presence_test = n_presence_test,
+      n_absence_test  = n_absence_test,
+      pr_auc  = out$metrics$estimate[out$metrics$metric == 'pr_auc'],
+      roc_auc = out$metrics$estimate[out$metrics$metric == 'roc_auc']
+    )
+  }
+  results <- do.call(rbind, results)
+  summary <- summarize_lopo(results)
+
+  fstem <- paste0(results_root, '/tables/', res_string(resolution), '-Iteration', iteration,
+                   '-LOPO-PA', PAratio, 'DO:', distOrder)
+  write.csv(results, paste0(fstem, '.csv'), row.names = FALSE)
+  write.csv(summary, paste0(fstem, '-summary.csv'), row.names = FALSE)
+
+  message(
+    'LOPO summary (presence-n-weighted, ', summary$n_populations, ' populations, ',
+    summary$total_n_presence_test, ' held-out presence records total): pr_auc = ',
+    round(summary$weighted_pr_auc, 3), ', roc_auc = ', round(summary$weighted_roc_auc, 3))
+
+  list(per_population = results, summary = summary)
+}
+
+#' Presence-n-weighted summary of a \code{population_lopo_search()} table
+#'
+#' @description Folds vary enormously in size - in the real iter1 90m pool, Cochetopa's
+#' held-out presence n is 50 vs. Bellview-Rustler/Gothic's n=3 - so an unweighted mean
+#' across populations would let a 3-point fold's PR-AUC (which, with that few positives,
+#' can only take a handful of discrete values and is essentially a coin flip) count the
+#' same as a 50-point fold's genuinely well-estimated one. Weights each population's
+#' contribution by its own \code{n_presence_test} instead. Rows with \code{NA} metrics
+#' (a zero-class fold \code{population_lopo_search()} had to skip) are dropped first.
+#' @param x The \code{per_population} data.frame \code{population_lopo_search()} returns.
+#' @return A one-row data.frame: \code{n_populations} (folds actually scored, after
+#' dropping \code{NA} rows), \code{total_n_presence_test}, \code{weighted_pr_auc},
+#' \code{weighted_roc_auc}.
+summarize_lopo <- function(x){
+  x <- x[!is.na(x$pr_auc) & !is.na(x$roc_auc), ]
+  data.frame(
+    n_populations = nrow(x),
+    total_n_presence_test = sum(x$n_presence_test),
+    weighted_pr_auc = stats::weighted.mean(x$pr_auc, w = x$n_presence_test),
+    weighted_roc_auc = stats::weighted.mean(x$roc_auc, w = x$n_presence_test)
+  )
+}
+
 #' Generate data sets for SD modelling at different configurations of distOrders and PAratios
 #' 
 #' @description This function helps subset the input data (x) to combinations of distOrders- where
@@ -899,6 +1085,15 @@ distOrder_PAratio_simulator <- function(x, distOrder, PAratio, resolution, seed 
 #' @param results_root Passed through to \code{modeller()}; see its documentation. Use
 #' this to point a \code{spatial_split = FALSE} comparison run at its own directory rather
 #' than overwriting the default results tree.
+#'
+#' Population-blocked robustness (Phase 1 of \code{population_rarefaction_roadmap.md}) is
+#' NOT a mode of this function - see \code{population_lopo_search()} instead. A single
+#' population-block draw reused across every ratio/seed replicate here (the same pattern
+#' \code{spatial_split} uses) would only characterize model/seed stochasticity for
+#' whichever populations happened to land in test on that one draw, not variability from a
+#' different, equally arbitrary draw - the thing a "held-out population" robustness check
+#' is actually supposed to speak to. \code{population_lopo_search()} sidesteps that by
+#' giving every population a turn instead of estimating the risk of a bad one.
 #' @details The Train/Test split is not re-randomized per fit. It's computed once, before
 #' any ratio/seed is tried, via \code{spatial_class_split()} - a class-stratified
 #' \code{CAST::knndm()} split matched against this resolution's prediction-domain raster -
