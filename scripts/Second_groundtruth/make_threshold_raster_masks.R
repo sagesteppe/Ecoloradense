@@ -10,7 +10,14 @@ f_thresh <- list.files(p2thresh, pattern = 'thresh.rds')
 
 r_name <- gsub('-Pr.*$', '', f_rasts); t_name <- gsub('-thresh.*', '', f_thresh)
 r_name <- r_name[r_name%in%t_name]; t_name <- t_name[t_name%in%r_name]
-r_name <- r_name[order(match(r_name,t_name))] 
+r_name <- r_name[order(match(r_name,t_name))]
+
+# Scope to the chosen top 1-3arc Iteration1 model only - suitability_maps/ and
+# evaluations/ are full of untriaged grid-search seeds, and building masks for
+# all of them is wasted compute/disk at 1-3arc resolution.
+target_ver <- '1-3arc-Iteration1-PA1:1DO:0-Seed1061'
+r_name <- r_name[r_name %in% target_ver]
+t_name <- t_name[t_name %in% target_ver]
 
 f_rasts <- file.path(rasts, paste0(r_name, '-Pr.tif'))
 f_thresh <- file.path(p2thresh, paste0(t_name, '-thresh.rds'))
