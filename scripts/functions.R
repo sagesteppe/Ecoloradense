@@ -1093,12 +1093,17 @@ densityModeller <- function(x, bn, fp){
     'Pr.suit' = test$Pr.SuitHab
   )
   
-  # this was the grouping variable required for the arithmetic mean, we drop it now. 
+  # this was the grouping variable required for the arithmetic mean, we drop it now.
   train <- sf::st_drop_geometry(train) |>
     select(-Lctn_bb)
   test <- sf::st_drop_geometry(test)
-  
-  # feature selection 
+
+  # RFE below may drop Longitude/Latitude as non-predictive features; keep a copy
+  # so the brms candidates' gp() term (needs coordinates, not a "selected" feature) can
+  # reattach them later.
+  train_coords <- train[, c('Longitude', 'Latitude')]
+
+  # feature selection
   if(!file.exists(file.path(fp, 'modelsTune', paste0(bn, '.rds')))){
     
     ctrl <- caret::rfeControl(
@@ -1175,22 +1180,40 @@ densityModeller <- function(x, bn, fp){
                      engine = 'lightgbm', objective = 'poisson', resp = 'Prsnc_All')
     saveRDS(lgbm_cv, f)
   } else {lgbm_cv <- readRDS(f)}
-  
-  # now calculate the evaluation statistics. 
+
+  # Bayesian candidates (census_uncertainty_roadmap.md Phase 1, scripts/Census_uncertainty/density_bayes.R).
+  # RFE (line ~1120 above) may have dropped Longitude/Latitude from `train` since they're
+  # coordinates, not predictive features - reattach them here, they're required by the
+  # brms candidates' gp() term but aren't evaluated as XGBoost/LightGBM features.
+  train_brms <- train
+  train_brms$Longitude <- train_coords[,1]
+  train_brms$Latitude  <- train_coords[,2]
+
+  brms_cv <- brms_cv_compare(train_brms, test)
+  brms_final <- brms_promote_and_refit(
+    switch(brms_cv$best$family_name,
+           Poisson = poisson(), NegBinomial = brms::negbinomial(),
+           HurdlePoisson = brms::hurdle_poisson(), HurdleNegBinomial = brms::hurdle_negbinomial()),
+    train_brms, seed = 1, fp = fp, bn = bn, family_label = tolower(brms_cv$best$family_name)
+  )
+
+  # now calculate the evaluation statistics.
   namev <- c('Arithmetic Mean', 'Kriging',
              'XGB Poisson Spat.', 'XGB Poisson', 'XBG Tweedie Spat.',  'XGB Tweedie', 'LGBM Poisson Spat.')
-  mods <- list(mean_preds, krig_preds, poiss_spat_cv$Predictions, poiss_cv$Predictions, 
+  mods <- list(mean_preds, krig_preds, poiss_spat_cv$Predictions, poiss_cv$Predictions,
                tweedie_spat_cv$Predictions, tweedie_cv$Predictions, lgbm_cv$Predictions)
-  
+
   metrrs <- lapply(mods, mets) |>
-    dplyr::bind_rows() |> 
-    dplyr::mutate(Model = rep(namev, each = 3), .before = 1)
-  
-  # now we will save the models, evaluation table, and information, note we 
+    dplyr::bind_rows() |>
+    dplyr::mutate(Model = rep(namev, each = 3), .before = 1) |>
+    dplyr::bind_rows(brms_cv$table)
+
+  # now we will save the models, evaluation table, and information, note we
   # also save the variable selection object for AOA calculation
-  
+
   write.csv(metrrs, file.path(fp, 'tables', paste0(bn, '.csv')), row.names = FALSE)
-  
+
+  invisible(list(metrics = metrrs, brms_promoted = brms_final))
 }
 
 #' fit tweedie models to the data
@@ -1248,10 +1271,13 @@ gbs <- function(rec, cv, train, test, resp, tune_gr, mode, engine, objective, le
   )
 }
 
-#' fit xgboosted models to predict plant count per space density. 
-#' @param f a vector of predicted suitable habitat rasters to use for input. 
-wrapper <- function(x){
-  
+#' fit xgboosted models to predict plant count per space density.
+#' @param f a vector of predicted suitable habitat rasters to use for input.
+#' @param return_early logical, if TRUE (default) return the assembled plot-level
+#' data.frame without fitting any density models - the behavior `ModelInterpretation.Rmd`
+#' relies on for PDP-plot exploration. Set FALSE to actually run `densityModeller()`.
+wrapper <- function(x, return_early = TRUE){
+
   res <- gsub('-I.*$', '', x)
   res_string <- switch(res,
                        "3m" = "3m",
@@ -1283,10 +1309,14 @@ wrapper <- function(x){
     select(-Prsnc_J, -Prsnc_M)
   
   ## this just here for playing wiht PDP plots!!!
-  return(df)
-  
+  if(return_early){ return(df) }
+
+  coords <- sf::st_coordinates(df)
+  df$Longitude <- coords[,1]
+  df$Latitude <- coords[,2]
+
   densityModeller(df, fp = '../results/count_models', bn = gsub('DO.*$', '', x))
-  
+
 }
 
 

@@ -72,3 +72,11 @@ TRANSECT_SCRATCH
 
 ## for formatting latex
 WileyDesign/
+
+.*fff
+.*log
+*.fff
+*.log
+scripts.zip
+wombling.pdf
+
