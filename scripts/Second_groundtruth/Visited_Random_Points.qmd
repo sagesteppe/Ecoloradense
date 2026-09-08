@@ -84,4 +84,5 @@ out_path <- file.path('..', '..', 'data', 'GroundTruthPts', 'visited_subset.gpkg
 
 st_write(visited_points, out_path, layer = 'visited_points', append = FALSE, quiet = TRUE)
 st_write(visited_transects, out_path, layer = 'visited_transects', append = FALSE, quiet = TRUE)
+
 ```

@@ -9,9 +9,6 @@ Need to determine how accurate the threshold process is.
 
 - Maximize coverage of *occupied* habitat.
 
-
-
-
 ```{r}
 library(sf)
 library(dplyr) 
