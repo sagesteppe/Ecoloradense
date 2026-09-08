@@ -1,8 +1,2 @@
 "model","resolution","iteration","n","pr_auc"
-"1-3arc-Iteration0-PA1:1.25DO:0-Seed1034","1/3 arc-second",0,58,0.516352726928657
-"1-3arc-Iteration1-PA1:1DO:0-Seed1021","1/3 arc-second",1,58,0.695194110251526
-"1-3arc-Iteration1-PA1:1DO:0-Seed1061","1/3 arc-second",1,58,0.631345058025198
-"1arc-Iteration0-PA1:1DO:0-Seed1054","1 arc-second",0,58,0.494441237089847
-"1arc-Iteration1-PA1:1DO:0-Seed1059","1 arc-second",1,58,0.614053912022102
-"3arc-Iteration0-PA1:1DO:0-Seed1055","3 arc-second",0,58,0.523678701544686
-"3arc-Iteration1-PA1:1DO:0-Seed1017","3 arc-second",1,58,0.563065651475411
+"3arc-Iteration1-PA1:DO:0-Seed1017","3 arc-second",1,72,0.504124438353535
