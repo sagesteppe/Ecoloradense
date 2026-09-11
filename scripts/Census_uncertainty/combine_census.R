@@ -50,19 +50,28 @@ pair_draws <- function(n_boundary, n_density, n_combined, seed = 1){
 #' "no chunking"; only lower it if `newdata` truly won't fit in memory for
 #' one call, and treat that raster as an approximation, not an exact draw.
 #'
-#' @param brms_fit the promoted `brms_promote_and_refit()$Model`.
+#' @param brms_fit the promoted `brms_promote_and_refit()$Model` - fit on
+#' standardized covariates (`density_bayes.R`'s `standardize_covariates()`), so
+#' `center`/`scale` (its `-scaling.rds`) must be supplied here to transform
+#' `raster_template`'s raw covariate values into the same scale before
+#' `posterior_epred()` - otherwise predictions are silently wrong (the model's
+#' coefficients are in standardized-covariate units, not the raster's raw units).
 #' @param raster_template a `terra::rast` covering the full prediction domain,
 #' one layer per covariate the model's formula needs, named to match.
 #' @param draw_id integer, which posterior draw to predict.
+#' @param center,scale named numeric vectors from the promoted model's
+#' `-scaling.rds` (`brms_promote_and_refit()$scaling_path`).
 #' @param covariate_df optional, pre-extracted `as.data.frame(raster_template, cells=TRUE)`
 #' - pass this in when calling repeatedly (e.g. per draw in
-#' `combined_census_montecarlo()`) so it's built once, not on every call.
+#' `combined_census_montecarlo()`) so it's built once, not on every call. Must
+#' still be in raw (unstandardized) units - the `center`/`scale` transform is
+#' applied inside this function, once per chunk.
 #' @param chunk_cells max rows of `covariate_df` per `posterior_epred()` call;
 #' `Inf` (default) means one call for the whole raster - see caveat above.
 #' @param seed RNG seed for this draw's `gp()` resampling at new locations;
 #' defaults to `draw_id` so the same draw is always reproducible.
 #' @return a `terra::rast` (single layer) of predicted density for this draw.
-predict_density_draw <- function(brms_fit, raster_template, draw_id,
+predict_density_draw <- function(brms_fit, raster_template, draw_id, center, scale,
                                   covariate_df = NULL, chunk_cells = Inf, seed = draw_id){
 
   if(is.null(covariate_df)){
@@ -75,7 +84,7 @@ predict_density_draw <- function(brms_fit, raster_template, draw_id,
   row_starts <- seq(1, nrow(covariate_df), by = chunk_cells)
   for(s in row_starts){
     e <- min(s + chunk_cells - 1, nrow(covariate_df))
-    chunk <- covariate_df[s:e, , drop = FALSE]
+    chunk <- apply_standardization(covariate_df[s:e, , drop = FALSE], center, scale)
 
     set.seed(seed)
     pred <- brms::posterior_epred(brms_fit, newdata = chunk, draw_ids = draw_id)
@@ -139,7 +148,7 @@ running_ci <- function(x) stats::quantile(x, probs = c(0.025, 0.975), na.rm = TR
 #' within `stop_tol` (relative change) over a trailing window of `window`
 #' draws, or at `n_max`.
 #'
-#' @param brms_fit,raster_template as `predict_density_draw()`.
+#' @param brms_fit,raster_template,center,scale as `predict_density_draw()`.
 #' @param boundary_mask_paths character vector, Phase 2's mask file paths.
 #' @param region_bbox a `terra::ext`/SpatExtent (or object `terra::crop()`
 #' accepts) to mask `raster_template` to before looping.
@@ -150,7 +159,8 @@ running_ci <- function(x) stats::quantile(x, probs = c(0.025, 0.975), na.rm = TR
 #' stabilization.
 #' @param out_csv path to write the draws + running-quantile trace to.
 #' @return list(draws = numeric vector, ci = c(lower, upper), n = length(draws)).
-combined_census_montecarlo <- function(brms_fit, raster_template, boundary_mask_paths,
+combined_census_montecarlo <- function(brms_fit, raster_template, center, scale,
+                                        boundary_mask_paths,
                                         region_bbox, n_max = 2000, min_n = 400,
                                         window = 100, stop_tol = 0.01, seed = 1,
                                         out_csv = NULL){
@@ -175,7 +185,8 @@ combined_census_montecarlo <- function(brms_fit, raster_template, boundary_mask_
   n_done <- 0
 
   for(i in seq_len(n_max)){
-    dens_r <- predict_density_draw(brms_fit, raster_template, pairs$density_id[i], covariate_df = covariate_df)
+    dens_r <- predict_density_draw(brms_fit, raster_template, pairs$density_id[i], center, scale,
+                                    covariate_df = covariate_df)
     draws[i] <- census_from_pair(dens_r, aligned_masks[[pairs$boundary_id[i]]], cell_area)
     n_done <- i
 

@@ -25,19 +25,19 @@
 #' actual apples-to-apples comparison (same batch, same seed), and would
 #' catch a cell-indexing/reshaping bug in `predict_density_draw()`.
 #'
-#' @param brms_fit,raster_template as `predict_density_draw()`.
+#' @param brms_fit,raster_template,center,scale as `predict_density_draw()`.
 #' @param draw_id which posterior draw to check.
 #' @param n_check how many cells to spot-check (sampled from the non-`NA` cells).
 #' @param cell_sample_seed RNG seed for *which* cells get spot-checked.
 #' @return invisible TRUE if both checks pass; stops with an informative
 #' message otherwise.
-check_predict_density_draw <- function(brms_fit, raster_template, draw_id = 1,
+check_predict_density_draw <- function(brms_fit, raster_template, center, scale, draw_id = 1,
                                         n_check = 50, cell_sample_seed = 1){
 
   covariate_df <- as.data.frame(raster_template, cells = TRUE)
 
-  pred_a <- predict_density_draw(brms_fit, raster_template, draw_id, covariate_df = covariate_df)
-  pred_b <- predict_density_draw(brms_fit, raster_template, draw_id, covariate_df = covariate_df)
+  pred_a <- predict_density_draw(brms_fit, raster_template, draw_id, center, scale, covariate_df = covariate_df)
+  pred_b <- predict_density_draw(brms_fit, raster_template, draw_id, center, scale, covariate_df = covariate_df)
   repro_mismatch <- max(abs(terra::values(pred_a) - terra::values(pred_b)), na.rm = TRUE)
   if(repro_mismatch > 1e-8){
     stop("check_predict_density_draw(): two calls with the same draw_id = ", draw_id,
@@ -47,7 +47,8 @@ check_predict_density_draw <- function(brms_fit, raster_template, draw_id = 1,
   }
 
   set.seed(draw_id)
-  reference <- as.vector(brms::posterior_epred(brms_fit, newdata = covariate_df, draw_ids = draw_id))
+  reference <- as.vector(brms::posterior_epred(brms_fit, newdata = apply_standardization(covariate_df, center, scale),
+                                                draw_ids = draw_id))
 
   set.seed(cell_sample_seed)
   check_cells <- sample(covariate_df$cell, min(n_check, nrow(covariate_df)))
@@ -117,8 +118,12 @@ sanity_check_boundary_median <- function(boundary_mask_paths, spec_sens_mask_pat
 #' `brms_count_model()`'s formula builder and refits once, cheaply, without
 #' the spatial term.
 #'
-#' @param promoted_fit the `brms_promote_and_refit()$Model` (covariates + `gp()`).
-#' @param train the same training data.frame it was fit on.
+#' @param promoted_fit the `brms_promote_and_refit()$Model` (covariates + `gp()`),
+#' fit on standardized covariates.
+#' @param train the same (raw, unstandardized) training data.frame it was fit
+#' on - standardized internally here with its own `standardize_covariates()`
+#' call, which reproduces `brms_promote_and_refit()`'s transform exactly since
+#' both are computed from this same full training set.
 #' @param family the same brms family used for the promoted fit.
 #' @param shift_tol relative-change threshold on a coefficient's median to flag.
 #' @param backend,chains,iter,warmup passed to the no-`gp()` refit.
@@ -126,10 +131,12 @@ sanity_check_boundary_median <- function(boundary_mask_paths, spec_sens_mask_pat
 check_spatial_confounding <- function(promoted_fit, train, family, shift_tol = 0.5,
                                        backend = 'cmdstanr', chains = 2, iter = 1000, warmup = 500){
 
-  covars <- setdiff(names(train), c('Prsnc_All', 'Longitude', 'Latitude'))
+  std <- standardize_covariates(train)
+  covars <- setdiff(names(std$train), c('Prsnc_All', 'Longitude', 'Latitude'))
   form_no_gp <- as.formula(paste('Prsnc_All ~', paste(covars, collapse = ' + ')))
 
-  fit_no_gp <- brms::brm(form_no_gp, data = train, family = family, backend = backend,
+  fit_no_gp <- brms::brm(form_no_gp, data = std$train, family = family, backend = backend,
+                          prior = brms_default_priors(), init = 0.1,
                           chains = chains, iter = iter, warmup = warmup, silent = 2, refresh = 0)
 
   with_gp <- brms::fixef(promoted_fit)[covars, 'Estimate']
