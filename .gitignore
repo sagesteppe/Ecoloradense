@@ -77,6 +77,12 @@ WileyDesign/
 .*log
 *.fff
 *.log
+*.rds
+.*rds
+*.rda
+.*rda
+*.RData
+.*RData
 scripts.zip
 wombling.pdf
 
