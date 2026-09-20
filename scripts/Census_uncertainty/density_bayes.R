@@ -93,10 +93,24 @@ apply_standardization <- function(newdata, center, scale){
 #' size for a 2D spatial term at this domain size (~40km x ~110km, `c = 5/4`);
 #' increase it only if posterior spatial predictions look under-resolved.
 #' @return a formula.
+#' @param use_gp logical. `FALSE` drops the `gp()` spatial smoother entirely -
+#' a fixed-effects-only, environmental-covariates-only formula (`Longitude`/
+#' `Latitude` are dropped too, not folded in as plain linear terms - this is
+#' meant as a clean ablation against the gp() candidates, not a "linear
+#' trend surface" variant). Motivated by a real worry raised after the split-
+#' strategy comparison (finding_density_model_extrapolation_limits.md): with
+#' this project's covariates only weakly explaining density, spatial
+#' autocorrelation is likely to leak into the residuals of a no-smoother fit
+#' - worth actually testing (`brms_cv_compare()`'s `no_gp` arg) rather than
+#' assuming, especially since the gp() term itself has proven fragile
+#' (chronic divergence/extrapolation blowups) across every split design and
+#' the real 2026 field validation.
 brms_density_formula <- function(train, gp_coords = c('Longitude', 'Latitude'),
-                                  gp_k = 20, gp_c = 5/4){
+                                  gp_k = 20, gp_c = 5/4, use_gp = TRUE){
 
   covars <- setdiff(names(train), c('Prsnc_All', gp_coords))
+  if(!use_gp) return(as.formula(paste('Prsnc_All ~', paste(covars, collapse = ' + '))))
+
   gp_term <- sprintf("gp(%s, %s, k = %s, c = %s)",
                       gp_coords[1], gp_coords[2],
                       if(is.na(gp_k)) 'NA' else gp_k, gp_c)
@@ -241,40 +255,55 @@ brms_spatial_fold_ids <- function(train, k = 10, coords = c('Longitude', 'Latitu
   list(ids = ids, knndm = kn)
 }
 
-#' Cheap-search comparison of the 4 brms families under spatial + non-spatial CV.
+#' Cheap-search comparison of the 4 brms families, scored against held-out test.
 #'
-#' @description Fits each family once per CV mode at reduced chains/iter (the
-#' same cheap-search-then-expensive-final-fit split `adaptive_PAratio_search()`
-#' already uses, ../functions.R:755-835), then scores every fit with the same
-#' `Observed`/`Predicted` -> `mets()` convention (../functions.R:1050-1059) the
-#' rest of `densityModeller()`'s comparison table uses, so results append
-#' directly onto the existing `metrrs` table.
+#' @description Fits each family once (not once per family x CV-mode - see
+#' below) at reduced chains/iter (the same cheap-search-then-expensive-final-fit
+#' split `adaptive_PAratio_search()` already uses, ../functions.R:755-835),
+#' then scores that fit against the actual held-out `test` set with the same
+#' `Observed`/`Predicted` -> `mets()` convention (../functions.R:1050-1059)
+#' the rest of `densityModeller()`'s comparison table uses, so results append
+#' directly onto the existing `metrrs` table and are actually comparable to
+#' it - an earlier version of this function scored fits against the training
+#' data they were just fit on (in-sample), which inflated every brms row's
+#' apparent error relative to the ML candidates' genuine held-out MAE/MSE/RMSE.
 #'
-#' Non-spatial CV here is single-fit PSIS-LOO (`brms::loo(fit, cores = )`),
-#' not a `K`-fold refit loop - matches `sagesteppe/safeHavens::bayesianSDM()`'s
-#' evaluation strategy (confirmed by reading its source: no `brms::kfold()`
-#' call anywhere in that package, evaluation is `brms::loo()`/`loo::loo()`
-#' throughout). One Stan fit plus parallelized (`cores`) importance sampling
-#' replaces what would otherwise be `k_nonspatial` serial full refits per
-#' family - that serial loop was confirmed to be the slower half of this
-#' comparison (the spatial arm still needs actual held-out spatial folds,
-#' which LOO doesn't respect, so it keeps `brms::kfold(fit, folds = )`).
-#' `moment_match`/`reloo` are deliberately left off here (unlike the full
+#' One fit per family, not one per family x CV-mode: confirmed by testing,
+#' `CAST::knndm()` (unlike `nndm()`) assigns every row to some fold, so a
+#' previous version's "spatial" comparator (`keep <- !is.na(spat_ids)`) was
+#' always all-`TRUE` - the "spatial" and "non-spatial" arms were fitting
+#' bit-identical data, producing bit-identical point predictions and
+#' therefore bit-identical MAE/MSE/RMSE table rows, while doubling every
+#' family's fitting cost for a distinction that only ever showed up in
+#' `elpd` (which CV method's importance sampling was used), never in the
+#' table. Both `elpd_spatial` (`brms::kfold()`, spatially-blocked folds) and
+#' `elpd_non_spatial` (`brms::loo()`, PSIS) are still computed on the single
+#' fit and returned per-family for diagnostic use - just no longer
+#' duplicating the fit itself or producing a meaningless duplicate row.
+#' `moment_match`/`reloo` are deliberately left off both (unlike the full
 #' final-fit LOO one might run post-promotion): at `cheap_iter`/`cheap_chains`
-#' precision this is a coarse ranking pass, not a publishable estimate, and
-#' `reloo`'s exact per-observation refits would reintroduce the same serial
-#' cost this change exists to remove.
+#' precision this is a coarse ranking pass, not a publishable estimate.
 #'
 #' @param train,test as `brms_count_model()`.
-#' @param nndm_indices `splitData()$nndm_indices`, for the spatial fold ids.
 #' @param families named list of brms family objects to compare.
 #' @param cheap_chains,cheap_iter,cheap_warmup reduced-precision fit settings.
-#' @param k_spatial number of folds for the spatial (`brms_spatial_fold_ids()`)
-#' comparator; the non-spatial comparator is single-fit PSIS-LOO and has no
-#' fold count.
+#' @param k_spatial number of folds for the `brms::kfold()` diagnostic.
 #' @param backend,cores,seed passed through to fitting/kfold/loo.
-#' @return list(table = data.frame(Model, Metric, Value) matching `metrrs`'s shape,
-#' fits = named list of every family/CV-mode fit, best = list(family_name, cv_mode)).
+#' @return list(table = data.frame(Model, Metric, Value) matching `metrrs`'s
+#' shape (one row-set per family - no "Spat." duplicate), fits = named list of
+#' every family's fit (plus its elpd_spatial/elpd_non_spatial diagnostics),
+#' best = list(family_name) - the family with the lowest held-out MAE, not
+#' the highest elpd (model *promotion* uses point accuracy - see
+#' `densityModeller()`; elpd's remaining role here is diagnostic only).
+#' @param no_gp character vector of names (from `families`) to fit *without*
+#' the `gp()` spatial smoother (`brms_density_formula(use_gp = FALSE)`) -
+#' a fixed-effects-only ablation, run alongside the gp() candidates rather
+#' than replacing them, so the two are directly comparable in the same table.
+#' @param tune_metric one of 'mae'/'huber'/'poisson' (`functions.R::
+#' resolve_tune_metric()`) - which held-out metric promotes the winning
+#' family. Kept consistent with whatever metric `densityModeller()`'s ML
+#' candidates were *tuned* by under the same run, so promotion and tuning
+#' aren't judged by two different yardsticks by accident.
 brms_cv_compare <- function(train, test,
                              families = list(
                                Poisson          = poisson(),
@@ -282,71 +311,84 @@ brms_cv_compare <- function(train, test,
                                HurdlePoisson    = brms::hurdle_poisson(),
                                HurdleNegBinomial = brms::hurdle_negbinomial()
                              ),
+                             no_gp = character(0),
+                             tune_metric = 'mae',
                              cheap_chains = 1, cheap_iter = 500, cheap_warmup = 250,
                              k_spatial = 10, backend = 'cmdstanr',
                              cores = cheap_chains, seed = 1){
 
+  sel_metric <- resolve_tune_metric(tune_metric)
+
   spat_ids <- brms_spatial_fold_ids(train, k = k_spatial)$ids
 
-  score_one <- function(fam, cv_mode){
-    if(cv_mode == 'spatial'){
-      keep <- !is.na(spat_ids)
-      dat <- train[keep, , drop = FALSE]
-    } else {
-      dat <- train
-    }
-
-    # standardize once per fold-subset (not via brms_count_model(), which would
-    # standardize a second time on top of this and double-divide the already-
-    # rescaled gp() coordinates) - self-consistent between this fit and the
-    # manual posterior_epred() call further down, which is all this needs.
-    std <- standardize_covariates(dat)
+  score_one <- function(fam){
+    # standardize once (not via brms_count_model(), which would standardize a
+    # second time on top of this and double-divide the already-rescaled
+    # gp() coordinates) - self-consistent between this fit and the
+    # apply_standardization() call further down, which is all this needs.
+    # `newdata = test` here (not NULL): this fit's `std$newdata` is `test`
+    # standardized with `train`'s own center/scale, needed below to score this
+    # candidate on the actual held-out set - not the in-sample `train` it was
+    # fit on - matching the convention every ML candidate in this table
+    # (`poiss()`/`tweed()`/`gbs()`, ../functions.R) already uses.
+    std <- standardize_covariates(train, test)
+    use_gp <- !(fam %in% no_gp)
 
     fit <- brms::brm(
-      brms_density_formula(std$train), data = std$train, family = families[[fam]],
+      brms_density_formula(std$train, use_gp = use_gp), data = std$train, family = families[[fam]],
       backend = backend, prior = brms_default_priors(), init = 0.1,
       control = list(adapt_delta = 0.99),
       chains = cheap_chains, iter = cheap_iter, warmup = cheap_warmup,
       cores = cores, seed = seed, silent = 2, refresh = 0
     )
 
-    if(cv_mode == 'spatial'){
-      cv <- brms::kfold(fit, folds = spat_ids[keep], chains = cheap_chains,
-                         iter = cheap_iter, warmup = cheap_warmup, cores = cores)
-      elpd <- cv$estimates['elpd_kfold', 'Estimate']
-    } else {
-      cv <- brms::loo(fit, cores = cores)
-      elpd <- cv$estimates['elpd_loo', 'Estimate']
-    }
+    kf <- brms::kfold(fit, folds = spat_ids, chains = cheap_chains,
+                       iter = cheap_iter, warmup = cheap_warmup, cores = cores)
+    lo <- brms::loo(fit, cores = cores)
 
-    # per-fold held-out prediction, scored the same way as the rest of the table.
-    preds <- data.frame(Observed = dat$Prsnc_All,
-                         Predicted = colMeans(brms::posterior_epred(fit, newdata = std$train)))
+    # held-out evaluation on the same `test` set/convention the ML candidates
+    # use - NOT train/std$train, which would be in-sample (train-on-train) and
+    # incomparable to the rest of this table's MAE/MSE/RMSE columns.
+    preds <- data.frame(Observed = test$Prsnc_All,
+                         Predicted = colMeans(brms::posterior_epred(fit, newdata = std$newdata)))
 
-    list(fit = fit, cv = cv, elpd = elpd, metrics = mets(preds))
+    list(fit = fit,
+         elpd_spatial = kf$estimates['elpd_kfold', 'Estimate'],
+         elpd_non_spatial = lo$estimates['elpd_loo', 'Estimate'],
+         metrics = mets(preds),
+         select_score = sel_metric$fn(preds, truth = Observed, estimate = Predicted)$.estimate)
   }
 
-  combos <- expand.grid(family = names(families), cv_mode = c('spatial', 'non_spatial'),
-                         stringsAsFactors = FALSE)
+  results <- lapply(names(families), score_one)
+  names(results) <- names(families)
 
-  results <- Map(score_one, combos$family, combos$cv_mode)
-  names(results) <- paste(combos$family, combos$cv_mode, sep = '_')
-
-  namev <- paste0(
-    ifelse(combos$family == 'NegBinomial', 'NegBin',
-           ifelse(combos$family == 'HurdlePoisson', 'Hurdle Poisson',
-                  ifelse(combos$family == 'HurdleNegBinomial', 'Hurdle NegBin', combos$family))),
-    ifelse(combos$cv_mode == 'spatial', ' Spat.', '')
-  )
+  base_name <- sub('_NoGP$', '', names(families))
+  namev <- ifelse(base_name == 'NegBinomial', 'NegBin',
+            ifelse(base_name == 'HurdlePoisson', 'Hurdle Poisson',
+             ifelse(base_name == 'HurdleNegBinomial', 'Hurdle NegBin', base_name)))
+  namev <- ifelse(names(families) %in% no_gp, paste(namev, '(no GP)'), namev)
 
   table <- dplyr::bind_rows(lapply(results, `[[`, 'metrics')) |>
     dplyr::mutate(Model = rep(namev, each = 3), .before = 1)
 
-  elpd <- sapply(results, `[[`, 'elpd')
-  best_combo <- combos[which.max(elpd), ]
+  # promote by held-out tune_metric (default MAE), not elpd: confirmed on
+  # real data (1-3arc/PA1:1) that these disagree - elpd (predictive-
+  # distribution fit) picked NegBinomial while plain Poisson had the best
+  # held-out MAE of every candidate in the whole comparison, ML included.
+  # elpd is still computed/returned above (still the right criterion for
+  # judging distributional calibration), but promotion should track the same
+  # metric the ML candidates are tuned/selected by (functions.R::
+  # resolve_tune_metric(), shared across both), and should do so fresh per
+  # product/iteration - which family actually wins is expected to vary as
+  # more data (further iterations, resolutions) comes in, not be fixed to
+  # whatever won on this one product. A candidate that blew up (Inf/huge
+  # posterior mean, see finding_density_model_extrapolation_limits.md) scores
+  # arbitrarily badly under every one of these metrics, so it's naturally
+  # never selected here.
+  scores <- sapply(results, function(r) r$select_score)
+  best_family <- names(families)[which.min(scores)]
 
-  list(table = table, fits = results,
-       best = list(family_name = best_combo$family, cv_mode = best_combo$cv_mode))
+  list(table = table, fits = results, best = list(family_name = best_family))
 }
 
 #' Refit the winning brms family at full precision on the full training data.

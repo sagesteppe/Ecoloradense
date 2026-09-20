@@ -15,6 +15,7 @@
 
 source('functions.R')
 source('Census_uncertainty/density_bayes.R')
+source('Census_uncertainty/density_conformal.R')
 source('Census_uncertainty/boundary_simulation.R')
 source('Census_uncertainty/combine_census.R')
 source('Census_uncertainty/validate_pipeline.R')
@@ -51,18 +52,29 @@ run_census_uncertainty <- function(x, holdout_sf, region_bbox,
   boundary_masks <- boundary_ensemble_run(pr_path, se_path, holdout_sf,
                                            out_dir = out_dir, n_draws = n_boundary_draws)
 
+  # Full covariate raster template (combine_census.R) - NOT just the
+  # suitability raster alone: predict_density_draw()/posterior_epred() need
+  # every covariate the promoted model's formula uses, named to match.
+  # Cropped to region_bbox up front (Phase 3's own "mask tightly... first"),
+  # matching the extent combined_census_montecarlo() crops to internally.
+  raster_template <- build_density_raster_template(
+    p2proc = file.path(PROJ_ROOT, 'data', 'spatial', 'processed'),
+    pr_path = pr_path, region_ext = region_bbox
+  )
+  scaling <- readRDS(density_result$brms_promoted$scaling_path)
+
   # Phase 4a/4b - validate before combining: reshape/reproducibility check on
   # the promoted density model, and the boundary ensemble's plausibility.
-  check_predict_density_draw(density_result$brms_promoted$Model,
-                              terra::rast(pr_path), draw_id = 1)
+  check_predict_density_draw(density_result$brms_promoted$Model, raster_template,
+                              scaling$center, scaling$scale, draw_id = 1)
   boundary_check <- sanity_check_boundary_median(boundary_masks, spec_sens_mask_path,
                                                   sensitivity_mask_path)
 
   # Phase 3 - combine.
   census_out_csv <- file.path('..', 'results', 'tables', paste0(bn, '-census_size_posterior.csv'))
   census <- combined_census_montecarlo(
-    density_result$brms_promoted$Model, terra::rast(pr_path), boundary_masks,
-    region_bbox, n_max = n_combined_max, out_csv = census_out_csv
+    density_result$brms_promoted$Model, raster_template, scaling$center, scaling$scale,
+    boundary_masks, region_bbox, n_max = n_combined_max, out_csv = census_out_csv
   )
 
   # Phase 4c - spatial confounding re-check, now that gp() is actually fit.

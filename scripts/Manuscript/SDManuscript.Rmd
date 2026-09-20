@@ -484,6 +484,11 @@ ggplot(mae_mock, aes(y = Resolution, x = MAE, shape = CV, group = interaction(Re
 # TODO: results for modelling population boundaries.
 ```
 
+Field boundary-transect verification (`scripts/Second_groundtruth/evaluate_transect_boundary.R`, n = 6 usable core transects with a clear present-to-absent edge) found:
+
+- Both threshold rules overshoot the true population edge - `sensitivity` bias -2.1 m / MAE 9.1 m vs. `spec_sens` bias -12.7 m / MAE 13.5 m, roughly 6x farther off.
+- Ground both rules already call "core" suitable habitat, and every exploratory (no-known-occurrence) patch, came back genuinely unoccupied at all visited stations - both threshold cuts substantially overpredict actual population geography.
+
 The population boundaries obtained by thresholding resulted in initial estimates of population geographic extent of ... for sensitivity and for equal sensitivity and specificity.
 The wombling approach shows that estimates at the XX-percentile led to more accurate estimates of population extent, correcting it towards YY.
 

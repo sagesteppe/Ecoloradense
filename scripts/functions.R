@@ -1053,46 +1053,101 @@ CAST2rsample <- function(x, train){
 #' this is to be extra sure that each set of models us using at the least, the same test 
 #' and train split (which should be accomplished alone by using the u1 argument to `twin`), 
 #' but given how long hyperparam tuning takes we want to be extra sure. 
-splitData <- function(df, fp, bn){
-  
+#' Row indices of the held-out test set, for one train/test split strategy.
+#'
+#' @description Pluggable alternatives to `splitData()`'s default twinning
+#' split, added to characterize how much of the density-model comparison
+#' (`densityModeller()`) reflects genuine signal vs. split-to-split noise, and
+#' whether twinning's covariate/response-aware partitioning (chosen to avoid
+#' the naive-split confound `splitData()` documents below - Cochetopa Dome's
+#' outsized counts) actually earns its complexity over simpler alternatives.
+#'
+#' `'twinning'` no longer fixes `u1` (`?twinning::twin`: "if not provided,
+#' twinning starts from a random point in the dataset. Fixing `u1` makes
+#' twinning deterministic, i.e., the same twins are returned.") - confirmed by
+#' testing, the previous `u1 = 2` made every call return bit-identical indices
+#' regardless of `set.seed()`, silently defeating any attempt to perturb this
+#' split across replicates. Omitting `u1` and seeding beforehand instead
+#' reproduces the documented random-start behavior on demand.
+#'
+#' @param df sf occurrence data.frame, same shape `splitData()` receives.
+#' @param method 'twinning' (default - `twinning::twin()` on rescaled
+#' coords/counts), 'classic' (uniform random sample, the naive split
+#' `splitData()`'s comment above documents rejecting - reintroduced here only
+#' as a comparison baseline), 'spatial_knn' (`CAST::knndm()` spatial blocking,
+#' the same call `density_bayes.R`'s `brms_spatial_fold_ids()` uses for CV
+#' folds, used here instead as the actual train/test carve-out), or
+#' 'population' (leave-one-population-out on `Lctn_bb`).
+#' @param replicate method-specific: an RNG seed for 'twinning'/'classic'; a
+#' fold index `1:k` for 'spatial_knn' (which `knndm()` fold is held out); the
+#' population name (one `Lctn_bb` level) for 'population'.
+#' @param k number of `CAST::knndm()` folds for 'spatial_knn' - also that
+#' method's natural replicate count (`1:k`).
+#' @return integer vector, indices of the held-out test rows in `df`.
+split_indices <- function(df, method = 'twinning', replicate = 1, k = 10){
+  switch(method,
+    twinning = {
+      twinning_dat <- df |>
+        dplyr::mutate(
+          x = scales::rescale(st_coordinates(df)[,1]),
+          y = scales::rescale(st_coordinates(df)[,2]),
+          Prsnc = scales::rescale(Prsnc_All)
+        ) |>
+        sf::st_drop_geometry() |>
+        dplyr::select(Prsnc, y, x)
+      set.seed(replicate)
+      twinning::twin(twinning_dat, r = 5)
+    },
+    classic = {
+      set.seed(replicate)
+      sample(seq_len(nrow(df)), size = round(nrow(df) / 5))
+    },
+    spatial_knn = {
+      df_sf <- sf::st_as_sf(df, coords = c('Longitude', 'Latitude'), crs = 32613)
+      modeldomain <- sf::st_union(df_sf) |> sf::st_buffer(5000)
+      kn <- CAST::knndm(df_sf, modeldomain, k = k, samplesize = 1000)
+      kn$indx_test[[replicate]]
+    },
+    population = which(df$Lctn_bb == replicate),
+    stop("split_indices(): unknown method '", method, "'")
+  )
+}
+
+splitData <- function(df, fp, bn, method = 'twinning', replicate = 1, k = 10){
+
   # We will create three columns for our data, which can then be used
   # to separate the data sets into two sets, where the longitude, latitude, and response
-  # variables are almost identical - like twins. Basically, we have a problem 
-  # which makes splitting along the outcome variable, not an ideal choice. If you 
-  # remember, the southern Cocheotopa Dome (CD) population has drastically higher 
+  # variables are almost identical - like twins. Basically, we have a problem
+  # which makes splitting along the outcome variable, not an ideal choice. If you
+  # remember, the southern Cocheotopa Dome (CD) population has drastically higher
   # counts of plants than the populations near CB, 10x individuals
   # not being uncommon! So when we 'split' our data, what we end up with is a gradient
   # which is actually a mix of CB:CD and then quickly just becomes CD. So our independent
   # test set isn't really what we see across the species, rather it's evaluating two
-  # distinct components. 
-  
-  # fortunately for these predictions we are only including the plot level data and 
+  # distinct components.
+
+  # fortunately for these predictions we are only including the plot level data and
   # some 'near' absences. so we can try and 'ameliorate' this split gradients using
   # three steps: rescale longitude and latitude from 0:1, and do the same with our
   # counts. When we then 'combine' the three data sets, on paper, we should get
   # be able to incorporate a SMIDGE of each of these aspects to the split. Although
   # we will not entirely remove the CD area having more plants, I think we will slightly
-  # mute the effect. 
-  f <- file.path(fp, 'test_data', paste0('twin_indx-', gsub('-I.*$', '', bn), '.txt'))
-  
+  # mute the effect.
+
+  # legacy single-file cache preserved exactly for the default call (every
+  # existing caller/cached product uses method='twinning', replicate=1) -
+  # any other method/replicate gets its own distinctly-named, reusable cache
+  # instead of colliding with or overwriting the legacy file.
+  suffix <- if(method == 'twinning' && replicate == 1) '' else paste0('-', method, '-rep', replicate)
+  f <- file.path(fp, 'test_data', paste0('twin_indx-', gsub('-I.*$', '', bn), suffix, '.txt'))
+
   if(!file.exists(f)){
-    
-    twinning_dat <- df |>
-      dplyr::mutate( # this algo PROBABLY rescales too, but we'll just feed em in to be sure. 
-        x = scales::rescale(st_coordinates(df)[,1]), # the stats doc is rich the tech 
-        y = scales::rescale(st_coordinates(df)[,2]),  # not so much 
-        Prsnc = scales::rescale(Prsnc_All)
-      ) |>
-      sf::st_drop_geometry() |>
-      dplyr::select(Prsnc, y, x)
-    
-    indx <- twinning::twin(twinning_dat, r=5, u1 = 2)
+    indx <- split_indices(df, method = method, replicate = replicate, k = k)
     cat(indx, file = f)
-    
   } else {
     indx <- as.numeric(unlist(strsplit(readLines(f, warn = FALSE), ' ')))
   }
-  
+
   train <- df[-indx,]
   test  <- df[indx,]
   
@@ -1156,25 +1211,27 @@ splitData <- function(df, fp, bn){
 #' @param train data split
 #' @param test data split
 #' @param tune_gr tuning grid. 
-poiss <- function(rec, cv, train, test, tune_gr){
-  
+poiss <- function(rec, cv, train, test, tune_gr, tune_metric = 'mae'){
+
+  m <- resolve_tune_metric(tune_metric)
+
   xgb_poisson <- tune_gr |>
-    parsnip::set_engine("xgboost", objective = "count:poisson") 
-  
+    parsnip::set_engine("xgboost", objective = "count:poisson")
+
   xgb_poisson_gr <- xgb_poisson |>
     tune::extract_parameter_set_dials() |>
     dials::grid_regular(levels = 3)
-  
+
   future::plan(multisession, workers = parallel::detectCores())
   params_xg_poisson <- xgb_poisson |>
-    finetune::tune_race_anova(
+    tune_race_anova_safe(
       rec,
-      metrics = yardstick::metric_set(yardstick::mae), 
+      metrics = m$metrics,
       resamples = cv,
       grid = xgb_poisson_gr
     )
-  
-  best_xg_pois <- tune::select_best(params_xg_poisson, metric = "mae")
+
+  best_xg_pois <- tune::select_best(params_xg_poisson, metric = m$name)
   xg_poisson <- xgb_poisson |>
     tune::finalize_model(best_xg_pois) |>
     fit(Prsnc_All ~ ., data = train)
@@ -1201,25 +1258,27 @@ poiss <- function(rec, cv, train, test, tune_gr){
 #' @param train data split
 #' @param test data split
 #' @param tune_gr tuning grid. 
-tweed <- function(rec, cv, train, test, tune_gr){
-  
+tweed <- function(rec, cv, train, test, tune_gr, tune_metric = 'mae'){
+
+  m <- resolve_tune_metric(tune_metric)
+
   xgb_tweedie_model <- tune_gr |>
     parsnip::set_engine("xgboost", objective = "reg:tweedie")
-  
-  xgb_tweedie_gr <- xgb_tweedie_model |> 
-    tune::extract_parameter_set_dials() |> 
+
+  xgb_tweedie_gr <- xgb_tweedie_model |>
+    tune::extract_parameter_set_dials() |>
     dials::grid_regular(levels = 3)
-  
-  future::plan(multisession, workers = parallel::detectCores()) 
-  xbg_tweedie_params <- xgb_tweedie_model |> 
-    finetune::tune_race_anova(
+
+  future::plan(multisession, workers = parallel::detectCores())
+  xbg_tweedie_params <- xgb_tweedie_model |>
+    tune_race_anova_safe(
       rec,
       resamples = cv,
-      metrics = yardstick::metric_set(yardstick::mae), 
+      metrics = m$metrics,
       grid = xgb_tweedie_gr
     )
-  
-  best_param_tweedie <- tune::select_best(xbg_tweedie_params, metric = "mae")
+
+  best_param_tweedie <- tune::select_best(xbg_tweedie_params, metric = m$name)
   
   xgb_tweedie_mod <- xgb_tweedie_model |>
     tune::finalize_model(best_param_tweedie)
@@ -1242,7 +1301,156 @@ tweed <- function(rec, cv, train, test, tune_gr){
   )
 }
 
-#' calculate some summary values about the regression models 
+#' k-NN density null models (census_uncertainty_roadmap.md Phase 1b).
+#'
+#' @description Two variants, both predicting from *observed* training
+#' counts rather than a fitted surface, so neither can blow up the way the
+#' brms gp() term does when extrapolating outside its fitted domain
+#' (finding_density_model_extrapolation_limits.md) - a genuine test of
+#' whether the fancier candidates add real value over "assume this plot
+#' resembles its nearest neighbours".
+#' - `within_population`: a test plot's prediction is the mean `Prsnc_All`
+#'   of its k nearest *training* plots in the same population (`Lctn_bb`) -
+#'   exploits local spatial autocorrelation the same way Kriging does.
+#' - `across_population`: training data is first collapsed to one mean-
+#'   density point per population (at that population's centroid); a test
+#'   plot's prediction is the mean of its k nearest population means. Falls
+#'   back to this for any test plot whose population has zero training rows
+#'   (leave-one-population-out's held-out population) - `within_population`
+#'   is undefined there by construction.
+#'
+#' @param train.sf,test sf data.frames with `Prsnc_All`, `Lctn_bb`,
+#' `Pr.SuitHab` and point geometry - the same shape `densityModeller()`
+#' passes to `gstat::krige()` for the Kriging null model, before geometry is
+#' dropped.
+#' @param k number of neighbours to average.
+#' @return list(within_population = , across_population = ) each
+#' data.frame(Observed, Predicted, Pr.suit), matching `mets()`'s expected shape.
+knn_density_null <- function(train.sf, test, k = 5){
+
+  train_df <- sf::st_drop_geometry(train.sf)
+
+  pop_summary <- train.sf |>
+    dplyr::group_by(Lctn_bb) |>
+    dplyr::summarize(mean_density = mean(Prsnc_All), .groups = 'drop') |>
+    sf::st_centroid()
+
+  d_pop <- sf::st_distance(test, pop_summary)
+  across_pred <- apply(d_pop, 1, function(row){
+    kk <- min(k, length(row))
+    mean(pop_summary$mean_density[order(row)[seq_len(kk)]])
+  })
+
+  within_pred <- rep(NA_real_, nrow(test))
+  for(pop_i in unique(test$Lctn_bb)){
+    test_idx  <- which(test$Lctn_bb == pop_i)
+    train_idx <- which(train_df$Lctn_bb == pop_i)
+    if(length(train_idx) == 0) next  # left NA - filled from across_pred below
+
+    d <- sf::st_distance(test[test_idx, ], train.sf[train_idx, ])
+    kk <- min(k, length(train_idx))
+    within_pred[test_idx] <- apply(d, 1, function(row){
+      mean(train_df$Prsnc_All[train_idx][order(row)[seq_len(kk)]])
+    })
+  }
+  within_pred <- dplyr::coalesce(within_pred, across_pred)
+
+  list(
+    within_population = data.frame(Observed = test$Prsnc_All, Predicted = within_pred, Pr.suit = test$Pr.SuitHab),
+    across_population = data.frame(Observed = test$Prsnc_All, Predicted = across_pred, Pr.suit = test$Pr.SuitHab)
+  )
+}
+
+#' Resolve a tuning/selection metric name to its yardstick metric function
+#' and canonical name string.
+#'
+#' @description Centralizes the choice of internal objective function used
+#' to a) rank XGBoost/LightGBM hyperparameter candidates during
+#' `finetune::tune_race_anova()` (`poiss()`/`tweed()`/`gbs()`) and b) promote
+#' a winning brms family (`density_bayes.R::brms_cv_compare()`), so a given
+#' run uses the *same* metric consistently across every candidate rather than
+#' mixing MAE-tuned ML models against a MAE-promoted brms family by
+#' convention alone. Plain MAE is the metric every candidate in this
+#' pipeline was originally selected/promoted by (still the default) -
+#' `huber` and `poisson` are alternatives worth testing given a real
+#' mismatch: MAE is dominated by the dataset's handful of huge Cochetopa
+#' Dome counts (real 2026 field validation showed MdAE telling a much
+#' better-calibrated story than MAE - see
+#' finding_density_model_extrapolation_limits.md), while the XGBoost/
+#' LightGBM candidates' actual *training* objective is Poisson/Tweedie
+#' deviance, not MAE at all.
+#' - `'mae'` - mean absolute error (current default, point-accuracy,
+#'   outlier-sensitive).
+#' - `'huber'` - `yardstick::huber_loss()`, a point-accuracy metric that's
+#'   quadratic near zero and linear in the tails - a more conservative,
+#'   still-interpretable compromise between MAE and RMSE's outlier
+#'   sensitivity.
+#' - `'poisson'` - `yardstick::poisson_log_loss()`, a distributional metric
+#'   consistent with the XGBoost `count:poisson`/LightGBM `objective =
+#'   'poisson'` training objective already in use - down-weights the
+#'   influence of a few huge counts relative to MAE by construction (it's a
+#'   log-scale likelihood, not an absolute difference).
+#' @param tune_metric one of 'mae', 'huber', 'poisson'.
+#' @return list(fn = <yardstick metric function>, name = <string for
+#' `tune::select_best(metric=)`/`.metric` matching>).
+#' @return list(fn = <yardstick metric function, for calling directly>, name
+#' = <string for `tune::select_best(metric=)`/`.metric` matching>, metrics =
+#' <a `yardstick::metric_set()` built from `fn`, for `tune_race_anova()`/
+#' `tune_grid()`'s `metrics=` argument>. `metrics` is built here (via a
+#' literal `switch()`, not by passing an indirected variable like `m$fn` into
+#' `metric_set()`) because `metric_set()` names its metric from the *deparsed
+#' calling expression*, not the function's own identity - passing it a
+#' variable like `m$fn` silently produces a metric literally named `"m$fn"`,
+#' which then can't be found by `select_best(metric = "huber_loss")` and (for
+#' `tune_race_anova()` specifically) breaks its internal ANOVA step outright
+#' - confirmed by testing (real held-out failure under `tune_metric =
+#' 'huber'`, `Census_uncertainty/test_tune_metrics.R`).
+resolve_tune_metric <- function(tune_metric = c('mae', 'huber', 'poisson')){
+  tune_metric <- match.arg(tune_metric)
+  switch(tune_metric,
+    mae     = list(fn = yardstick::mae, name = 'mae',
+                    metrics = yardstick::metric_set(yardstick::mae)),
+    huber   = list(fn = yardstick::huber_loss, name = 'huber_loss',
+                    metrics = yardstick::metric_set(yardstick::huber_loss)),
+    poisson = list(fn = yardstick::poisson_log_loss, name = 'poisson_log_loss',
+                    metrics = yardstick::metric_set(yardstick::poisson_log_loss))
+  )
+}
+
+#' Robustness wrapper for `finetune::tune_race_anova()` (`poiss()`/
+#' `tweed()`/`gbs()`) around a real, reproducible-given-the-same-inputs
+#' failure: when a hyperparameter grid's racing elimination narrows down to
+#' a single surviving configuration before every resample has been used
+#' (which some metrics provoke more readily than others by separating
+#' configurations' performance more decisively - confirmed to reliably
+#' happen under `tune_metric = 'huber'` on a specific RFE-selected covariate
+#' subset/grid/CV combination that never triggered it under 'mae'),
+#' `tune_race_anova()`'s internal ANOVA summary step errors on a
+#' single-level `.config` factor ("contrasts can be applied only to factors
+#' with 2 or more levels" / "no non-missing arguments to max; returning
+#' -Inf") - a real limitation of its early-elimination bookkeeping, not
+#' something a retry reliably escapes (confirmed: 3 retries in a row failed
+#' identically on the triggering input). Falls back to plain
+#' `tune::tune_grid()` (same grid/resamples/metrics, no early elimination,
+#' so immune to this specific failure mode) after `max_tries` racing
+#' attempts - slower (evaluates the full grid x resample product instead of
+#' eliminating early) but only pays that cost on the rare input that
+#' actually breaks racing.
+#' @param ... passed to `finetune::tune_race_anova()` / `tune::tune_grid()`.
+#' @param max_tries racing attempts before falling back to `tune_grid()`.
+tune_race_anova_safe <- function(..., max_tries = 3){
+  for(i in seq_len(max_tries)){
+    res <- tryCatch(finetune::tune_race_anova(...), error = function(e) e)
+    if(!inherits(res, 'error')) return(res)
+    message('tune_race_anova() failed (attempt ', i, '/', max_tries, '): ',
+            conditionMessage(res), ' - retrying.')
+  }
+  message('tune_race_anova() failed ', max_tries, ' times - falling back to ',
+          'tune::tune_grid() (no early elimination, slower but immune to this failure mode).')
+  tune::tune_grid(...)
+}
+
+#' calculate some summary values about the regression models
 mets <- function(x){
   data.frame(
     Metric = c('MAE', 'MSE', 'RMSE'),
@@ -1267,12 +1475,18 @@ mets <- function(x){
 #' @param brms_refit_args list of extra arguments passed to
 #' brms_promote_and_refit() (e.g. list(full_chains = 2, full_iter = 1000,
 #' full_warmup = 500) for a lighter final refit than the 4/2000/1000 default).
-densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = list()){
+#' @param split_method,split_replicate,split_k passed through to
+#' `splitData()` - which train/test split strategy to use (default
+#' 'twinning', matching every existing cached product) and its
+#' method-specific replicate/fold argument; see `split_indices()`.
+densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = list(),
+                             split_method = 'twinning', split_replicate = 1, split_k = 10,
+                             knn_k = 5, tune_metric = 'mae'){
 
   t_total <- Sys.time()
 
   # split the data into train/test and spatial CV.
-  dsplit <- splitData(x, fp = fp, bn = bn)
+  dsplit <- splitData(x, fp = fp, bn = bn, method = split_method, replicate = split_replicate, k = split_k)
   
   train <- dsplit$train
   test <- dsplit$test
@@ -1286,17 +1500,33 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
     dplyr::summarize(Predicted = mean(Prsnc_All)) |>
     sf::st_drop_geometry()
   
-  arith_mean <- test |> 
-    dplyr::select(Observed = Prsnc_All, Lctn_bb) 
-  mean_preds <- dplyr::left_join(arith_mean, preds, by = 'Lctn_bb')
+  arith_mean <- test |>
+    dplyr::select(Observed = Prsnc_All, Lctn_bb)
+  mean_preds <- dplyr::left_join(arith_mean, preds, by = 'Lctn_bb') |>
+    # falls back to the overall training mean when `test` contains a
+    # population absent from `train` entirely (Census_uncertainty's
+    # leave-one-population-out split, compare_split_strategies.R) - the
+    # per-population join is otherwise NA there by construction (no
+    # training rows to average), which would otherwise silently NA out
+    # this whole null-model baseline for exactly the replicates where a
+    # sanity-check baseline matters most.
+    dplyr::mutate(Predicted = dplyr::coalesce(Predicted, mean(train$Prsnc_All)))
   
-  # kriging interpolation, a spatial null model. 
+  # kriging interpolation, a spatial null model.
   krig_preds <- data.frame(
-    'Observed' = test$Prsnc_All, 
+    'Observed' = test$Prsnc_All,
     'Predicted' = gstat::krige(Prsnc_All ~ 1, train.sf, newdata = test)$var1.pred,
     'Pr.suit' = test$Pr.SuitHab
   )
-  
+
+  # k-NN null models (census_uncertainty_roadmap.md Phase 1b) - motivated by
+  # the brms gp() term's catastrophic out-of-domain extrapolation failure
+  # (finding_density_model_extrapolation_limits.md memory): a k-NN average of
+  # *observed* counts can't blow up the way a fitted spatial basis can, so
+  # these are a genuine test of whether the fancier candidates add real value
+  # over "assume this plot/population resembles its nearest neighbours".
+  knn_preds <- knn_density_null(train.sf, test, k = knn_k)
+
   # this was the grouping variable required for the arithmetic mean, we drop it now.
   train <- sf::st_drop_geometry(train) |>
     select(-Lctn_bb)
@@ -1335,52 +1565,98 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
   rs <- rsample::bootstraps(train, 10)
   indx_nndm_rs <- CAST2rsample(nndm_indices, train)
   
-  # now define a tuning grid for trees.  
-  tune_gr <- parsnip::boost_tree( 
+  # now define a tuning grid for trees.
+  # stop_iter (early stopping) deliberately NOT tuned: confirmed by testing,
+  # a fitted XGBoost booster that stops early ends up with fewer actual trees
+  # than the grid's `trees=` value, and a known xgboost/parsnip prediction-path
+  # bug then predicts using the *requested* tree count instead of the
+  # *actual* one - "Check failed: tree_end <= model_.trees.size()" - which
+  # only ever surfaced once this tuning grid was run against data other than
+  # the single, long-cached twinning split it had exclusively been validated
+  # against (Census_uncertainty/compare_split_strategies.R). Leaving
+  # `stop_iter` unset disables early stopping entirely (every candidate trains
+  # its full requested `trees=`), trading that one tuning dimension away for
+  # not hitting this crash on data this grid hasn't specifically been fit to.
+  tune_gr <- parsnip::boost_tree(
     mode = 'regression',
     trees = tune(),
     tree_depth = tune(),
-    min_n = tune(), 
+    min_n = tune(),
     loss_reduction = tune(),
-    learn_rate = tune(),
-    stop_iter = tune()
+    learn_rate = tune()
   )
   
   # tune hyper parameters and fit all models  - the hyper param tuning on occasion
   # is super slow, and may crash so we want to write to disk as they are completed.
   if(missing(fp)){fp <- file.path(PROJ_ROOT, 'results', 'count_models')}
 
+  # ML candidate fits genuinely depend on tune_metric (different hyperparameter
+  # winners under mae/huber/poisson), unlike the brms candidates below (whose
+  # cache only depends on which family got promoted, not how) - suffix the
+  # cache filename so switching tune_metric doesn't silently reuse an
+  # MAE-tuned fit. Default 'mae' keeps every pre-existing cache path
+  # byte-identical (no suffix), same convention as splitData()'s suffix.
+  metric_suffix <- if(tune_metric == 'mae') '' else paste0('-', tune_metric)
+
   t0 <- Sys.time()
-  f <- file.path(fp, 'models', paste0(bn, '-poisson_spat.rds'))
+  f <- file.path(fp, 'models', paste0(bn, metric_suffix, '-poisson_spat.rds'))
   if(!file.exists(f)){
-    poiss_spat_cv <- poiss(rec, indx_nndm_rs, train, test, tune_gr)
+    poiss_spat_cv <- poiss(rec, indx_nndm_rs, train, test, tune_gr, tune_metric = tune_metric)
     saveRDS(poiss_spat_cv, f)
   } else {poiss_spat_cv <- readRDS(f)}
   message(sprintf('[timing] XGB Poisson Spat.: %.1fs', as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
 
-  t0 <- Sys.time()
-  f <- file.path(fp, 'models', paste0(bn, '-poisson.rds'))
+  # conformal calibration (census_uncertainty_roadmap.md Phase 1c,
+  # Census_uncertainty/density_conformal.R) - split (against `test`) and
+  # spatial CV+ (against `indx_nndm_rs`, the same knndm folds used for
+  # tuning above), cached the same way as the model fit itself.
+  f <- file.path(fp, 'models', paste0(bn, metric_suffix, '-poisson_spat-conformal.rds'))
   if(!file.exists(f)){
-    poiss_cv <- poiss(rec, rs, train, test, tune_gr)
+    poiss_spat_conformal <- conformal_calibrate_candidate(poiss_spat_cv$Model, train, test, indx_nndm_rs)
+    saveRDS(poiss_spat_conformal, f)
+  } else {poiss_spat_conformal <- readRDS(f)}
+
+  t0 <- Sys.time()
+  f <- file.path(fp, 'models', paste0(bn, metric_suffix, '-poisson.rds'))
+  if(!file.exists(f)){
+    poiss_cv <- poiss(rec, rs, train, test, tune_gr, tune_metric = tune_metric)
     saveRDS(poiss_cv, f)
   } else {poiss_cv <- readRDS(f)}
   message(sprintf('[timing] XGB Poisson: %.1fs', as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
 
-  t0 <- Sys.time()
-  f <- file.path(fp, 'models', paste0(bn, '-tweedie_spat.rds'))
+  f <- file.path(fp, 'models', paste0(bn, metric_suffix, '-poisson-conformal.rds'))
   if(!file.exists(f)){
-    tweedie_spat_cv <- tweed(rec, indx_nndm_rs, train, test, tune_gr)
+    poiss_conformal <- conformal_calibrate_candidate(poiss_cv$Model, train, test, indx_nndm_rs)
+    saveRDS(poiss_conformal, f)
+  } else {poiss_conformal <- readRDS(f)}
+
+  t0 <- Sys.time()
+  f <- file.path(fp, 'models', paste0(bn, metric_suffix, '-tweedie_spat.rds'))
+  if(!file.exists(f)){
+    tweedie_spat_cv <- tweed(rec, indx_nndm_rs, train, test, tune_gr, tune_metric = tune_metric)
     saveRDS(tweedie_spat_cv, f)
   } else {tweedie_spat_cv <- readRDS(f)}
   message(sprintf('[timing] XGB Tweedie Spat.: %.1fs', as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
 
-  t0 <- Sys.time()
-  f <- file.path(fp, 'models', paste0(bn, '-tweedie.rds'))
+  f <- file.path(fp, 'models', paste0(bn, metric_suffix, '-tweedie_spat-conformal.rds'))
   if(!file.exists(f)){
-    tweedie_cv <- tweed(rec, rs, train, test, tune_gr)
+    tweedie_spat_conformal <- conformal_calibrate_candidate(tweedie_spat_cv$Model, train, test, indx_nndm_rs)
+    saveRDS(tweedie_spat_conformal, f)
+  } else {tweedie_spat_conformal <- readRDS(f)}
+
+  t0 <- Sys.time()
+  f <- file.path(fp, 'models', paste0(bn, metric_suffix, '-tweedie.rds'))
+  if(!file.exists(f)){
+    tweedie_cv <- tweed(rec, rs, train, test, tune_gr, tune_metric = tune_metric)
     saveRDS(tweedie_cv, f)
   } else {tweedie_cv <- readRDS(f)}
   message(sprintf('[timing] XGB Tweedie: %.1fs', as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
+
+  f <- file.path(fp, 'models', paste0(bn, metric_suffix, '-tweedie-conformal.rds'))
+  if(!file.exists(f)){
+    tweedie_conformal <- conformal_calibrate_candidate(tweedie_cv$Model, train, test, indx_nndm_rs)
+    saveRDS(tweedie_conformal, f)
+  } else {tweedie_conformal <- readRDS(f)}
 
   tune_gr <- parsnip::boost_tree(
     mode = 'regression',
@@ -1390,13 +1666,19 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
   )
 
   t0 <- Sys.time()
-  f <- file.path(fp, 'models', paste0(bn, '-lgbm-poisson_spat.rds'))
+  f <- file.path(fp, 'models', paste0(bn, metric_suffix, '-lgbm-poisson_spat.rds'))
   if(!file.exists(f)){
-    lgbm_cv <- gbs(rec, indx_nndm_rs, train, test, tune_gr, mode = 'regression', metric = 'mae',
+    lgbm_cv <- gbs(rec, indx_nndm_rs, train, test, tune_gr, mode = 'regression', tune_metric = tune_metric,
                      engine = 'lightgbm', objective = 'poisson', resp = 'Prsnc_All')
     saveRDS(lgbm_cv, f)
   } else {lgbm_cv <- readRDS(f)}
   message(sprintf('[timing] LGBM Poisson Spat.: %.1fs', as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
+
+  f <- file.path(fp, 'models', paste0(bn, metric_suffix, '-lgbm-poisson_spat-conformal.rds'))
+  if(!file.exists(f)){
+    lgbm_conformal <- conformal_calibrate_candidate(lgbm_cv$Model, train, test, indx_nndm_rs)
+    saveRDS(lgbm_conformal, f)
+  } else {lgbm_conformal <- readRDS(f)}
 
   # Bayesian candidates (census_uncertainty_roadmap.md Phase 1, scripts/Census_uncertainty/density_bayes.R).
   # RFE (above) may have dropped Longitude/Latitude from `train` since they're
@@ -1408,9 +1690,9 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
 
   t0 <- Sys.time()
   brms_cv <- if (is.null(brms_families)) {
-    brms_cv_compare(train_brms, test)
+    brms_cv_compare(train_brms, test, tune_metric = tune_metric)
   } else {
-    brms_cv_compare(train_brms, test, families = brms_families)
+    brms_cv_compare(train_brms, test, families = brms_families, tune_metric = tune_metric)
   }
   message(sprintf('[timing] brms_cv_compare (%d family x 2 CV modes): %.1fs',
                    if (is.null(brms_families)) 4 else length(brms_families),
@@ -1430,9 +1712,10 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
                    as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
 
   # now calculate the evaluation statistics.
-  namev <- c('Arithmetic Mean', 'Kriging',
+  namev <- c('Arithmetic Mean', 'Kriging', 'kNN (within pop)', 'kNN (across pop)',
              'XGB Poisson Spat.', 'XGB Poisson', 'XBG Tweedie Spat.',  'XGB Tweedie', 'LGBM Poisson Spat.')
-  mods <- list(mean_preds, krig_preds, poiss_spat_cv$Predictions, poiss_cv$Predictions,
+  mods <- list(mean_preds, krig_preds, knn_preds$within_population, knn_preds$across_population,
+               poiss_spat_cv$Predictions, poiss_cv$Predictions,
                tweedie_spat_cv$Predictions, tweedie_cv$Predictions, lgbm_cv$Predictions)
 
   metrrs <- lapply(mods, mets) |>
@@ -1440,14 +1723,41 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
     dplyr::mutate(Model = rep(namev, each = 3), .before = 1) |>
     dplyr::bind_rows(brms_cv$table)
 
+  # conformal interval widths (census_uncertainty_roadmap.md Phase 1c) for the
+  # 5 ML candidates - informational (calibrated on the same test/CV rows this
+  # table's own MAE/MSE/RMSE come from, so NOT a coverage estimate; real
+  # coverage is checked in validate_against_2026_groundtruth.R against
+  # genuinely new field plots). `namev`'s 'XBG Tweedie Spat.' typo (above) is
+  # matched here deliberately, so this table's Model labels stay joinable
+  # against its own MAE/MSE/RMSE rows.
+  conformal_ml <- list(
+    'XGB Poisson Spat.'  = poiss_spat_conformal,
+    'XGB Poisson'        = poiss_conformal,
+    'XBG Tweedie Spat.'  = tweedie_spat_conformal,
+    'XGB Tweedie'        = tweedie_conformal,
+    'LGBM Poisson Spat.' = lgbm_conformal
+  )
+
+  conformal_widths <- dplyr::bind_rows(lapply(names(conformal_ml), function(nm){
+    cf <- conformal_ml[[nm]]
+    data.frame(
+      Model = nm,
+      Metric = c('IntervalWidth90_split', 'IntervalWidth90_cvplus'),
+      Value = c(conformal_interval_width(cf$split$residuals),
+                conformal_interval_width(cf$cv_plus$residuals))
+    )
+  }))
+
+  metrrs <- dplyr::bind_rows(metrrs, conformal_widths)
+
   # now we will save the models, evaluation table, and information, note we
   # also save the variable selection object for AOA calculation
 
-  write.csv(metrrs, file.path(fp, 'tables', paste0(bn, '.csv')), row.names = FALSE)
+  write.csv(metrrs, file.path(fp, 'tables', paste0(bn, metric_suffix, '.csv')), row.names = FALSE)
 
   message(sprintf('[timing] densityModeller() TOTAL: %.1fs', as.numeric(difftime(Sys.time(), t_total, units = 'secs'))))
 
-  invisible(list(metrics = metrrs, brms_promoted = brms_final))
+  invisible(list(metrics = metrrs, brms_promoted = brms_final, conformal = conformal_ml))
 }
 
 #' fit tweedie models to the data
@@ -1463,26 +1773,47 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
 #' @param objective Character. Argument to `parsnip::set_engine`, objective.  
 #' @param levels Numeric. Argument to `dials::grid_regular`  
 #' @param metric Character. Evaluation metric for the model passed onto `yardstick::metric_set`
-gbs <- function(rec, cv, train, test, resp, tune_gr, mode, engine, objective, levels, metric){
-  
+gbs <- function(rec, cv, train, test, resp, tune_gr, mode, engine, objective, levels, tune_metric = 'mae'){
+
   if(missing(levels)){levels <-3}
-  
-  model <- parsnip::set_engine(tune_gr, engine = engine, objective = objective)
-  
+  m <- resolve_tune_metric(tune_metric)
+
+  # LightGBM's OpenMP backend, R's OpenBLAS, and data.table all default to
+  # claiming every core (num_threads=0, OMP_NUM_THREADS unset, and
+  # getDTthreads() ~ 8 respectively). future::multisession below fans this
+  # function's model-fitting out across several worker *processes*, and each
+  # worker independently re-triggers all three of those "use everything"
+  # defaults - severe oversubscription that took a single LGBM candidate from
+  # minutes to 6-10+ hours (confirmed: system load average hit ~138 on a
+  # 16-core box while this ran, and worker processes showed >200% sustained
+  # CPU each despite lightgbm's own num_threads being capped). Setting the
+  # env vars here, before `future::plan()` spawns the workers, is required
+  # because each multisession worker is a fresh Rscript process that inherits
+  # the parent's environment at spawn time but re-resolves its own BLAS/
+  # data.table thread defaults independently - pinning lightgbm's engine arg
+  # alone (which only bounds lightgbm's own threads) was insufficient.
+  Sys.setenv(OMP_NUM_THREADS = '1', OPENBLAS_NUM_THREADS = '1', R_DATATABLE_NUM_THREADS = '1')
+
+  model <- if(identical(engine, 'lightgbm')){
+    parsnip::set_engine(tune_gr, engine = engine, objective = objective, num_threads = 1)
+  } else {
+    parsnip::set_engine(tune_gr, engine = engine, objective = objective)
+  }
+
   gr <- model |>
     tune::extract_parameter_set_dials() |>
     dials::grid_regular(levels = levels)
-  
+
   future::plan(multisession, workers = parallel::detectCores()/2)
   params <- model |>
-    finetune::tune_race_anova(
+    tune_race_anova_safe(
       rec,
       resamples = cv,
-      metrics = yardstick::metric_set(yardstick::mae),
+      metrics = m$metrics,
       grid = gr
     )
-  
-  best_param <- tune::select_best(params, metric = metric)
+
+  best_param <- tune::select_best(params, metric = m$name)
   
   final_model <- model |>
     tune::finalize_model(best_param)

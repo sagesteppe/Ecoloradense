@@ -5,6 +5,57 @@
 ## MCMC chain, so their draws are combined by Monte Carlo composition rather
 ## than a single joint model - see the roadmap's Phase 3 notes for why.
 
+#' Assemble the covariate raster template both Phase 3 draw sources need.
+#'
+#' @description Neither `predict_density_draw()` (brms) nor
+#' `predict_density_draw_conformal()` (ML candidates, density_conformal.R)
+#' can be handed just the suitability probability raster alone - both need
+#' every covariate column the promoted model's formula/feature set actually
+#' uses, named to match (confirmed by testing: `stats::predict()` on a
+#' `parsnip` fit errors loudly, "object '<covariate>' not found", the moment
+#' a required column is missing - a safe failure mode, but a real gap
+#' `run_census_uncertainty()` had left unaddressed, passing `terra::rast(pr_path)`
+#' - a single layer - directly as `raster_template`). This assembles the
+#' real thing: `rastReader()`'s full covariate stack (../functions.R) plus
+#' the suitability raster itself, attached as `Pr.SuitHab` (resampled onto
+#' the covariate stack's grid first if it doesn't already match exactly -
+#' confirmed necessary in practice, not just defensive).
+#'
+#' @param p2proc path to processed raster data (`rastReader()`'s `p2proc` arg).
+#' @param pr_path path to the promoted product's suitability probability
+#' raster (`results/suitability_maps/<bn>DO:0-Seed....-Pr.tif`).
+#' @param region_ext optional `terra::ext`/SpatExtent to crop to before
+#' returning - strongly recommended for anything but a final full-domain
+#' run: the full domain is ~330M cells (confirmed against the existing
+#' suitability raster), a many-hour, tens-of-GB job to predict across
+#' unclipped - see census_uncertainty_roadmap.md Phase 3's "mask tightly to
+#' regional bounding boxes... first". `combined_census_montecarlo()`/
+#' `combined_census_montecarlo_conformal()` crop to `region_bbox` internally
+#' too, so passing the same extent here is redundant-but-harmless with those
+#' - it mainly matters for a raster handed to Phase 4's
+#' `check_predict_density_draw()`, which does not crop internally.
+#' @return a `terra::rast` with `rastReader()`'s full covariate stack plus a
+#' `Pr.SuitHab` layer, ready to pass as `raster_template` to either
+#' `predict_density_draw()` or `predict_density_draw_conformal()`.
+build_density_raster_template <- function(p2proc, pr_path, region_ext = NULL){
+
+  rast_dat <- rastReader('dem_1-3arc', p2proc)
+  suit_r <- terra::rast(pr_path)
+
+  if(!is.null(region_ext)){
+    rast_dat <- terra::crop(rast_dat, region_ext)
+    suit_r <- terra::crop(suit_r, region_ext)
+  }
+
+  if(!terra::compareGeom(suit_r, rast_dat, stopOnError = FALSE)){
+    suit_r <- terra::resample(suit_r, rast_dat, method = 'bilinear')
+  }
+  names(suit_r) <- 'Pr.SuitHab'
+  rast_dat$Pr.SuitHab <- suit_r
+
+  rast_dat
+}
+
 #' Pair boundary draws against density draws for the combination loop.
 #'
 #' @description Resamples the smaller boundary stack with replacement,
@@ -188,6 +239,81 @@ combined_census_montecarlo <- function(brms_fit, raster_template, center, scale,
     dens_r <- predict_density_draw(brms_fit, raster_template, pairs$density_id[i], center, scale,
                                     covariate_df = covariate_df)
     draws[i] <- census_from_pair(dens_r, aligned_masks[[pairs$boundary_id[i]]], cell_area)
+    n_done <- i
+
+    if(i >= min_n){
+      trace[i, ] <- running_ci(draws[1:i])
+      if(i >= min_n + window){
+        prev <- trace[i - window, ]
+        rel_change <- abs(trace[i, ] - prev) / pmax(abs(prev), .Machine$double.eps)
+        if(all(rel_change < stop_tol)) break
+      }
+    }
+  }
+
+  draws <- draws[1:n_done]
+  trace <- trace[1:n_done, , drop = FALSE]
+
+  if(!is.null(out_csv)){
+    write.csv(
+      data.frame(draw = seq_len(n_done), census_size = draws,
+                 running_lower = trace[, 1], running_upper = trace[, 2]),
+      out_csv, row.names = FALSE
+    )
+  }
+
+  list(draws = draws, ci = running_ci(draws), n = n_done)
+}
+
+#' Monte Carlo combination of an ML candidate's conformal pseudo-draws and the
+#' boundary ensemble into a census-size credible interval.
+#'
+#' @description The conformal-pseudo-draw sibling of `combined_census_montecarlo()`
+#' (census_uncertainty_roadmap.md Phase 1c/3), for whichever ML candidate is in
+#' play instead of the brms posterior. Structurally identical - mask to
+#' `region_bbox`, build `covariate_df`/aligned masks once, loop draws via
+#' `predict_density_draw_conformal()` (`density_conformal.R`) instead of
+#' `predict_density_draw()`, `census_from_pair()`, running-quantile
+#' stabilization via `running_ci()` - but deliberately does **not** share code
+#' with `combined_census_montecarlo()`: that path is already Phase 4-validated
+#' for reproducibility, and duplicating this ~15-line loop is lower risk than
+#' refactoring it into a shared helper both paths would depend on.
+#'
+#' Unlike `pair_draws()`, there's no finite `n_density` to sample an id from -
+#' conformal pseudo-draws are generated fresh by resampling `conformal`'s
+#' residual/fold pool on every call to `predict_density_draw_conformal()`, not
+#' drawn from a fixed pre-existing posterior - so only the boundary side needs
+#' an explicit resampled index here.
+#'
+#' @param conformal one ML candidate's `conformal_calibrate_candidate()`
+#' output (`densityModeller()`'s `$conformal[[<candidate name>]]`).
+#' @param method 'split' or 'cv_plus' - which conformal calibration to draw from.
+#' @param raster_template,boundary_mask_paths,region_bbox,n_max,min_n,window,stop_tol,seed,out_csv
+#' as `combined_census_montecarlo()`.
+#' @return list(draws = numeric vector, ci = c(lower, upper), n = length(draws)).
+combined_census_montecarlo_conformal <- function(conformal, method, raster_template,
+                                                  boundary_mask_paths, region_bbox,
+                                                  n_max = 2000, min_n = 400, window = 100,
+                                                  stop_tol = 0.01, seed = 1, out_csv = NULL){
+
+  raster_template <- terra::crop(raster_template, region_bbox)
+  cell_area <- prod(terra::res(raster_template))
+
+  covariate_df <- as.data.frame(raster_template, cells = TRUE)
+  aligned_masks <- lapply(boundary_mask_paths, align_mask_to_template, target = raster_template)
+
+  n_boundary <- length(boundary_mask_paths)
+  set.seed(seed)
+  boundary_ids <- sample.int(n_boundary, n_max, replace = n_max > n_boundary)
+
+  draws <- numeric(n_max)
+  trace <- matrix(NA_real_, nrow = n_max, ncol = 2)
+  n_done <- 0
+
+  for(i in seq_len(n_max)){
+    dens_r <- predict_density_draw_conformal(conformal, method, raster_template, draw_id = i,
+                                              covariate_df = covariate_df)
+    draws[i] <- census_from_pair(dens_r, aligned_masks[[boundary_ids[i]]], cell_area)
     n_done <- i
 
     if(i >= min_n){

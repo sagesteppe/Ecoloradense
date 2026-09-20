@@ -73,6 +73,95 @@ Implementation notes:
   `Longitude`/`Latitude` columns that `wrapper()`'s sf-geometry-only output
   didn't have (now added in `wrapper()` before the `densityModeller()` call).
 
+## Phase 1b - k-NN null model (planned, not yet implemented)
+
+Real validation against the 2026 field census (`Census_uncertainty/validate_against_2026_groundtruth.R`)
+surfaced a finding worth a dedicated null model rather than just a caveat:
+the brms Poisson candidate's approximate `gp()` term catastrophically fails
+to extrapolate to unmodelled populations - even ones nominally inside the
+fitted spatial domain (Earthslide) - while XGBoost/LightGBM degrade more
+gracefully but still show a real generalization gap at new sites, suggesting
+they need more training populations than currently available.
+
+A k-NN null model was not in the original Phase 1 candidate set and should
+be added:
+- **Within-population k-NN**: predict a plot's density as the mean of its k
+  nearest plots' density *within the same population* - exploits local
+  spatial autocorrelation the same way Kriging (an existing Phase 1
+  candidate) does. Expected to land close to Kriging's performance; mainly a
+  sanity check, not expected to change model selection there. Suspect it
+  will pick a low k and edge out Kriging slightly by being more locally
+  responsive (kriging's fitted variogram smooths more).
+- **Across-population k-NN**: aggregate each known population to a mean
+  density (optionally downsampled), then for a new location, predict as the
+  mean of its k nearest *population means*. This is the more interesting
+  variant: unlike the GP, it structurally cannot blow up when extrapolating
+  (bounded by the population means it's averaging), so it's a genuine test
+  of whether the ML/Bayesian candidates are adding real value over "assume a
+  new population resembles its nearest known neighbors" - most informative
+  exactly where the GP failed (out-of-sample populations), not on the
+  split-strategy comparison (which never leaves known populations).
+
+**Status**: deferred until the split-strategy comparison
+(`Census_uncertainty/compare_split_strategies.R` - twinning/classic/
+spatial_knn/population) finishes across all populations; then run both k-NN
+variants there and re-score against the 2026 groundtruth alongside the
+existing candidates.
+
+## Phase 1c - Density: conformal intervals for the ML candidates
+
+The 5 ML candidates (XGBoost Poisson/Tweedie - spatial + non-spatial - and
+LightGBM Poisson Spat., all fit inside `densityModeller()`) are point-estimate
+only: unlike the brms candidates above, they have no posterior to draw an
+interval from at all. That's a real gap, not a hypothetical one - Phase 1's
+own comparison has shown plain Poisson XGBoost beating every Bayesian
+candidate on held-out MAE for the current product, so the actual best model
+for a given resolution/PA-ratio product can easily be one with zero native
+uncertainty.
+
+- Two conformal calibrations, compared rather than committing to one up
+  front (same reasoning as comparing 4 brms families in Phase 1): **split
+  conformal** (residuals from the model predicted on the existing held-out
+  `test` split - no new calibration set carved out) and **spatial CV+**
+  (Barber, Candes, Ramdas & Tibshirani 2021), reusing the fixed-k
+  `CAST::knndm()` folds already built for XGB/LGBM tuning
+  (`indx_nndm_rs`/`CAST2rsample()`) rather than a random calibration split -
+  addresses the same exchangeability concern spatial data raises for a naive
+  split (nearby points aren't independent), the same concern that motivated
+  `brms_spatial_fold_ids()`'s spatial `kfold()` for the Bayesian candidates.
+- Residuals are kept **signed**, not absolute - this project's count-data
+  residuals are right-skewed, so the two interval tails get independent
+  quantiles instead of one symmetric `+-` width.
+- Reported interval width in `densityModeller()`'s comparison table
+  (`IntervalWidth90_split`/`IntervalWidth90_cvplus`) is informational only,
+  **not** a coverage estimate - computed against the same test/CV rows the
+  residuals were calibrated on, which would be circular. Real coverage is
+  checked the same place this project already checks real generalization:
+  `validate_against_2026_groundtruth.R`, against genuinely new field plots
+  (extended to report empirical coverage/width per candidate per method,
+  using the full pooled-residual CV+ formula rather than the single-fold
+  approximation the Phase 3 pseudo-draw path uses for speed).
+- Implemented in `scripts/Census_uncertainty/density_conformal.R`
+  (`conformal_calibrate_candidate()`, `conformal_interval_width()`,
+  `predict_density_draw_conformal()`), wired into `densityModeller()`
+  (`functions.R`) right after each ML candidate's own cache block, same
+  `if(file.exists()) readRDS() else compute+saveRDS()` idiom as everything
+  else in that function.
+- **One resampled residual for the whole raster per pseudo-draw, not one per
+  cell** - the important design point carried over from Phase 2's own
+  lesson there (a spatially coherent boundary-field realization vs. per-cell
+  iid noise): an independently-resampled residual at every cell would mostly
+  cancel out under `terra::global(fun='sum')`, understating the candidate's
+  real census-size uncertainty. Each pseudo-draw instead applies one residual
+  as a flat shift across the entire surface - also the more faithful reading
+  of what a conformal interval actually licenses (a bound on one new point's
+  error, not independent per-cell error). A spatially-varying residual field
+  (reusing Phase 2's `estimate_residual_covariance()`/circulant-embedding
+  machinery on density residuals instead of boundary residuals) is a
+  possible future refinement, not implemented here.
+- Feeds Phase 3 as a pseudo-draw source alongside (not replacing) the brms
+  posterior path - see Phase 3's `combined_census_montecarlo_conformal()`.
+
 ## Phase 2 - Boundary: simulate, don't refit
 
 - No Bayesian refit of suitability - reuse the existing random forest mean
@@ -146,6 +235,14 @@ validly combined by Monte Carlo composition instead of one joint multivariate
 model. A joint model would be "more correct" in principle but reopens the
 spatial-confounding problem from early planning discussion, for a likely
 marginal gain in interval accuracy.
+
+`combine_census.R` has two density-side draw sources: the brms posterior
+(`predict_density_draw()`/`combined_census_montecarlo()`, below) and, per
+Phase 1c, an ML candidate's conformal pseudo-draws
+(`predict_density_draw_conformal()`/`combined_census_montecarlo_conformal()`,
+a deliberately separate sibling function rather than a shared/branching
+implementation - lower risk to the brms path, which Phase 4 already
+validates for reproducibility).
 
 - Mask tightly first to regional bounding boxes used in manuscript. 
 - For each of ~1000-2000 combined draws: pair one boundary mask with one

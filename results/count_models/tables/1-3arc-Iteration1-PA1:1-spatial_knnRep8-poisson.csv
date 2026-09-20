@@ -1,0 +1,40 @@
+"Model","Metric","Value"
+"Arithmetic Mean","MAE",0
+"Arithmetic Mean","MSE",0
+"Arithmetic Mean","RMSE",0
+"Kriging","MAE",3.45834630259929
+"Kriging","MSE",12.1029738055794
+"Kriging","RMSE",3.47893285442237
+"kNN (within pop)","MAE",0
+"kNN (within pop)","MSE",0
+"kNN (within pop)","RMSE",0
+"kNN (across pop)","MAE",3.85540956340956
+"kNN (across pop)","MSE",14.9537244648147
+"kNN (across pop)","RMSE",3.86700458556939
+"XGB Poisson Spat.","MAE",0.38469118475914
+"XGB Poisson Spat.","MSE",0.184908792523893
+"XGB Poisson Spat.","RMSE",0.430010223743451
+"XGB Poisson","MAE",2.38751463890076
+"XGB Poisson","MSE",6.64197310203164
+"XGB Poisson","RMSE",2.57720257295224
+"XBG Tweedie Spat.","MAE",0.654375359416008
+"XBG Tweedie Spat.","MSE",0.488833026274105
+"XBG Tweedie Spat.","RMSE",0.6991659504539
+"XGB Tweedie","MAE",0.601430001854897
+"XGB Tweedie","MSE",0.419419811241628
+"XGB Tweedie","RMSE",0.647626289801169
+"LGBM Poisson Spat.","MAE",1.30383703327866
+"LGBM Poisson Spat.","MSE",2.31875126657777
+"LGBM Poisson Spat.","RMSE",1.52274464917062
+"Poisson","MAE",0.345218889138253
+"Poisson","MSE",0.21916873730488
+"Poisson","RMSE",0.468154608334554
+"NegBin","MAE",0.470031089949798
+"NegBin","MSE",0.727616910703573
+"NegBin","RMSE",0.853004636976595
+"Hurdle Poisson","MAE",607.579595196539
+"Hurdle Poisson","MSE",657224.048936971
+"Hurdle Poisson","RMSE",810.69356043882
+"Hurdle NegBin","MAE",31.4475504046508
+"Hurdle NegBin","MSE",1132.21526134967
+"Hurdle NegBin","RMSE",33.6484065202153
