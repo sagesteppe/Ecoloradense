@@ -1,0 +1,491 @@
+"Model","Metric","Value","replicate","n_test"
+"Arithmetic Mean","MAE",30.0855708068296,"AP+CD",103
+"Arithmetic Mean","MSE",2061.73131375167,"AP+CD",103
+"Arithmetic Mean","RMSE",45.4062915657255,"AP+CD",103
+"Kriging","MAE",30.071025195327,"AP+CD",103
+"Kriging","MSE",2058.85757647577,"AP+CD",103
+"Kriging","RMSE",45.3746358274727,"AP+CD",103
+"kNN (within pop)","MAE",30.0399549273092,"AP+CD",103
+"kNN (within pop)","MSE",2054.55892140507,"AP+CD",103
+"kNN (within pop)","RMSE",45.3272425965342,"AP+CD",103
+"kNN (across pop)","MAE",30.0399549273092,"AP+CD",103
+"kNN (across pop)","MSE",2054.55892140507,"AP+CD",103
+"kNN (across pop)","RMSE",45.3272425965342,"AP+CD",103
+"XGB Poisson Spat.","MAE",30.564876382585,"AP+CD",103
+"XGB Poisson Spat.","MSE",2325.16977662011,"AP+CD",103
+"XGB Poisson Spat.","RMSE",48.2200142743665,"AP+CD",103
+"XGB Poisson","MAE",30.3634645096885,"AP+CD",103
+"XGB Poisson","MSE",2315.09604794505,"AP+CD",103
+"XGB Poisson","RMSE",48.1154450041257,"AP+CD",103
+"XBG Tweedie Spat.","MAE",30.4291101989237,"AP+CD",103
+"XBG Tweedie Spat.","MSE",2320.01975527765,"AP+CD",103
+"XBG Tweedie Spat.","RMSE",48.1665833880466,"AP+CD",103
+"XGB Tweedie","MAE",30.4291101989237,"AP+CD",103
+"XGB Tweedie","MSE",2320.01975527765,"AP+CD",103
+"XGB Tweedie","RMSE",48.1665833880466,"AP+CD",103
+"LGBM Poisson Spat.","MAE",30.5833573515494,"AP+CD",103
+"LGBM Poisson Spat.","MSE",2326.13076575304,"AP+CD",103
+"LGBM Poisson Spat.","RMSE",48.2299778742748,"AP+CD",103
+"Poisson","MAE",5.16194495072998e+41,"AP+CD",103
+"Poisson","MSE",2.60724778412852e+85,"AP+CD",103
+"Poisson","RMSE",5.10612160463156e+42,"AP+CD",103
+"NegBin","MAE",30.4291341246177,"AP+CD",103
+"NegBin","MSE",2318.37013202823,"AP+CD",103
+"NegBin","RMSE",48.1494561965992,"AP+CD",103
+"Hurdle Poisson","MAE",30110997.7849765,"AP+CD",103
+"Hurdle Poisson","MSE",24750722724355136,"AP+CD",103
+"Hurdle Poisson","RMSE",157323624.177538,"AP+CD",103
+"Hurdle NegBin","MAE",29.6945301144201,"AP+CD",103
+"Hurdle NegBin","MSE",1554.92409958734,"AP+CD",103
+"Hurdle NegBin","RMSE",39.4325259092965,"AP+CD",103
+"XGB Poisson Spat.","IntervalWidth90_split",99.8006750205066,"AP+CD",103
+"XGB Poisson Spat.","IntervalWidth90_cvplus",21.4380941569805,"AP+CD",103
+"XGB Poisson","IntervalWidth90_split",99.8,"AP+CD",103
+"XGB Poisson","IntervalWidth90_cvplus",21.3989240840077,"AP+CD",103
+"XBG Tweedie Spat.","IntervalWidth90_split",99.8120856422931,"AP+CD",103
+"XBG Tweedie Spat.","IntervalWidth90_cvplus",21.3277929544448,"AP+CD",103
+"XGB Tweedie","IntervalWidth90_split",99.8120856422931,"AP+CD",103
+"XGB Tweedie","IntervalWidth90_cvplus",21.3277929544448,"AP+CD",103
+"LGBM Poisson Spat.","IntervalWidth90_split",99.8000000827671,"AP+CD",103
+"LGBM Poisson Spat.","IntervalWidth90_cvplus",21.9658271945211,"AP+CD",103
+"Arithmetic Mean","MAE",9.27639727807936,"HB+XTAL",87
+"Arithmetic Mean","MSE",124.356150104259,"HB+XTAL",87
+"Arithmetic Mean","RMSE",11.1515088711913,"HB+XTAL",87
+"Kriging","MAE",6.30246636888989,"HB+XTAL",87
+"Kriging","MSE",96.2105604131536,"HB+XTAL",87
+"Kriging","RMSE",9.80869820175714,"HB+XTAL",87
+"kNN (within pop)","MAE",6.19803831385825,"HB+XTAL",87
+"kNN (within pop)","MSE",98.8806659640152,"HB+XTAL",87
+"kNN (within pop)","RMSE",9.94387580192025,"HB+XTAL",87
+"kNN (across pop)","MAE",6.19803831385825,"HB+XTAL",87
+"kNN (across pop)","MSE",98.8806659640152,"HB+XTAL",87
+"kNN (across pop)","RMSE",9.94387580192025,"HB+XTAL",87
+"XGB Poisson Spat.","MAE",4.79827362435988,"HB+XTAL",87
+"XGB Poisson Spat.","MSE",80.9400365843682,"HB+XTAL",87
+"XGB Poisson Spat.","RMSE",8.99666808237184,"HB+XTAL",87
+"XGB Poisson","MAE",5.04740878347516,"HB+XTAL",87
+"XGB Poisson","MSE",114.366142009627,"HB+XTAL",87
+"XGB Poisson","RMSE",10.6942106772602,"HB+XTAL",87
+"XBG Tweedie Spat.","MAE",4.56780846547549,"HB+XTAL",87
+"XBG Tweedie Spat.","MSE",84.4645917578697,"HB+XTAL",87
+"XBG Tweedie Spat.","RMSE",9.19046199915269,"HB+XTAL",87
+"XGB Tweedie","MAE",4.56780846547549,"HB+XTAL",87
+"XGB Tweedie","MSE",84.4645917578697,"HB+XTAL",87
+"XGB Tweedie","RMSE",9.19046199915269,"HB+XTAL",87
+"LGBM Poisson Spat.","MAE",4.64230645235054,"HB+XTAL",87
+"LGBM Poisson Spat.","MSE",89.4499674307972,"HB+XTAL",87
+"LGBM Poisson Spat.","RMSE",9.45779929110347,"HB+XTAL",87
+"Poisson","MAE",4.9126781085745,"HB+XTAL",87
+"Poisson","MSE",92.6174247140374,"HB+XTAL",87
+"Poisson","RMSE",9.62379471487404,"HB+XTAL",87
+"NegBin","MAE",16.6437943679069,"HB+XTAL",87
+"NegBin","MSE",899.72560870418,"HB+XTAL",87
+"NegBin","RMSE",29.9954264631157,"HB+XTAL",87
+"Hurdle Poisson","MAE",7.10307559236091,"HB+XTAL",87
+"Hurdle Poisson","MSE",126.382526302381,"HB+XTAL",87
+"Hurdle Poisson","RMSE",11.2419983233579,"HB+XTAL",87
+"Hurdle NegBin","MAE",9.95409837644491,"HB+XTAL",87
+"Hurdle NegBin","MSE",200.43874875475,"HB+XTAL",87
+"Hurdle NegBin","RMSE",14.1576392366365,"HB+XTAL",87
+"XGB Poisson Spat.","IntervalWidth90_split",23.6506007194519,"HB+XTAL",87
+"XGB Poisson Spat.","IntervalWidth90_cvplus",51.9927380084991,"HB+XTAL",87
+"XGB Poisson","IntervalWidth90_split",23.565952026844,"HB+XTAL",87
+"XGB Poisson","IntervalWidth90_cvplus",62.0128413438797,"HB+XTAL",87
+"XBG Tweedie Spat.","IntervalWidth90_split",23.3360222816467,"HB+XTAL",87
+"XBG Tweedie Spat.","IntervalWidth90_cvplus",59.8815112113953,"HB+XTAL",87
+"XGB Tweedie","IntervalWidth90_split",23.3360222816467,"HB+XTAL",87
+"XGB Tweedie","IntervalWidth90_cvplus",59.8815112113953,"HB+XTAL",87
+"LGBM Poisson Spat.","IntervalWidth90_split",24.7763634426241,"HB+XTAL",87
+"LGBM Poisson Spat.","IntervalWidth90_cvplus",58.4573196424781,"HB+XTAL",87
+"Arithmetic Mean","MAE",8.55141843971631,"AVP+RG+YP",94
+"Arithmetic Mean","MSE",85.1503127984223,"AVP+RG+YP",94
+"Arithmetic Mean","RMSE",9.22769271261361,"AVP+RG+YP",94
+"Kriging","MAE",4.78785455001668,"AVP+RG+YP",94
+"Kriging","MSE",33.0213431038111,"AVP+RG+YP",94
+"Kriging","RMSE",5.74642002500784,"AVP+RG+YP",94
+"kNN (within pop)","MAE",5.01273445562664,"AVP+RG+YP",94
+"kNN (within pop)","MSE",35.071994548957,"AVP+RG+YP",94
+"kNN (within pop)","RMSE",5.92216130723885,"AVP+RG+YP",94
+"kNN (across pop)","MAE",5.01273445562664,"AVP+RG+YP",94
+"kNN (across pop)","MSE",35.071994548957,"AVP+RG+YP",94
+"kNN (across pop)","RMSE",5.92216130723885,"AVP+RG+YP",94
+"XGB Poisson Spat.","MAE",2.95158867720277,"AVP+RG+YP",94
+"XGB Poisson Spat.","MSE",20.7678880185591,"AVP+RG+YP",94
+"XGB Poisson Spat.","RMSE",4.55717983171162,"AVP+RG+YP",94
+"XGB Poisson","MAE",3.33233083312974,"AVP+RG+YP",94
+"XGB Poisson","MSE",37.2587626527197,"AVP+RG+YP",94
+"XGB Poisson","RMSE",6.10399563013602,"AVP+RG+YP",94
+"XBG Tweedie Spat.","MAE",2.82788115093841,"AVP+RG+YP",94
+"XBG Tweedie Spat.","MSE",23.8395900169985,"AVP+RG+YP",94
+"XBG Tweedie Spat.","RMSE",4.88258026221776,"AVP+RG+YP",94
+"XGB Tweedie","MAE",2.68945312652578,"AVP+RG+YP",94
+"XGB Tweedie","MSE",22.7762755100604,"AVP+RG+YP",94
+"XGB Tweedie","RMSE",4.7724496341041,"AVP+RG+YP",94
+"LGBM Poisson Spat.","MAE",2.71459158662859,"AVP+RG+YP",94
+"LGBM Poisson Spat.","MSE",25.1684969926321,"AVP+RG+YP",94
+"LGBM Poisson Spat.","RMSE",5.0168214033023,"AVP+RG+YP",94
+"Poisson","MAE",3.5423088530434,"AVP+RG+YP",94
+"Poisson","MSE",43.5057679421817,"AVP+RG+YP",94
+"Poisson","RMSE",6.59589023121077,"AVP+RG+YP",94
+"NegBin","MAE",2.60355084551512,"AVP+RG+YP",94
+"NegBin","MSE",20.8720934507679,"AVP+RG+YP",94
+"NegBin","RMSE",4.56859863095544,"AVP+RG+YP",94
+"Hurdle Poisson","MAE",2822848.93940933,"AVP+RG+YP",94
+"Hurdle Poisson","MSE",91979178255752.3,"AVP+RG+YP",94
+"Hurdle Poisson","RMSE",9590577.57675482,"AVP+RG+YP",94
+"Hurdle NegBin","MAE",6.50169987214054,"AVP+RG+YP",94
+"Hurdle NegBin","MSE",67.8719673917717,"AVP+RG+YP",94
+"Hurdle NegBin","RMSE",8.23844447646349,"AVP+RG+YP",94
+"XGB Poisson Spat.","IntervalWidth90_split",15.8551064193249,"AVP+RG+YP",94
+"XGB Poisson Spat.","IntervalWidth90_cvplus",50.3922468781471,"AVP+RG+YP",94
+"XGB Poisson","IntervalWidth90_split",15.0826610326767,"AVP+RG+YP",94
+"XGB Poisson","IntervalWidth90_cvplus",63.9686781167982,"AVP+RG+YP",94
+"XBG Tweedie Spat.","IntervalWidth90_split",19.1669484982267,"AVP+RG+YP",94
+"XBG Tweedie Spat.","IntervalWidth90_cvplus",60.5217879772186,"AVP+RG+YP",94
+"XGB Tweedie","IntervalWidth90_split",17.5604021802545,"AVP+RG+YP",94
+"XGB Tweedie","IntervalWidth90_cvplus",58.7731708049774,"AVP+RG+YP",94
+"LGBM Poisson Spat.","IntervalWidth90_split",13.4892704820993,"AVP+RG+YP",94
+"LGBM Poisson Spat.","IntervalWidth90_cvplus",62.3007988137045,"AVP+RG+YP",94
+"Arithmetic Mean","MAE",7.87263339070568,"Frigid+GRNA",83
+"Arithmetic Mean","MSE",89.0103721248962,"Frigid+GRNA",83
+"Arithmetic Mean","RMSE",9.43453083756135,"Frigid+GRNA",83
+"Kriging","MAE",5.1395564615662,"Frigid+GRNA",83
+"Kriging","MSE",57.0419277921335,"Frigid+GRNA",83
+"Kriging","RMSE",7.55261066070094,"Frigid+GRNA",83
+"kNN (within pop)","MAE",5.33467180687098,"Frigid+GRNA",83
+"kNN (within pop)","MSE",60.2073011691569,"Frigid+GRNA",83
+"kNN (within pop)","RMSE",7.75933638716333,"Frigid+GRNA",83
+"kNN (across pop)","MAE",5.33467180687098,"Frigid+GRNA",83
+"kNN (across pop)","MSE",60.2073011691569,"Frigid+GRNA",83
+"kNN (across pop)","RMSE",7.75933638716333,"Frigid+GRNA",83
+"XGB Poisson Spat.","MAE",3.54671102151813,"Frigid+GRNA",83
+"XGB Poisson Spat.","MSE",41.2793145140753,"Frigid+GRNA",83
+"XGB Poisson Spat.","RMSE",6.42489801585016,"Frigid+GRNA",83
+"XGB Poisson","MAE",2.81640564953258,"Frigid+GRNA",83
+"XGB Poisson","MSE",43.4368375767712,"Frigid+GRNA",83
+"XGB Poisson","RMSE",6.59066290874986,"Frigid+GRNA",83
+"XBG Tweedie Spat.","MAE",3.34548580985382,"Frigid+GRNA",83
+"XBG Tweedie Spat.","MSE",46.7472358082606,"Frigid+GRNA",83
+"XBG Tweedie Spat.","RMSE",6.83719502488123,"Frigid+GRNA",83
+"XGB Tweedie","MAE",3.29042385992067,"Frigid+GRNA",83
+"XGB Tweedie","MSE",47.7538096148441,"Frigid+GRNA",83
+"XGB Tweedie","RMSE",6.91041312910047,"Frigid+GRNA",83
+"LGBM Poisson Spat.","MAE",4.36095739749507,"Frigid+GRNA",83
+"LGBM Poisson Spat.","MSE",63.2868027212828,"Frigid+GRNA",83
+"LGBM Poisson Spat.","RMSE",7.95530029108159,"Frigid+GRNA",83
+"Poisson","MAE",3.89627640487039,"Frigid+GRNA",83
+"Poisson","MSE",61.6136612810249,"Frigid+GRNA",83
+"Poisson","RMSE",7.84943700408029,"Frigid+GRNA",83
+"NegBin","MAE",3.1221390726694,"Frigid+GRNA",83
+"NegBin","MSE",37.0279215453549,"Frigid+GRNA",83
+"NegBin","RMSE",6.08505723435325,"Frigid+GRNA",83
+"Hurdle Poisson","MAE",4.74589048925104,"Frigid+GRNA",83
+"Hurdle Poisson","MSE",48.0292261824047,"Frigid+GRNA",83
+"Hurdle Poisson","RMSE",6.93031212734352,"Frigid+GRNA",83
+"Hurdle NegBin","MAE",4.792772041744,"Frigid+GRNA",83
+"Hurdle NegBin","MSE",54.855447849097,"Frigid+GRNA",83
+"Hurdle NegBin","RMSE",7.40644637117538,"Frigid+GRNA",83
+"XGB Poisson Spat.","IntervalWidth90_split",15.2378881931305,"Frigid+GRNA",83
+"XGB Poisson Spat.","IntervalWidth90_cvplus",52.3318650722504,"Frigid+GRNA",83
+"XGB Poisson","IntervalWidth90_split",14.1089383721351,"Frigid+GRNA",83
+"XGB Poisson","IntervalWidth90_cvplus",60.9202775359151,"Frigid+GRNA",83
+"XBG Tweedie Spat.","IntervalWidth90_split",15.0953585386276,"Frigid+GRNA",83
+"XBG Tweedie Spat.","IntervalWidth90_cvplus",62.7286072731018,"Frigid+GRNA",83
+"XGB Tweedie","IntervalWidth90_split",14.6061655163765,"Frigid+GRNA",83
+"XGB Tweedie","IntervalWidth90_cvplus",63.0892671585082,"Frigid+GRNA",83
+"LGBM Poisson Spat.","IntervalWidth90_split",19.1809969727846,"Frigid+GRNA",83
+"LGBM Poisson Spat.","IntervalWidth90_cvplus",59.8533038073083,"Frigid+GRNA",83
+"Arithmetic Mean","MAE",8.97158999192897,"Baldy+BV+RAEL",118
+"Arithmetic Mean","MSE",109.729176371113,"Baldy+BV+RAEL",118
+"Arithmetic Mean","RMSE",10.4751695151493,"Baldy+BV+RAEL",118
+"Kriging","MAE",6.52383715762015,"Baldy+BV+RAEL",118
+"Kriging","MSE",108.940223686711,"Baldy+BV+RAEL",118
+"Kriging","RMSE",10.4374433501079,"Baldy+BV+RAEL",118
+"kNN (within pop)","MAE",7.0006369529229,"Baldy+BV+RAEL",118
+"kNN (within pop)","MSE",101.855054058108,"Baldy+BV+RAEL",118
+"kNN (within pop)","RMSE",10.0923264938322,"Baldy+BV+RAEL",118
+"kNN (across pop)","MAE",7.0006369529229,"Baldy+BV+RAEL",118
+"kNN (across pop)","MSE",101.855054058108,"Baldy+BV+RAEL",118
+"kNN (across pop)","RMSE",10.0923264938322,"Baldy+BV+RAEL",118
+"XGB Poisson Spat.","MAE",5.91873371373799,"Baldy+BV+RAEL",118
+"XGB Poisson Spat.","MSE",92.1280502487767,"Baldy+BV+RAEL",118
+"XGB Poisson Spat.","RMSE",9.59833580621019,"Baldy+BV+RAEL",118
+"XGB Poisson","MAE",5.93288779151389,"Baldy+BV+RAEL",118
+"XGB Poisson","MSE",110.266287512531,"Baldy+BV+RAEL",118
+"XGB Poisson","RMSE",10.5007755671917,"Baldy+BV+RAEL",118
+"XBG Tweedie Spat.","MAE",5.67773551148189,"Baldy+BV+RAEL",118
+"XBG Tweedie Spat.","MSE",87.3051404107503,"Baldy+BV+RAEL",118
+"XBG Tweedie Spat.","RMSE",9.34372197845967,"Baldy+BV+RAEL",118
+"XGB Tweedie","MAE",6.01237500552088,"Baldy+BV+RAEL",118
+"XGB Tweedie","MSE",108.174314480792,"Baldy+BV+RAEL",118
+"XGB Tweedie","RMSE",10.4006881734235,"Baldy+BV+RAEL",118
+"LGBM Poisson Spat.","MAE",5.75319361666876,"Baldy+BV+RAEL",118
+"LGBM Poisson Spat.","MSE",96.5518735960852,"Baldy+BV+RAEL",118
+"LGBM Poisson Spat.","RMSE",9.82608129398924,"Baldy+BV+RAEL",118
+"Poisson","MAE",6.42688897974146,"Baldy+BV+RAEL",118
+"Poisson","MSE",114.797369488688,"Baldy+BV+RAEL",118
+"Poisson","RMSE",10.7143534330676,"Baldy+BV+RAEL",118
+"NegBin","MAE",5.5602262727403,"Baldy+BV+RAEL",118
+"NegBin","MSE",97.5686906641574,"Baldy+BV+RAEL",118
+"NegBin","RMSE",9.87768650363826,"Baldy+BV+RAEL",118
+"Hurdle Poisson","MAE",5.97122763606656,"Baldy+BV+RAEL",118
+"Hurdle Poisson","MSE",101.356710468266,"Baldy+BV+RAEL",118
+"Hurdle Poisson","RMSE",10.0676069881708,"Baldy+BV+RAEL",118
+"Hurdle NegBin","MAE",6.1122008001585,"Baldy+BV+RAEL",118
+"Hurdle NegBin","MSE",101.453496069775,"Baldy+BV+RAEL",118
+"Hurdle NegBin","RMSE",10.0724126240824,"Baldy+BV+RAEL",118
+"XGB Poisson Spat.","IntervalWidth90_split",29.9882933378219,"Baldy+BV+RAEL",118
+"XGB Poisson Spat.","IntervalWidth90_cvplus",56.1253191590309,"Baldy+BV+RAEL",118
+"XGB Poisson","IntervalWidth90_split",31.8582790136337,"Baldy+BV+RAEL",118
+"XGB Poisson","IntervalWidth90_cvplus",61.4429795265197,"Baldy+BV+RAEL",118
+"XBG Tweedie Spat.","IntervalWidth90_split",29.1132653236389,"Baldy+BV+RAEL",118
+"XBG Tweedie Spat.","IntervalWidth90_cvplus",56.1963102817535,"Baldy+BV+RAEL",118
+"XGB Tweedie","IntervalWidth90_split",33.2377129733562,"Baldy+BV+RAEL",118
+"XGB Tweedie","IntervalWidth90_cvplus",63.2953166007996,"Baldy+BV+RAEL",118
+"LGBM Poisson Spat.","IntervalWidth90_split",29.6303776506073,"Baldy+BV+RAEL",118
+"LGBM Poisson Spat.","IntervalWidth90_cvplus",60.1816630124586,"Baldy+BV+RAEL",118
+"Arithmetic Mean","MAE",9.36688548504741,"GRNA+HB",81
+"Arithmetic Mean","MSE",125.869066604858,"GRNA+HB",81
+"Arithmetic Mean","RMSE",11.2191384074205,"GRNA+HB",81
+"Kriging","MAE",6.61595811701718,"GRNA+HB",81
+"Kriging","MSE",99.2020231507432,"GRNA+HB",81
+"Kriging","RMSE",9.96002124248453,"GRNA+HB",81
+"kNN (within pop)","MAE",6.7609813325105,"GRNA+HB",81
+"kNN (within pop)","MSE",101.737134643598,"GRNA+HB",81
+"kNN (within pop)","RMSE",10.0864827687157,"GRNA+HB",81
+"kNN (across pop)","MAE",6.7609813325105,"GRNA+HB",81
+"kNN (across pop)","MSE",101.737134643598,"GRNA+HB",81
+"kNN (across pop)","RMSE",10.0864827687157,"GRNA+HB",81
+"XGB Poisson Spat.","MAE",4.37407511877425,"GRNA+HB",81
+"XGB Poisson Spat.","MSE",74.8074639178676,"GRNA+HB",81
+"XGB Poisson Spat.","RMSE",8.64913081863534,"GRNA+HB",81
+"XGB Poisson","MAE",4.61716898098404,"GRNA+HB",81
+"XGB Poisson","MSE",77.2195152523835,"GRNA+HB",81
+"XGB Poisson","RMSE",8.78746352779819,"GRNA+HB",81
+"XBG Tweedie Spat.","MAE",4.31003461889693,"GRNA+HB",81
+"XBG Tweedie Spat.","MSE",79.2063937019183,"GRNA+HB",81
+"XBG Tweedie Spat.","RMSE",8.8997973966781,"GRNA+HB",81
+"XGB Tweedie","MAE",4.31311519772826,"GRNA+HB",81
+"XGB Tweedie","MSE",80.1993175303338,"GRNA+HB",81
+"XGB Tweedie","RMSE",8.95540716719981,"GRNA+HB",81
+"LGBM Poisson Spat.","MAE",4.15269040811814,"GRNA+HB",81
+"LGBM Poisson Spat.","MSE",90.1035485404503,"GRNA+HB",81
+"LGBM Poisson Spat.","RMSE",9.49228889891423,"GRNA+HB",81
+"Poisson","MAE",4.60223540911666,"GRNA+HB",81
+"Poisson","MSE",90.4436338445553,"GRNA+HB",81
+"Poisson","RMSE",9.5101857944288,"GRNA+HB",81
+"NegBin","MAE",4.22717596090501,"GRNA+HB",81
+"NegBin","MSE",61.9197613383481,"GRNA+HB",81
+"NegBin","RMSE",7.86891106433083,"GRNA+HB",81
+"Hurdle Poisson","MAE",6.18330352580643,"GRNA+HB",81
+"Hurdle Poisson","MSE",97.0190097079841,"GRNA+HB",81
+"Hurdle Poisson","RMSE",9.84982282622302,"GRNA+HB",81
+"Hurdle NegBin","MAE",7.00856373154187,"GRNA+HB",81
+"Hurdle NegBin","MSE",110.221855271444,"GRNA+HB",81
+"Hurdle NegBin","RMSE",10.4986596892862,"GRNA+HB",81
+"XGB Poisson Spat.","IntervalWidth90_split",22.2060799598694,"GRNA+HB",81
+"XGB Poisson Spat.","IntervalWidth90_cvplus",54.111417388916,"GRNA+HB",81
+"XGB Poisson","IntervalWidth90_split",22.6204767227173,"GRNA+HB",81
+"XGB Poisson","IntervalWidth90_cvplus",50.4815591812133,"GRNA+HB",81
+"XBG Tweedie Spat.","IntervalWidth90_split",22.8591237068176,"GRNA+HB",81
+"XBG Tweedie Spat.","IntervalWidth90_cvplus",53.8078609466553,"GRNA+HB",81
+"XGB Tweedie","IntervalWidth90_split",23.2974653244019,"GRNA+HB",81
+"XGB Tweedie","IntervalWidth90_cvplus",51.9852602005005,"GRNA+HB",81
+"LGBM Poisson Spat.","IntervalWidth90_split",20.5327423144777,"GRNA+HB",81
+"LGBM Poisson Spat.","IntervalWidth90_cvplus",54.7538311899363,"GRNA+HB",81
+"Arithmetic Mean","MAE",9.24160322436185,"BV+GRNA+RG",132
+"Arithmetic Mean","MSE",110.310943034656,"BV+GRNA+RG",132
+"Arithmetic Mean","RMSE",10.5029016483378,"BV+GRNA+RG",132
+"Kriging","MAE",6.59559914259402,"BV+GRNA+RG",132
+"Kriging","MSE",89.1141733628651,"BV+GRNA+RG",132
+"Kriging","RMSE",9.44003036874697,"BV+GRNA+RG",132
+"kNN (within pop)","MAE",6.78349989103954,"BV+GRNA+RG",132
+"kNN (within pop)","MSE",88.4555107280284,"BV+GRNA+RG",132
+"kNN (within pop)","RMSE",9.40507898574108,"BV+GRNA+RG",132
+"kNN (across pop)","MAE",6.78349989103954,"BV+GRNA+RG",132
+"kNN (across pop)","MSE",88.4555107280284,"BV+GRNA+RG",132
+"kNN (across pop)","RMSE",9.40507898574108,"BV+GRNA+RG",132
+"XGB Poisson Spat.","MAE",4.78349295574607,"BV+GRNA+RG",132
+"XGB Poisson Spat.","MSE",68.4639795569281,"BV+GRNA+RG",132
+"XGB Poisson Spat.","RMSE",8.2742963179311,"BV+GRNA+RG",132
+"XGB Poisson","MAE",5.01877988348574,"BV+GRNA+RG",132
+"XGB Poisson","MSE",90.5977004315219,"BV+GRNA+RG",132
+"XGB Poisson","RMSE",9.51828243074988,"BV+GRNA+RG",132
+"XBG Tweedie Spat.","MAE",4.74535116225933,"BV+GRNA+RG",132
+"XBG Tweedie Spat.","MSE",69.1460303292109,"BV+GRNA+RG",132
+"XBG Tweedie Spat.","RMSE",8.31540920996741,"BV+GRNA+RG",132
+"XGB Tweedie","MAE",4.74535116225933,"BV+GRNA+RG",132
+"XGB Tweedie","MSE",69.1460303292109,"BV+GRNA+RG",132
+"XGB Tweedie","RMSE",8.31540920996741,"BV+GRNA+RG",132
+"LGBM Poisson Spat.","MAE",5.07145608509729,"BV+GRNA+RG",132
+"LGBM Poisson Spat.","MSE",93.9116571092789,"BV+GRNA+RG",132
+"LGBM Poisson Spat.","RMSE",9.69080270716925,"BV+GRNA+RG",132
+"Poisson","MAE",215.042943155437,"BV+GRNA+RG",132
+"Poisson","MSE",265708.782947985,"BV+GRNA+RG",132
+"Poisson","RMSE",515.469478192438,"BV+GRNA+RG",132
+"NegBin","MAE",5.16011777725797,"BV+GRNA+RG",132
+"NegBin","MSE",79.0155833097587,"BV+GRNA+RG",132
+"NegBin","RMSE",8.88907100375279,"BV+GRNA+RG",132
+"Hurdle Poisson","MAE",6.81084116731281,"BV+GRNA+RG",132
+"Hurdle Poisson","MSE",96.4059100112287,"BV+GRNA+RG",132
+"Hurdle Poisson","RMSE",9.81865112992761,"BV+GRNA+RG",132
+"Hurdle NegBin","MAE",6.26992159737951,"BV+GRNA+RG",132
+"Hurdle NegBin","MSE",87.2953056313313,"BV+GRNA+RG",132
+"Hurdle NegBin","RMSE",9.34319568623773,"BV+GRNA+RG",132
+"XGB Poisson Spat.","IntervalWidth90_split",27.5853681564331,"BV+GRNA+RG",132
+"XGB Poisson Spat.","IntervalWidth90_cvplus",57.0752657651901,"BV+GRNA+RG",132
+"XGB Poisson","IntervalWidth90_split",26.6440850615501,"BV+GRNA+RG",132
+"XGB Poisson","IntervalWidth90_cvplus",56.7642805576324,"BV+GRNA+RG",132
+"XBG Tweedie Spat.","IntervalWidth90_split",25.872022819519,"BV+GRNA+RG",132
+"XBG Tweedie Spat.","IntervalWidth90_cvplus",56.7166058719158,"BV+GRNA+RG",132
+"XGB Tweedie","IntervalWidth90_split",25.872022819519,"BV+GRNA+RG",132
+"XGB Tweedie","IntervalWidth90_cvplus",56.7166058719158,"BV+GRNA+RG",132
+"LGBM Poisson Spat.","IntervalWidth90_split",26.492265384629,"BV+GRNA+RG",132
+"LGBM Poisson Spat.","IntervalWidth90_cvplus",66.5172097414959,"BV+GRNA+RG",132
+"Arithmetic Mean","MAE",8.19521019632028,"AVP+Frigid+HB",115
+"Arithmetic Mean","MSE",113.172596854667,"AVP+Frigid+HB",115
+"Arithmetic Mean","RMSE",10.6382609882756,"AVP+Frigid+HB",115
+"Kriging","MAE",5.9738391853814,"AVP+Frigid+HB",115
+"Kriging","MSE",103.737678860084,"AVP+Frigid+HB",115
+"Kriging","RMSE",10.1851695548029,"AVP+Frigid+HB",115
+"kNN (within pop)","MAE",6.03177605278796,"AVP+Frigid+HB",115
+"kNN (within pop)","MSE",103.38678716749,"AVP+Frigid+HB",115
+"kNN (within pop)","RMSE",10.1679293451268,"AVP+Frigid+HB",115
+"kNN (across pop)","MAE",6.03177605278796,"AVP+Frigid+HB",115
+"kNN (across pop)","MSE",103.38678716749,"AVP+Frigid+HB",115
+"kNN (across pop)","RMSE",10.1679293451268,"AVP+Frigid+HB",115
+"XGB Poisson Spat.","MAE",5.73721186547419,"AVP+Frigid+HB",115
+"XGB Poisson Spat.","MSE",120.32223238035,"AVP+Frigid+HB",115
+"XGB Poisson Spat.","RMSE",10.9691491183387,"AVP+Frigid+HB",115
+"XGB Poisson","MAE",5.70947861509479,"AVP+Frigid+HB",115
+"XGB Poisson","MSE",116.495677649057,"AVP+Frigid+HB",115
+"XGB Poisson","RMSE",10.7933163415633,"AVP+Frigid+HB",115
+"XBG Tweedie Spat.","MAE",4.55519803308922,"AVP+Frigid+HB",115
+"XBG Tweedie Spat.","MSE",85.0505155271032,"AVP+Frigid+HB",115
+"XBG Tweedie Spat.","RMSE",9.22228363948449,"AVP+Frigid+HB",115
+"XGB Tweedie","MAE",4.58825436263629,"AVP+Frigid+HB",115
+"XGB Tweedie","MSE",83.2245689846693,"AVP+Frigid+HB",115
+"XGB Tweedie","RMSE",9.12275007794631,"AVP+Frigid+HB",115
+"LGBM Poisson Spat.","MAE",5.20259837759156,"AVP+Frigid+HB",115
+"LGBM Poisson Spat.","MSE",102.613213887754,"AVP+Frigid+HB",115
+"LGBM Poisson Spat.","RMSE",10.1298180579788,"AVP+Frigid+HB",115
+"Poisson","MAE",6.51308716714325,"AVP+Frigid+HB",115
+"Poisson","MSE",138.621626574334,"AVP+Frigid+HB",115
+"Poisson","RMSE",11.7737685799549,"AVP+Frigid+HB",115
+"NegBin","MAE",5.48928785964988,"AVP+Frigid+HB",115
+"NegBin","MSE",80.7122523686164,"AVP+Frigid+HB",115
+"NegBin","RMSE",8.98399979789717,"AVP+Frigid+HB",115
+"Hurdle Poisson","MAE",72.1469637871407,"AVP+Frigid+HB",115
+"Hurdle Poisson","MSE",42327.4584677355,"AVP+Frigid+HB",115
+"Hurdle Poisson","RMSE",205.736381001843,"AVP+Frigid+HB",115
+"Hurdle NegBin","MAE",7.33359868437516,"AVP+Frigid+HB",115
+"Hurdle NegBin","MSE",112.800130115768,"AVP+Frigid+HB",115
+"Hurdle NegBin","RMSE",10.6207405634338,"AVP+Frigid+HB",115
+"XGB Poisson Spat.","IntervalWidth90_split",22.1138081431389,"AVP+Frigid+HB",115
+"XGB Poisson Spat.","IntervalWidth90_cvplus",58.2202861070633,"AVP+Frigid+HB",115
+"XGB Poisson","IntervalWidth90_split",22.8451059579849,"AVP+Frigid+HB",115
+"XGB Poisson","IntervalWidth90_cvplus",55.9223675251006,"AVP+Frigid+HB",115
+"XBG Tweedie Spat.","IntervalWidth90_split",22.2615321159363,"AVP+Frigid+HB",115
+"XBG Tweedie Spat.","IntervalWidth90_cvplus",59.7051204204559,"AVP+Frigid+HB",115
+"XGB Tweedie","IntervalWidth90_split",22.9275186538696,"AVP+Frigid+HB",115
+"XGB Tweedie","IntervalWidth90_cvplus",59.7434151649475,"AVP+Frigid+HB",115
+"LGBM Poisson Spat.","IntervalWidth90_split",24.4706437046707,"AVP+Frigid+HB",115
+"LGBM Poisson Spat.","IntervalWidth90_cvplus",55.8062595134737,"AVP+Frigid+HB",115
+"Arithmetic Mean","MAE",8.0892523364486,"AP+BV+Frigid",110
+"Arithmetic Mean","MSE",111.435197496407,"AP+BV+Frigid",110
+"Arithmetic Mean","RMSE",10.5562871075207,"AP+BV+Frigid",110
+"Kriging","MAE",7.09733549228699,"AP+BV+Frigid",110
+"Kriging","MSE",128.870102231155,"AP+BV+Frigid",110
+"Kriging","RMSE",11.3520968209029,"AP+BV+Frigid",110
+"kNN (within pop)","MAE",7.13097907641216,"AP+BV+Frigid",110
+"kNN (within pop)","MSE",127.606853394921,"AP+BV+Frigid",110
+"kNN (within pop)","RMSE",11.2963203475699,"AP+BV+Frigid",110
+"kNN (across pop)","MAE",7.13097907641216,"AP+BV+Frigid",110
+"kNN (across pop)","MSE",127.606853394921,"AP+BV+Frigid",110
+"kNN (across pop)","RMSE",11.2963203475699,"AP+BV+Frigid",110
+"XGB Poisson Spat.","MAE",6.57380387327549,"AP+BV+Frigid",110
+"XGB Poisson Spat.","MSE",128.883422351243,"AP+BV+Frigid",110
+"XGB Poisson Spat.","RMSE",11.3526834867904,"AP+BV+Frigid",110
+"XGB Poisson","MAE",5.98538260297342,"AP+BV+Frigid",110
+"XGB Poisson","MSE",107.516028778926,"AP+BV+Frigid",110
+"XGB Poisson","RMSE",10.3689936242109,"AP+BV+Frigid",110
+"XBG Tweedie Spat.","MAE",6.215595332785,"AP+BV+Frigid",110
+"XBG Tweedie Spat.","MSE",126.900318563624,"AP+BV+Frigid",110
+"XBG Tweedie Spat.","RMSE",11.2650041528454,"AP+BV+Frigid",110
+"XGB Tweedie","MAE",6.638815017688,"AP+BV+Frigid",110
+"XGB Tweedie","MSE",111.610181115058,"AP+BV+Frigid",110
+"XGB Tweedie","RMSE",10.5645719797377,"AP+BV+Frigid",110
+"LGBM Poisson Spat.","MAE",6.51701070690634,"AP+BV+Frigid",110
+"LGBM Poisson Spat.","MSE",130.284368866323,"AP+BV+Frigid",110
+"LGBM Poisson Spat.","RMSE",11.4142178385697,"AP+BV+Frigid",110
+"Poisson","MAE",17.5461680519475,"AP+BV+Frigid",110
+"Poisson","MSE",1090.65335932991,"AP+BV+Frigid",110
+"Poisson","RMSE",33.0250413978531,"AP+BV+Frigid",110
+"NegBin","MAE",7.49232487005197,"AP+BV+Frigid",110
+"NegBin","MSE",130.07397862083,"AP+BV+Frigid",110
+"NegBin","RMSE",11.4049979667175,"AP+BV+Frigid",110
+"Hurdle Poisson","MAE",9.54208192464115,"AP+BV+Frigid",110
+"Hurdle Poisson","MSE",211.063982039451,"AP+BV+Frigid",110
+"Hurdle Poisson","RMSE",14.5280412320261,"AP+BV+Frigid",110
+"Hurdle NegBin","MAE",6.69959256411265,"AP+BV+Frigid",110
+"Hurdle NegBin","MSE",108.605875558941,"AP+BV+Frigid",110
+"Hurdle NegBin","RMSE",10.4214142782513,"AP+BV+Frigid",110
+"XGB Poisson Spat.","IntervalWidth90_split",31.6506196558475,"AP+BV+Frigid",110
+"XGB Poisson Spat.","IntervalWidth90_cvplus",51.613504576683,"AP+BV+Frigid",110
+"XGB Poisson","IntervalWidth90_split",32.0268857240677,"AP+BV+Frigid",110
+"XGB Poisson","IntervalWidth90_cvplus",50.2994251728058,"AP+BV+Frigid",110
+"XBG Tweedie Spat.","IntervalWidth90_split",34.7159426182508,"AP+BV+Frigid",110
+"XBG Tweedie Spat.","IntervalWidth90_cvplus",55.653943554312,"AP+BV+Frigid",110
+"XGB Tweedie","IntervalWidth90_split",33.2673567056656,"AP+BV+Frigid",110
+"XGB Tweedie","IntervalWidth90_cvplus",65.4641269624233,"AP+BV+Frigid",110
+"LGBM Poisson Spat.","IntervalWidth90_split",36.0699607007685,"AP+BV+Frigid",110
+"LGBM Poisson Spat.","IntervalWidth90_cvplus",55.2173060595708,"AP+BV+Frigid",110
+"Arithmetic Mean","MAE",8.06354560172693,"Frigid+HB",102
+"Arithmetic Mean","MSE",115.299714715867,"Frigid+HB",102
+"Arithmetic Mean","RMSE",10.7377704723032,"Frigid+HB",102
+"Kriging","MAE",6.16410190533164,"Frigid+HB",102
+"Kriging","MSE",111.304802037856,"Frigid+HB",102
+"Kriging","RMSE",10.5501091007561,"Frigid+HB",102
+"kNN (within pop)","MAE",6.22082778863533,"Frigid+HB",102
+"kNN (within pop)","MSE",110.850323112272,"Frigid+HB",102
+"kNN (within pop)","RMSE",10.5285480058873,"Frigid+HB",102
+"kNN (across pop)","MAE",6.22082778863533,"Frigid+HB",102
+"kNN (across pop)","MSE",110.850323112272,"Frigid+HB",102
+"kNN (across pop)","RMSE",10.5285480058873,"Frigid+HB",102
+"XGB Poisson Spat.","MAE",5.81674779681306,"Frigid+HB",102
+"XGB Poisson Spat.","MSE",123.408781452422,"Frigid+HB",102
+"XGB Poisson Spat.","RMSE",11.1089505108458,"Frigid+HB",102
+"XGB Poisson","MAE",5.61103939521583,"Frigid+HB",102
+"XGB Poisson","MSE",118.056109788747,"Frigid+HB",102
+"XGB Poisson","RMSE",10.8653628466217,"Frigid+HB",102
+"XBG Tweedie Spat.","MAE",4.78094970942566,"Frigid+HB",102
+"XBG Tweedie Spat.","MSE",93.323771592884,"Frigid+HB",102
+"XBG Tweedie Spat.","RMSE",9.66042295103501,"Frigid+HB",102
+"XGB Tweedie","MAE",4.78094970942566,"Frigid+HB",102
+"XGB Tweedie","MSE",93.323771592884,"Frigid+HB",102
+"XGB Tweedie","RMSE",9.66042295103501,"Frigid+HB",102
+"LGBM Poisson Spat.","MAE",5.51065104737966,"Frigid+HB",102
+"LGBM Poisson Spat.","MSE",106.767508109117,"Frigid+HB",102
+"LGBM Poisson Spat.","RMSE",10.3328364019333,"Frigid+HB",102
+"Poisson","MAE",6.03371306935706,"Frigid+HB",102
+"Poisson","MSE",126.922702825937,"Frigid+HB",102
+"Poisson","RMSE",11.2659976400644,"Frigid+HB",102
+"NegBin","MAE",4.86400486622194,"Frigid+HB",102
+"NegBin","MSE",73.5905003665311,"Frigid+HB",102
+"NegBin","RMSE",8.57849056457668,"Frigid+HB",102
+"Hurdle Poisson","MAE",6.35804532573795,"Frigid+HB",102
+"Hurdle Poisson","MSE",105.031092452124,"Frigid+HB",102
+"Hurdle Poisson","RMSE",10.2484678099765,"Frigid+HB",102
+"Hurdle NegBin","MAE",6.64233973332164,"Frigid+HB",102
+"Hurdle NegBin","MSE",109.176376798959,"Frigid+HB",102
+"Hurdle NegBin","RMSE",10.4487500113152,"Frigid+HB",102
+"XGB Poisson Spat.","IntervalWidth90_split",22.1832920312881,"Frigid+HB",102
+"XGB Poisson Spat.","IntervalWidth90_cvplus",58.286655664444,"Frigid+HB",102
+"XGB Poisson","IntervalWidth90_split",22.5083969712257,"Frigid+HB",102
+"XGB Poisson","IntervalWidth90_cvplus",57.9385804608464,"Frigid+HB",102
+"XBG Tweedie Spat.","IntervalWidth90_split",22.8440353393555,"Frigid+HB",102
+"XBG Tweedie Spat.","IntervalWidth90_cvplus",58.0341517925262,"Frigid+HB",102
+"XGB Tweedie","IntervalWidth90_split",22.8440353393555,"Frigid+HB",102
+"XGB Tweedie","IntervalWidth90_cvplus",58.0341517925262,"Frigid+HB",102
+"LGBM Poisson Spat.","IntervalWidth90_split",24.7730480174567,"Frigid+HB",102
+"LGBM Poisson Spat.","IntervalWidth90_cvplus",56.7820623391669,"Frigid+HB",102

@@ -1,0 +1,50 @@
+"Model","Metric","Value"
+"Arithmetic Mean","MAE",8.06354560172693
+"Arithmetic Mean","MSE",115.299714715867
+"Arithmetic Mean","RMSE",10.7377704723032
+"Kriging","MAE",6.16410190533164
+"Kriging","MSE",111.304802037856
+"Kriging","RMSE",10.5501091007561
+"kNN (within pop)","MAE",6.22082778863533
+"kNN (within pop)","MSE",110.850323112272
+"kNN (within pop)","RMSE",10.5285480058873
+"kNN (across pop)","MAE",6.22082778863533
+"kNN (across pop)","MSE",110.850323112272
+"kNN (across pop)","RMSE",10.5285480058873
+"XGB Poisson Spat.","MAE",5.81674779681306
+"XGB Poisson Spat.","MSE",123.408781452422
+"XGB Poisson Spat.","RMSE",11.1089505108458
+"XGB Poisson","MAE",5.61103939521583
+"XGB Poisson","MSE",118.056109788747
+"XGB Poisson","RMSE",10.8653628466217
+"XBG Tweedie Spat.","MAE",4.78094970942566
+"XBG Tweedie Spat.","MSE",93.323771592884
+"XBG Tweedie Spat.","RMSE",9.66042295103501
+"XGB Tweedie","MAE",4.78094970942566
+"XGB Tweedie","MSE",93.323771592884
+"XGB Tweedie","RMSE",9.66042295103501
+"LGBM Poisson Spat.","MAE",5.51065104737966
+"LGBM Poisson Spat.","MSE",106.767508109117
+"LGBM Poisson Spat.","RMSE",10.3328364019333
+"Poisson","MAE",6.03371306935706
+"Poisson","MSE",126.922702825937
+"Poisson","RMSE",11.2659976400644
+"NegBin","MAE",4.86400486622194
+"NegBin","MSE",73.5905003665311
+"NegBin","RMSE",8.57849056457668
+"Hurdle Poisson","MAE",6.35804532573795
+"Hurdle Poisson","MSE",105.031092452124
+"Hurdle Poisson","RMSE",10.2484678099765
+"Hurdle NegBin","MAE",6.64233973332164
+"Hurdle NegBin","MSE",109.176376798959
+"Hurdle NegBin","RMSE",10.4487500113152
+"XGB Poisson Spat.","IntervalWidth90_split",22.1832920312881
+"XGB Poisson Spat.","IntervalWidth90_cvplus",58.286655664444
+"XGB Poisson","IntervalWidth90_split",22.5083969712257
+"XGB Poisson","IntervalWidth90_cvplus",57.9385804608464
+"XBG Tweedie Spat.","IntervalWidth90_split",22.8440353393555
+"XBG Tweedie Spat.","IntervalWidth90_cvplus",58.0341517925262
+"XGB Tweedie","IntervalWidth90_split",22.8440353393555
+"XGB Tweedie","IntervalWidth90_cvplus",58.0341517925262
+"LGBM Poisson Spat.","IntervalWidth90_split",24.7730480174567
+"LGBM Poisson Spat.","IntervalWidth90_cvplus",56.7820623391669

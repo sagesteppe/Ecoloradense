@@ -28,9 +28,97 @@ ensure_multipolygons <- function(X) { # @ stackoverflow
 }
 
 
+#' Decision curve analysis: net benefit vs. threshold probability
+#'
+#' @description Net benefit (Vickers & Elkin 2006) of using the model's predicted
+#' probabilities to classify presence, relative to the two reference strategies that
+#' bound any real classifier: "treat_all" (call every point presence) and "treat_none"
+#' (call every point absence, net benefit = 0 by definition). At threshold probability
+#' pt, a positive call is only "worth it" if the odds of a true positive are at least
+#' pt/(1-pt) against a false positive, so:
+#' \code{NB(pt) = TP/n - (FP/n) * (pt / (1 - pt))}. A model beats both reference
+#' strategies over a range of pt if its curve lies above them there - the range a
+#' decision-maker would plausibly use is what matters, not the single AUC-style summary.
+#' Undefined at pt = 1 (division by zero), so the default grid stops at 0.99, matching
+#' the `dcurves` package's default.
+#' @param truth Numeric or factor coding 0 = absence, 1 = presence, for the holdout set.
+#' @param prob Numeric, predicted probability of presence for the same rows as `truth`.
+#' @param thresholds Numeric vector of threshold probabilities to evaluate net benefit at.
+#' @return A long data.frame with one row per threshold x strategy (`model`, `treat_all`,
+#' `treat_none`), columns `threshold`, `strategy`, `net_benefit`.
+decisionCurve <- function(truth, prob, thresholds = seq(0.01, 0.99, by = 0.01)){
+
+  truth <- as.numeric(as.character(truth))
+  n <- length(truth)
+  prevalence <- mean(truth)
+
+  model_nb <- vapply(thresholds, function(pt){
+    predicted_pos <- prob >= pt
+    tp <- sum(predicted_pos & truth == 1)
+    fp <- sum(predicted_pos & truth == 0)
+    (tp / n) - (fp / n) * (pt / (1 - pt))
+  }, numeric(1))
+
+  treat_all_nb <- prevalence - (1 - prevalence) * (thresholds / (1 - thresholds))
+
+  data.frame(
+    threshold = rep(thresholds, 3),
+    strategy = rep(c('model', 'treat_all', 'treat_none'), each = length(thresholds)),
+    net_benefit = c(model_nb, treat_all_nb, rep(0, length(thresholds)))
+  )
+}
+
+
+#' Cox calibration: intercept and slope of a logistic recalibration model
+#'
+#' @description Regresses holdout truth on the logit of the predicted probabilities
+#' (Cox 1958; see Van Calster et al. 2016 for the modern treatment) to summarize
+#' calibration with two numbers: the \strong{slope}, from
+#' \code{glm(truth ~ qlogis(prob), family = binomial)}, is 1 for perfectly-spread
+#' predictions, <1 if the model is over-confident (probabilities too close to 0/1 for
+#' how discriminating it really is) and >1 if under-confident; the \strong{intercept},
+#' from the same model but with the logit held fixed as an offset (slope forced to 1),
+#' is 0 when predictions are correct on average and captures calibration-in-the-large -
+#' systematic over- or under-prediction of presence - separately from the slope. Both
+#' complement AUC/PR-AUC (which only reward correct rank-ordering, not correct
+#' probability values) and Brier score (a single number that conflates the two).
+#' @param truth Numeric or factor coding 0 = absence, 1 = presence, for the holdout set.
+#' @param prob Numeric, predicted probability of presence for the same rows as `truth`.
+#' @return A data.frame with two rows (`cox_intercept`, `cox_slope`), columns `metric`,
+#' `estimator`, `estimate`, `std_error`.
+coxCalibration <- function(truth, prob){
+
+  truth <- as.numeric(as.character(truth))
+  # clamp away from 0/1 so qlogis() doesn't return +-Inf for a holdout point the
+  # model was (near-)perfectly confident about.
+  prob <- pmin(pmax(prob, 1e-6), 1 - 1e-6)
+  logit_p <- qlogis(prob)
+
+  slope_fit <- glm(truth ~ logit_p, family = binomial)
+
+  # The intercept-only fit with logit_p as an offset is solved directly from its score
+  # equation, sum(truth - plogis(a + logit_p)) = 0, which is monotone in a with a single
+  # root - glm(truth ~ offset(logit_p)) can run off to ~1e14 (still reporting
+  # converged = TRUE) when many clamped predictions sit at +-13.8 on the logit scale.
+  intercept <- uniroot(function(a) sum(truth - plogis(a + logit_p)),
+                       interval = c(-50, 50), tol = 1e-10)$root
+  fitted_p <- plogis(intercept + logit_p)
+
+  data.frame(
+    metric = c('cox_intercept', 'cox_slope'),
+    estimator = 'glm',
+    estimate = c(intercept, coef(slope_fit)[['logit_p']]),
+    std_error = c(
+      1 / sqrt(sum(fitted_p * (1 - fitted_p))),
+      sqrt(vcov(slope_fit)['logit_p', 'logit_p'])
+    )
+  )
+}
+
+
 #' @param x input occurrence data
-#' @param resolution list of paths to geodata at different resolutions. 
-#' @param iteration numeric, which iteration of modelling is being performed? 
+#' @param resolution list of paths to geodata at different resolutions.
+#' @param iteration numeric, which iteration of modelling is being performed?
 #' @param se_prediction boolean, whether to predict the SE surfaces or not, can add roughly
 #' a week onto the prediction at 3m. 
 #' @param p2proc path to the processed raster data. 
@@ -191,30 +279,47 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   saveRDS(cmRestrat,
           file = paste0(results_root, '/tables/', fname, '.rds'))
   
-  # we will also save the pr-auc and ROC-auc metrics. 
+  # we will also save the pr-auc, ROC-auc, and Brier score metrics.
   df_auc <- data.frame(
     truth = as.factor(Test$Occurrence),
     Class1 = predictions$predictions[,2]
-  ) 
-  
+  )
+
   pr_auc_val <- yardstick::pr_auc(
-    data = df_auc, truth = truth, Class1, event_level = 'second') 
+    data = df_auc, truth = truth, Class1, event_level = 'second')
   roc_auc_val <- yardstick::roc_auc(
     df_auc, truth, Class1, event_level = 'second')
-  
+  # computed directly: yardstick::brier_class() ignores event_level = 'second' for a
+  # single binary probability column and scores it as P(absence), inflating Brier.
+  brier_val <- data.frame(.metric = 'brier_class', .estimator = 'binary',
+    .estimate = mean((as.numeric(as.character(Test$Occurrence)) - predictions$predictions[,2])^2))
+
+  # Cox calibration (intercept/slope of truth ~ logit(prob)) - the only rows carrying
+  # a real std_error, so the yardstick-derived rows above get NA for that column.
+  cox_val <- coxCalibration(truth = Test$Occurrence, prob = predictions$predictions[,2])
+
   setNames(
-    data.frame( 
+    data.frame(
       rbind(
-        pr_auc_val, 
-        roc_auc_val
+        pr_auc_val,
+        roc_auc_val,
+        brier_val
       )
     ), nm = c('metric', 'estimator', 'estimate')
   ) |>
+    mutate(std_error = NA_real_) |>
+    dplyr::bind_rows(cox_val) |>
     mutate(resolution = resolution, iteration = iteration) |>
     write.csv(paste0(results_root, '/tables/', fname, '.csv'),
               row.names = F)
-  
-  rm(df, df_auc, TrainIndex, Train, Test, predictions, cmRestrat)
+
+  # decision curve analysis (net benefit vs. threshold probability) - a separate
+  # curve, not a single scalar, so it gets its own file alongside the dismo
+  # eval/threshold objects rather than a row in the metrics table above.
+  dca <- decisionCurve(truth = Test$Occurrence, prob = predictions$predictions[,2])
+  write.csv(dca, paste0(results_root, '/evaluations/', fname, '-dca.csv'), row.names = FALSE)
+
+  rm(df, df_auc, TrainIndex, Train, Test, predictions, cmRestrat, dca, cox_val)
   }
 
   eval_path <- paste0(results_root, '/tables/', fname, '.csv')
@@ -1272,10 +1377,13 @@ CAST2rsample <- function(x, train){
 #' as a comparison baseline), 'spatial_knn' (`CAST::knndm()` spatial blocking,
 #' the same call `density_bayes.R`'s `brms_spatial_fold_ids()` uses for CV
 #' folds, used here instead as the actual train/test carve-out), or
-#' 'population' (leave-one-population-out on `Lctn_bb`).
+#' 'population' (leave-one-population-out on `Lctn_bb`), or 'population_group'
+#' (leave-2-3-populations-out - same `Lctn_bb` mechanics as 'population', just
+#' with a multi-name `replicate` - see `population_group_replicates()`).
 #' @param replicate method-specific: an RNG seed for 'twinning'/'classic'; a
 #' fold index `1:k` for 'spatial_knn' (which `knndm()` fold is held out); the
-#' population name (one `Lctn_bb` level) for 'population'.
+#' population name (one `Lctn_bb` level) for 'population'; a character vector
+#' of 2-3 population names for 'population_group'.
 #' @param k number of `CAST::knndm()` folds for 'spatial_knn' - also that
 #' method's natural replicate count (`1:k`).
 #' @return integer vector, indices of the held-out test rows in `df`.
@@ -1303,9 +1411,227 @@ split_indices <- function(df, method = 'twinning', replicate = 1, k = 10){
       kn <- CAST::knndm(df_sf, modeldomain, k = k, samplesize = 1000)
       kn$indx_test[[replicate]]
     },
-    population = which(df$Lctn_bb == replicate),
+    # `%in%` (not `==`) so `replicate` can be either a single population name
+    # (leave-one-population-out) or a character vector of 2-3 names
+    # (leave-N-populations-out, grouped to approximate an 80/20 split - see
+    # `population_group_replicates()`). 'population_group' is a distinct
+    # method name (not just 'population' with a longer `replicate`) so
+    # `splitData()`'s cache files and `compare_split_strategies.R`'s output
+    # tables stay separate from the exhaustive single-population LOPO runs.
+    population = , population_group = which(df$Lctn_bb %in% replicate),
     stop("split_indices(): unknown method '", method, "'")
   )
+}
+
+#' Curate a coverage set of leave-2-3-populations-out replicates.
+#'
+#' @description `split_indices(method = 'population')`'s single-population
+#' LOPO produces wildly uneven, often tiny test sets (n=4 to n=78 depending
+#' which population is held out - see `compare_split_strategies.R`'s
+#' `run_replicate()` docs) - a long way from a "natural" 80/20-ish train/test
+#' split. This groups 2-3 populations per replicate instead, randomly
+#' sampling combinations whose combined size falls within `target_frac +-
+#' tol` of `nrow(df)` (default targets the same ~20% `split_indices(method =
+#' 'classic')` uses), continuing until every eligible population has
+#' appeared in at least one held-out group (or `max_replicates` is hit,
+#' whichever comes first) rather than exhaustively enumerating every
+#' in-window combination (~165 for this dataset's 13 presence populations -
+#' impractical at ~30min/replicate for the full `densityModeller()`
+#' pipeline).
+#'
+#' @param df sf occurrence data.frame, same shape `splitData()` receives.
+#' @param target_frac,tol test-set size window, as a fraction of `nrow(df)`:
+#' `[target_frac - tol, target_frac + tol]`.
+#' @param group_sizes candidate group sizes (number of populations held out
+#' together) to sample from for each replicate.
+#' @param max_replicates stop once this many replicates are found, even if
+#' coverage isn't complete.
+#' @param seed RNG seed, for reproducibility of the sampled groups.
+#' @param max_attempts safety cap on sampling attempts (avoids an infinite
+#' loop if the window is too narrow for any combination to fit).
+#' @return a named list of character vectors (each a 2-3-element `Lctn_bb`
+#' group), names are `"-"`-free `"+"`-joined labels (e.g. `"CD+RAEL"`)
+#' suitable for use as `split_replicate` / a `compare_split_strategies.R`
+#' `replicate` id.
+population_group_replicates <- function(df, target_frac = 0.2, tol = 0.05,
+                                         group_sizes = 2:3, max_replicates = 10,
+                                         seed = 1, max_attempts = 5000){
+  sizes <- df |>
+    sf::st_drop_geometry() |>
+    dplyr::group_by(Lctn_bb) |>
+    dplyr::summarize(n = dplyr::n(), has_presence = any(Prsnc_All > 0), .groups = 'drop') |>
+    dplyr::filter(has_presence)
+  pop_sizes <- setNames(sizes$n, sizes$Lctn_bb)
+
+  n <- nrow(df)
+  lo <- (target_frac - tol) * n
+  hi <- (target_frac + tol) * n
+
+  set.seed(seed)
+  groups <- list()
+  covered <- character(0)
+  attempts <- 0
+
+  while(length(groups) < max_replicates && attempts < max_attempts){
+    attempts <- attempts + 1
+    k <- sample(group_sizes, 1)
+    # bias sampling toward populations not yet covered as a held-out member
+    # of some group, so a small replicate count still spreads across as many
+    # populations as possible; once everyone's covered (or too few remain to
+    # fill a group of size k), fall back to sampling from all populations.
+    remaining <- setdiff(names(pop_sizes), covered)
+    pool <- if(length(remaining) >= k) remaining else names(pop_sizes)
+    grp <- sample(pool, k)
+    ntest <- sum(pop_sizes[grp])
+    if(ntest < lo || ntest > hi) next
+    lbl <- paste(sort(grp), collapse = '+')
+    if(lbl %in% names(groups)) next
+    groups[[lbl]] <- grp
+    covered <- union(covered, grp)
+  }
+
+  groups
+}
+
+#' Curate a coverage set of leave-2-3-populations-out replicates, for SDM presence data.
+#'
+#' @description SDM analogue of `population_group_replicates()` (built for the
+#' count/density data, where every row - including absences - carries a
+#' `Lctn_bb` population label). The presence/near-absence data bound into
+#' `First_modelling/Modelling.Rmd`'s `m90`/`m30`/`m10` (from
+#' `data/Data4modelling/{res}-presence-iter1.gpkg`, before `select(Occurrence)`
+#' drops it) carries `Lctn_bb` on BOTH presence and paired field-verified
+#' near-absence rows - but the shared background pseudo-absence pool
+#' (`data/Data4modelling/iter1-pa.gpkg`) has no `Lctn_bb` at all, since those
+#' points aren't tied to any surveyed population (see `population_group_split()`
+#' for how that pool is folded into a replicate's test set). `target_frac`/`tol`
+#' are therefore evaluated against the number of *labeled* rows only (`nrow(x)`
+#' after `population_group_replicates_sdm()`'s own NA/zero-presence filtering),
+#' not the full presence+background N - the background pool's contribution to
+#' test-set size depends on `buffer_m` and isn't known until split time.
+#'
+#' As in `population_group_replicates()`, true-zero populations (surveyed,
+#' never occupied - e.g. CP/WMB in this dataset) are excluded as *replicate*
+#' targets: holding one out and predicting "absent everywhere" is trivially
+#' achievable and doesn't test generalization the way a real presence
+#' population does. They (and any row with `Lctn_bb == NA`, e.g. unassigned
+#' opportunistic iNat/herbarium presences) still appear normally in every
+#' replicate's training data.
+#'
+#' @param x sf object, the presence+near-absence data for one resolution
+#' (`Lctn_bb` retained - do not `select(Occurrence)` before calling this), NOT
+#' including the background pseudo-absence pool.
+#' @param target_frac,tol,group_sizes,max_replicates,seed,max_attempts as
+#' `population_group_replicates()`.
+#' @return named list of character vectors (2-3-element `Lctn_bb` groups), as
+#' `population_group_replicates()`.
+population_group_replicates_sdm <- function(x, target_frac = 0.2, tol = 0.1,
+                                             group_sizes = 2:3, max_replicates = 10,
+                                             seed = 1, max_attempts = 5000){
+  sizes <- x |>
+    sf::st_drop_geometry() |>
+    dplyr::filter(!is.na(Lctn_bb)) |>
+    dplyr::group_by(Lctn_bb) |>
+    dplyr::summarize(n = dplyr::n(), has_presence = any(Occurrence == 1), .groups = 'drop') |>
+    dplyr::filter(has_presence)
+  pop_sizes <- setNames(sizes$n, sizes$Lctn_bb)
+
+  n <- sum(pop_sizes)
+  lo <- (target_frac - tol) * n
+  hi <- (target_frac + tol) * n
+
+  set.seed(seed)
+  groups <- list()
+  covered <- character(0)
+  attempts <- 0
+
+  while(length(groups) < max_replicates && attempts < max_attempts){
+    attempts <- attempts + 1
+    k <- sample(group_sizes, 1)
+    remaining <- setdiff(names(pop_sizes), covered)
+    pool <- if(length(remaining) >= k) remaining else names(pop_sizes)
+    if(length(pool) < k) break
+    grp <- sample(pool, k)
+    ntest <- sum(pop_sizes[grp])
+    if(ntest < lo || ntest > hi) next
+    lbl <- paste(sort(grp), collapse = '+')
+    if(lbl %in% names(groups)) next
+    groups[[lbl]] <- grp
+    covered <- union(covered, grp)
+  }
+
+  groups
+}
+
+#' Leave-2-3-populations-out train/test split for SDM presence/absence data.
+#'
+#' @description SDM analogue of `split_indices(method = 'population_group')`,
+#' adapted for the fact that only PART of the SDM training data carries a
+#' `Lctn_bb` population label: the presence points and their paired
+#' field-verified near-absences (both from `{res}-presence-iter1.gpkg`) do,
+#' exactly like the count/density data, and move to train/test purely by
+#' population membership. The shared background pseudo-absence pool
+#' (`iter1-pa.gpkg`) doesn't - it's a landscape-wide sample with no ties to
+#' any surveyed population - so it can't be partitioned that way; instead, a
+#' background absence moves to test only if it falls within `buffer_m` of one
+#' of the held-out population's presence points. This makes the replicate a
+#' genuine held-out-region test (does the model generalize to an unseen
+#' population's neighborhood) rather than just a held-out-label test, while
+#' leaving the labeled majority of the split as a direct emulation of
+#' `population_group_replicates()`/`split_indices()`'s density-model logic.
+#'
+#' @param x sf object, `rbind`/`bind_rows` of the labeled presence+near-absence
+#' data (`Lctn_bb` retained) and the unlabeled background pseudo-absence pool
+#' - i.e. what `First_modelling/Modelling.Rmd` builds as `m90`/`m30`/`m10`
+#' before `select(Occurrence)` drops `Lctn_bb`, plus a `.id` column (see
+#' `modeller()`'s `split` argument; add one with
+#' `dplyr::mutate(x, .id = seq_len(nrow(x)))`, matching
+#' `adaptive_PAratio_search()`'s convention).
+#' @param replicate character vector of 2-3 `Lctn_bb` population names to hold
+#' out - one element of `population_group_replicates_sdm()`'s return value.
+#' @param buffer_m Numeric, meters. Background absences within this distance
+#' of any held-out population's presence points also move to test. Default
+#' 1000 - comfortably under the ~1100m minimum spacing between this dataset's
+#' closest neighboring populations (checked empirically), so the buffer
+#' doesn't reach into a population meant to stay in train.
+#' @return list, same shape `spatial_class_split()` returns: \code{train_id},
+#' \code{test_id} (`.id` values), and \code{summary} (n/proportion achieved
+#' per class, for a sanity check).
+population_group_split <- function(x, replicate, buffer_m = 1000){
+  stopifnot('.id' %in% names(x))
+
+  labeled <- x[!is.na(x$Lctn_bb) & x$Lctn_bb %in% replicate, ]
+  if(nrow(labeled) == 0){
+    stop("population_group_split(): no rows found for replicate '",
+         paste(replicate, collapse = '+'), "'")
+  }
+  held_out_presences <- labeled[labeled$Occurrence == 1, ]
+  buf <- sf::st_union(sf::st_buffer(held_out_presences, buffer_m))
+
+  bg_abs <- x[is.na(x$Lctn_bb) & x$Occurrence == 0, ]
+  bg_abs_in_buffer <- bg_abs[lengths(sf::st_intersects(bg_abs, buf)) > 0, ]
+
+  test_id  <- unique(c(labeled$.id, bg_abs_in_buffer$.id))
+  train_id <- setdiff(x$.id, test_id)
+
+  summary <- data.frame(
+    class = c('presence', 'absence'),
+    n_train = c(
+      sum(x$.id %in% train_id & x$Occurrence == 1),
+      sum(x$.id %in% train_id & x$Occurrence == 0)
+    ),
+    n_test = c(
+      sum(x$.id %in% test_id & x$Occurrence == 1),
+      sum(x$.id %in% test_id & x$Occurrence == 0)
+    )
+  )
+  summary$test_prop_achieved <- summary$n_test / (summary$n_train + summary$n_test)
+
+  message('Leave-population(s)-out split (held out: ', paste(replicate, collapse = '+'),
+          ', buffer_m = ', buffer_m, '):')
+  message(paste(utils::capture.output(print(summary, row.names = FALSE)), collapse = '\n'))
+
+  list(train_id = train_id, test_id = test_id, summary = summary)
 }
 
 splitData <- function(df, fp, bn, method = 'twinning', replicate = 1, k = 10){
@@ -1333,7 +1659,10 @@ splitData <- function(df, fp, bn, method = 'twinning', replicate = 1, k = 10){
   # existing caller/cached product uses method='twinning', replicate=1) -
   # any other method/replicate gets its own distinctly-named, reusable cache
   # instead of colliding with or overwriting the legacy file.
-  suffix <- if(method == 'twinning' && replicate == 1) '' else paste0('-', method, '-rep', replicate)
+  # `replicate` can be a vector (population_group_replicates()'s leave-2-3-
+  # out groups) - collapse to a single '+'-joined label for the filename.
+  replicate_label <- if(length(replicate) > 1) paste(sort(replicate), collapse = '+') else replicate
+  suffix <- if(method == 'twinning' && length(replicate) == 1 && replicate == 1) '' else paste0('-', method, '-rep', replicate_label)
   f <- file.path(fp, 'test_data', paste0('twin_indx-', gsub('-I.*$', '', bn), suffix, '.txt'))
 
   if(!file.exists(f)){

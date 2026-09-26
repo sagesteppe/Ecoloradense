@@ -14,6 +14,12 @@
 ## replicates (which CAST::knndm() fold is held out) and 'population' is the
 ## exhaustive leave-one-population-out set (as many replicates as
 ## populations) - neither has a stopping rule, both always run to completion.
+## 'population_group' is leave-2-3-populations-out (functions.R's
+## population_group_replicates()): single-population LOPO's test sets are
+## wildly uneven (n=4 to n=78) and mostly far from a "natural" 80/20 split -
+## this groups 2-3 populations per replicate so held-out size lands near 20%
+## of N, up to 10 replicates, biased to cover every population at least once
+## rather than enumerating all ~165 in-window combinations.
 ##
 ## Run with the working directory set to scripts/ (this project's usual
 ## convention) - e.g. `Rscript Census_uncertainty/compare_split_strategies.R <method>`.
@@ -66,9 +72,18 @@ race_check <- function(combined){
   list(table = mae, resolved = isTRUE(resolved), leader = top2$Model[1], runner_up = top2$Model[2])
 }
 
+#' Collapse a `split_indices()` replicate id (scalar for every method except
+#' 'population_group', where it's a 2-3-element character vector of
+#' `Lctn_bb` names) to a single label string, for filenames/messages/dedup.
+replicate_label <- function(replicate){
+  if(length(replicate) > 1) paste(sort(replicate), collapse = '+') else as.character(replicate)
+}
+
 #' Run one split-strategy replicate through the full densityModeller() pipeline.
 #'
-#' @param method,replicate,k as `split_indices()`.
+#' @param method,replicate,k as `split_indices()` ('population_group's
+#' `replicate` is a character vector of 2-3 `Lctn_bb` names - see
+#' `population_group_replicates()`).
 #' @return `densityModeller()$metrics`, tagged with `replicate` and `n_test`
 #' columns - `n_test` varies a lot across replicates (LOPO ranges from n=4 to
 #' n=78 depending which population is held out; `spatial_knn`'s folds aren't
@@ -77,16 +92,17 @@ race_check <- function(combined){
 #' (e.g. weighting, or just flagging) rather than silently averaged as if
 #' every replicate were equally informative.
 run_replicate <- function(method, replicate, k = 10, tune_metric = 'mae'){
-  bn_i <- paste0(bn_base, '-', method, 'Rep', replicate)
-  message(sprintf('\n===== %s replicate %s (bn = %s, tune_metric = %s) =====', method, replicate, bn_i, tune_metric))
+  lbl <- replicate_label(replicate)
+  bn_i <- paste0(bn_base, '-', method, 'Rep', lbl)
+  message(sprintf('\n===== %s replicate %s (bn = %s, tune_metric = %s) =====', method, lbl, bn_i, tune_metric))
   t0 <- Sys.time()
   res <- densityModeller(
     df, bn = bn_i, fp = fp,
     brms_refit_args = list(full_chains = 2, full_iter = 1000, full_warmup = 500),
     split_method = method, split_replicate = replicate, split_k = k, tune_metric = tune_metric
   )
-  message(sprintf('[timing] replicate %s total: %.1fs', replicate, as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
-  res$metrics$replicate <- replicate
+  message(sprintf('[timing] replicate %s total: %.1fs', lbl, as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
+  res$metrics$replicate <- lbl
   res$metrics$n_test <- length(split_indices(df, method = method, replicate = replicate, k = k))
   res$metrics
 }
@@ -128,10 +144,16 @@ run_strategy <- function(method, out_csv, tune_metric = 'mae'){
       dplyr::filter(has_presence) |>
       dplyr::pull(Lctn_bb) |>
       unique(),
+    # leave-2-3-populations-out (population_group_replicates(), functions.R)
+    # - a named list of 2-3-element character vectors, not a plain vector
+    # like the other methods' replicate_ids, so the `for(r in ...)` loop
+    # below still iterates one group per `r` and `replicate_label()` (not
+    # bare `r %in% done`) handles the resume/dedup check.
+    population_group = population_group_replicates(df),
     stop("run_strategy(): unknown method '", method, "'"))
 
   for(r in replicate_ids){
-    if(r %in% done) next
+    if(replicate_label(r) %in% done) next
     all_results[[length(all_results) + 1]] <- run_replicate(method, r, tune_metric = tune_metric)
     save_progress()
   }
