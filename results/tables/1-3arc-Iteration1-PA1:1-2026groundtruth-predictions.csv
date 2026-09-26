@@ -66,7 +66,7 @@
 "XGB Poisson Spat.",65,"Coche",0,25.4289493560791
 "XGB Poisson Spat.",66,"Coche",1,47.2894058227539
 "XGB Poisson Spat.",67,"Coche",39,25.3087673187256
-"XGB Poisson Spat.",68,"Coche",96,3.02216649055481
+"XGB Poisson Spat.",68,"Coche",96,41.9761772155762
 "XGB Poisson Spat.",69,"Coche",19,25.2531452178955
 "XGB Poisson Spat.",70,"Coche",0,25.4289493560791
 "XGB Poisson Spat.",71,"Coche",50,40.7667350769043
@@ -92,7 +92,7 @@
 "XGB Poisson Spat.",91,"Virginia Basin",7,7.84320878982544
 "XGB Poisson Spat.",92,"Virginia Basin",6,8.07698631286621
 "XGB Poisson Spat.",93,"Virginia Basin",2,7.36746549606323
-"XGB Poisson Spat.",94,"Crystal",1,0.495170414447784
+"XGB Poisson Spat.",94,"Crystal",1,0.3115174472332
 "XGB Poisson Spat.",95,"Crystal",2,0.489842742681503
 "XGB Poisson Spat.",96,"Crystal",2,0.671952068805695
 "XGB Poisson Spat.",97,"Crystal",12,0.315169632434845
@@ -122,7 +122,7 @@
 "XGB Poisson Spat.",121,"Bellview",7,11.8118085861206
 "XGB Poisson Spat.",122,"Bellview",4,9.56326198577881
 "XGB Poisson Spat.",123,"Bellview",3,5.700927734375
-"XGB Poisson Spat.",124,"Bellview",8,0.41449248790741
+"XGB Poisson Spat.",124,"Bellview",8,10.0053997039795
 "XGB Poisson Spat.",125,"Frigid",0,0.407228767871857
 "XGB Poisson Spat.",126,"Frigid",0,3.14345359802246
 "XGB Poisson Spat.",127,"Frigid",0,1.45479118824005
@@ -155,52 +155,32 @@
 "XGB Poisson Spat.",154,"Frigid",3,7.92118453979492
 "XGB Poisson Spat.",155,"Frigid",7,8.37124061584473
 "XGB Poisson Spat.",156,"Frigid",11,7.92118453979492
-"XGB Poisson Spat.",157,"Frigid",0,7.93456077575684
-"XGB Poisson Spat.",158,"Frigid",0,7.92118453979492
-"XGB Poisson Spat.",159,"Frigid",0,4.52861547470093
-"XGB Poisson Spat.",160,"Frigid",3,4.35387277603149
-"XGB Poisson Spat.",161,"Frigid",0,2.30092859268188
-"XGB Poisson Spat.",162,"Frigid",6,4.38448905944824
-"XGB Poisson Spat.",163,"Frigid",1,9.46803379058838
-"XGB Poisson Spat.",164,"Frigid",7,9.71428489685059
-"XGB Poisson Spat.",165,"Frigid",0,11.2008848190308
-"XGB Poisson Spat.",166,"Bellview 2",10,1.49458432197571
-"XGB Poisson Spat.",167,"Bellview 2",6,0.641480624675751
-"XGB Poisson Spat.",168,"Bellview 2",4,2.49290704727173
-"XGB Poisson Spat.",169,"Bellview 2",0,0.414741367101669
-"XGB Poisson Spat.",170,"Bellview 2",6,0.581953823566437
-"XGB Poisson Spat.",171,"Bellview 2",7,3.09029841423035
-"XGB Poisson Spat.",172,"Bellview 2",6,3.09365510940552
-"XGB Poisson Spat.",173,"Bellview 2",0,0.799337446689606
-"XGB Poisson Spat.",174,"Bellview 2",0,0.42218753695488
-"XGB Poisson Spat.",175,"Bellview 2",5,1.96480143070221
-"XGB Poisson Spat.",176,"Bellview 2",0,0.634918630123138
-"XGB Poisson Spat.",177,"Bellview 2",0,2.4721508026123
-"XGB Poisson Spat.",178,"Bellview 2",0,3.64262938499451
-"XGB Poisson Spat.",179,"Bellview 2",24,1.49296259880066
-"XGB Poisson Spat.",180,"Bellview 2",7,1.1034734249115
-"XGB Poisson Spat.",181,"Bellview 2",0,4.73604869842529
-"XGB Poisson Spat.",182,"Earthslide",6,2.67009663581848
-"XGB Poisson Spat.",183,"Earthslide",0,2.74475789070129
-"XGB Poisson Spat.",184,"Earthslide",8,1.15246498584747
-"XGB Poisson Spat.",185,"Earthslide",8,2.74475789070129
-"XGB Poisson Spat.",186,"Earthslide",17,2.74475789070129
-"XGB Poisson Spat.",187,"Earthslide",3,2.74475789070129
-"XGB Poisson Spat.",188,"Earthslide",14,2.77631497383118
-"XGB Poisson Spat.",189,"Earthslide",9,2.95050549507141
-"XGB Poisson Spat.",190,"Earthslide",29,2.66719937324524
-"XGB Poisson Spat.",191,"Earthslide",27,2.81971573829651
-"XGB Poisson Spat.",192,"Earthslide",27,2.74178051948547
-"XGB Poisson Spat.",193,"Earthslide",13,2.81971573829651
-"XGB Poisson Spat.",194,"Earthslide",20,2.74475789070129
-"XGB Poisson Spat.",195,"Earthslide",5,0.93228816986084
-"XGB Poisson Spat.",196,"Earthslide",6,0.93228816986084
-"XGB Poisson Spat.",197,"Earthslide",13,0.93228816986084
-"XGB Poisson Spat.",198,"Earthslide",0,0.788721203804016
-"XGB Poisson Spat.",199,"Earthslide",0,2.74475789070129
-"XGB Poisson Spat.",200,"Earthslide",0,0.760150551795959
-"XGB Poisson Spat.",201,"Earthslide",0,0.788721203804016
-"XGB Poisson Spat.",202,"Earthslide",0,0.767754435539246
+"XGB Poisson Spat.",157,"Frigid",12,7.92118453979492
+"XGB Poisson Spat.",158,"Frigid",0,7.93456077575684
+"XGB Poisson Spat.",159,"Frigid",0,7.92118453979492
+"XGB Poisson Spat.",160,"Frigid",0,4.52861547470093
+"XGB Poisson Spat.",161,"Frigid",3,4.35387277603149
+"XGB Poisson Spat.",162,"Frigid",0,2.30092859268188
+"XGB Poisson Spat.",163,"Frigid",6,4.38448905944824
+"XGB Poisson Spat.",164,"Frigid",1,9.46803379058838
+"XGB Poisson Spat.",165,"Frigid",7,9.71428489685059
+"XGB Poisson Spat.",166,"Frigid",0,11.2008848190308
+"XGB Poisson Spat.",167,"Bellview 2",10,1.49458432197571
+"XGB Poisson Spat.",168,"Bellview 2",6,0.641480624675751
+"XGB Poisson Spat.",169,"Bellview 2",4,2.49290704727173
+"XGB Poisson Spat.",170,"Bellview 2",0,0.414741367101669
+"XGB Poisson Spat.",171,"Bellview 2",6,0.581953823566437
+"XGB Poisson Spat.",172,"Bellview 2",7,3.09029841423035
+"XGB Poisson Spat.",173,"Bellview 2",6,3.09365510940552
+"XGB Poisson Spat.",174,"Bellview 2",0,0.799337446689606
+"XGB Poisson Spat.",175,"Bellview 2",0,0.42218753695488
+"XGB Poisson Spat.",176,"Bellview 2",5,1.96480143070221
+"XGB Poisson Spat.",177,"Bellview 2",0,0.634918630123138
+"XGB Poisson Spat.",178,"Bellview 2",0,2.4721508026123
+"XGB Poisson Spat.",179,"Bellview 2",0,3.64262938499451
+"XGB Poisson Spat.",180,"Bellview 2",24,1.49296259880066
+"XGB Poisson Spat.",181,"Bellview 2",7,1.1034734249115
+"XGB Poisson Spat.",182,"Bellview 2",0,4.73604869842529
 "XGB Poisson",1,"Antero",30,0.0596521236002445
 "XGB Poisson",2,"Antero",171,0.112053386867046
 "XGB Poisson",3,"Antero",99,0.0805106908082962
@@ -268,7 +248,7 @@
 "XGB Poisson",65,"Coche",0,15.9683656692505
 "XGB Poisson",66,"Coche",1,39.6561698913574
 "XGB Poisson",67,"Coche",39,11.7859926223755
-"XGB Poisson",68,"Coche",96,0.440661728382111
+"XGB Poisson",68,"Coche",96,42.1438255310059
 "XGB Poisson",69,"Coche",19,29.9251575469971
 "XGB Poisson",70,"Coche",0,19.8836154937744
 "XGB Poisson",71,"Coche",50,62.2543830871582
@@ -294,7 +274,7 @@
 "XGB Poisson",91,"Virginia Basin",7,3.32437324523926
 "XGB Poisson",92,"Virginia Basin",6,4.24258613586426
 "XGB Poisson",93,"Virginia Basin",2,1.52236580848694
-"XGB Poisson",94,"Crystal",1,0.0134453931823373
+"XGB Poisson",94,"Crystal",1,0.0222860872745514
 "XGB Poisson",95,"Crystal",2,0.142796993255615
 "XGB Poisson",96,"Crystal",2,0.0942274630069733
 "XGB Poisson",97,"Crystal",12,0.0138113675639033
@@ -324,7 +304,7 @@
 "XGB Poisson",121,"Bellview",7,6.74069929122925
 "XGB Poisson",122,"Bellview",4,18.0545902252197
 "XGB Poisson",123,"Bellview",3,0.98996639251709
-"XGB Poisson",124,"Bellview",8,0.0583793446421623
+"XGB Poisson",124,"Bellview",8,4.94266033172607
 "XGB Poisson",125,"Frigid",0,0.012477483600378
 "XGB Poisson",126,"Frigid",0,0.262861281633377
 "XGB Poisson",127,"Frigid",0,0.0308317095041275
@@ -357,52 +337,32 @@
 "XGB Poisson",154,"Frigid",3,3.107088804245
 "XGB Poisson",155,"Frigid",7,2.61825251579285
 "XGB Poisson",156,"Frigid",11,1.69635283946991
-"XGB Poisson",157,"Frigid",0,1.8564817905426
-"XGB Poisson",158,"Frigid",0,1.88403832912445
-"XGB Poisson",159,"Frigid",0,0.42947781085968
-"XGB Poisson",160,"Frigid",3,0.58320164680481
-"XGB Poisson",161,"Frigid",0,0.299131393432617
-"XGB Poisson",162,"Frigid",6,0.443148851394653
-"XGB Poisson",163,"Frigid",1,6.63923597335815
-"XGB Poisson",164,"Frigid",7,7.80199146270752
-"XGB Poisson",165,"Frigid",0,5.85365915298462
-"XGB Poisson",166,"Bellview 2",10,0.167582556605339
-"XGB Poisson",167,"Bellview 2",6,0.0501240938901901
-"XGB Poisson",168,"Bellview 2",4,0.633375823497772
-"XGB Poisson",169,"Bellview 2",0,0.0454610548913479
-"XGB Poisson",170,"Bellview 2",6,0.053163681179285
-"XGB Poisson",171,"Bellview 2",7,0.772945880889893
-"XGB Poisson",172,"Bellview 2",6,0.593700766563416
-"XGB Poisson",173,"Bellview 2",0,0.0525045953691006
-"XGB Poisson",174,"Bellview 2",0,0.0296128615736961
-"XGB Poisson",175,"Bellview 2",5,0.263104796409607
-"XGB Poisson",176,"Bellview 2",0,0.0278315786272287
-"XGB Poisson",177,"Bellview 2",0,0.219310700893402
-"XGB Poisson",178,"Bellview 2",0,2.08562564849854
-"XGB Poisson",179,"Bellview 2",24,0.17687314748764
-"XGB Poisson",180,"Bellview 2",7,0.0755879804491997
-"XGB Poisson",181,"Bellview 2",0,1.33107233047485
-"XGB Poisson",182,"Earthslide",6,0.278452634811401
-"XGB Poisson",183,"Earthslide",0,0.240056440234184
-"XGB Poisson",184,"Earthslide",8,0.200973585247993
-"XGB Poisson",185,"Earthslide",8,0.169139549136162
-"XGB Poisson",186,"Earthslide",17,0.326276540756226
-"XGB Poisson",187,"Earthslide",3,0.16993160545826
-"XGB Poisson",188,"Earthslide",14,0.252014249563217
-"XGB Poisson",189,"Earthslide",9,0.348116904497147
-"XGB Poisson",190,"Earthslide",29,0.16903418302536
-"XGB Poisson",191,"Earthslide",27,0.337459206581116
-"XGB Poisson",192,"Earthslide",27,0.283511221408844
-"XGB Poisson",193,"Earthslide",13,0.314216166734695
-"XGB Poisson",194,"Earthslide",20,0.225028589367867
-"XGB Poisson",195,"Earthslide",5,0.0747613906860352
-"XGB Poisson",196,"Earthslide",6,0.191316574811935
-"XGB Poisson",197,"Earthslide",13,0.409869492053986
-"XGB Poisson",198,"Earthslide",0,0.154749110341072
-"XGB Poisson",199,"Earthslide",0,0.217024356126785
-"XGB Poisson",200,"Earthslide",0,0.0939581021666527
-"XGB Poisson",201,"Earthslide",0,0.108705475926399
-"XGB Poisson",202,"Earthslide",0,0.104394882917404
+"XGB Poisson",157,"Frigid",12,2.4719409942627
+"XGB Poisson",158,"Frigid",0,1.8564817905426
+"XGB Poisson",159,"Frigid",0,1.88403832912445
+"XGB Poisson",160,"Frigid",0,0.42947781085968
+"XGB Poisson",161,"Frigid",3,0.58320164680481
+"XGB Poisson",162,"Frigid",0,0.299131393432617
+"XGB Poisson",163,"Frigid",6,0.443148851394653
+"XGB Poisson",164,"Frigid",1,6.63923597335815
+"XGB Poisson",165,"Frigid",7,7.80199146270752
+"XGB Poisson",166,"Frigid",0,5.85365915298462
+"XGB Poisson",167,"Bellview 2",10,0.167582556605339
+"XGB Poisson",168,"Bellview 2",6,0.0501240938901901
+"XGB Poisson",169,"Bellview 2",4,0.633375823497772
+"XGB Poisson",170,"Bellview 2",0,0.0454610548913479
+"XGB Poisson",171,"Bellview 2",6,0.053163681179285
+"XGB Poisson",172,"Bellview 2",7,0.772945880889893
+"XGB Poisson",173,"Bellview 2",6,0.593700766563416
+"XGB Poisson",174,"Bellview 2",0,0.0525045953691006
+"XGB Poisson",175,"Bellview 2",0,0.0296128615736961
+"XGB Poisson",176,"Bellview 2",5,0.263104796409607
+"XGB Poisson",177,"Bellview 2",0,0.0278315786272287
+"XGB Poisson",178,"Bellview 2",0,0.219310700893402
+"XGB Poisson",179,"Bellview 2",0,2.08562564849854
+"XGB Poisson",180,"Bellview 2",24,0.17687314748764
+"XGB Poisson",181,"Bellview 2",7,0.0755879804491997
+"XGB Poisson",182,"Bellview 2",0,1.33107233047485
 "XGB Tweedie Spat.",1,"Antero",30,0.00567045295611024
 "XGB Tweedie Spat.",2,"Antero",171,0.0115573471412063
 "XGB Tweedie Spat.",3,"Antero",99,0.011501869186759
@@ -470,7 +430,7 @@
 "XGB Tweedie Spat.",65,"Coche",0,1.01734280586243
 "XGB Tweedie Spat.",66,"Coche",1,33.6254692077637
 "XGB Tweedie Spat.",67,"Coche",39,15.0905275344849
-"XGB Tweedie Spat.",68,"Coche",96,0.120331987738609
+"XGB Tweedie Spat.",68,"Coche",96,53.6045722961426
 "XGB Tweedie Spat.",69,"Coche",19,3.61612629890442
 "XGB Tweedie Spat.",70,"Coche",0,1.00654196739197
 "XGB Tweedie Spat.",71,"Coche",50,47.3257789611816
@@ -496,7 +456,7 @@
 "XGB Tweedie Spat.",91,"Virginia Basin",7,3.22937774658203
 "XGB Tweedie Spat.",92,"Virginia Basin",6,4.70122861862183
 "XGB Tweedie Spat.",93,"Virginia Basin",2,4.11565971374512
-"XGB Tweedie Spat.",94,"Crystal",1,0.00333040184341371
+"XGB Tweedie Spat.",94,"Crystal",1,0.000967014057096094
 "XGB Tweedie Spat.",95,"Crystal",2,0.00342916045337915
 "XGB Tweedie Spat.",96,"Crystal",2,0.0140624400228262
 "XGB Tweedie Spat.",97,"Crystal",12,0.00068414892302826
@@ -526,7 +486,7 @@
 "XGB Tweedie Spat.",121,"Bellview",7,4.85413980484009
 "XGB Tweedie Spat.",122,"Bellview",4,6.79590082168579
 "XGB Tweedie Spat.",123,"Bellview",3,0.231701105833054
-"XGB Tweedie Spat.",124,"Bellview",8,0.00305238948203623
+"XGB Tweedie Spat.",124,"Bellview",8,15.3680763244629
 "XGB Tweedie Spat.",125,"Frigid",0,0.000476349727250636
 "XGB Tweedie Spat.",126,"Frigid",0,0.62878006696701
 "XGB Tweedie Spat.",127,"Frigid",0,0.00676297675818205
@@ -559,52 +519,32 @@
 "XGB Tweedie Spat.",154,"Frigid",3,4.66439247131348
 "XGB Tweedie Spat.",155,"Frigid",7,7.94715690612793
 "XGB Tweedie Spat.",156,"Frigid",11,2.03990888595581
-"XGB Tweedie Spat.",157,"Frigid",0,1.57766175270081
-"XGB Tweedie Spat.",158,"Frigid",0,1.95613837242126
-"XGB Tweedie Spat.",159,"Frigid",0,0.0217854473739862
-"XGB Tweedie Spat.",160,"Frigid",3,0.0325531549751759
-"XGB Tweedie Spat.",161,"Frigid",0,0.0012724653352052
-"XGB Tweedie Spat.",162,"Frigid",6,0.0249994397163391
-"XGB Tweedie Spat.",163,"Frigid",1,3.35825610160828
-"XGB Tweedie Spat.",164,"Frigid",7,3.20175099372864
-"XGB Tweedie Spat.",165,"Frigid",0,6.2210431098938
-"XGB Tweedie Spat.",166,"Bellview 2",10,0.00223659467883408
-"XGB Tweedie Spat.",167,"Bellview 2",6,0.00196482846513391
-"XGB Tweedie Spat.",168,"Bellview 2",4,0.0260341987013817
-"XGB Tweedie Spat.",169,"Bellview 2",0,0.00201468192972243
-"XGB Tweedie Spat.",170,"Bellview 2",6,0.00210398668423295
-"XGB Tweedie Spat.",171,"Bellview 2",7,0.118664033710957
-"XGB Tweedie Spat.",172,"Bellview 2",6,0.077586866915226
-"XGB Tweedie Spat.",173,"Bellview 2",0,0.00329833547584713
-"XGB Tweedie Spat.",174,"Bellview 2",0,0.00357102719135582
-"XGB Tweedie Spat.",175,"Bellview 2",5,0.162694200873375
-"XGB Tweedie Spat.",176,"Bellview 2",0,0.00684478180482984
-"XGB Tweedie Spat.",177,"Bellview 2",0,0.232680782675743
-"XGB Tweedie Spat.",178,"Bellview 2",0,0.340094089508057
-"XGB Tweedie Spat.",179,"Bellview 2",24,0.0033451970666647
-"XGB Tweedie Spat.",180,"Bellview 2",7,0.00901834759861231
-"XGB Tweedie Spat.",181,"Bellview 2",0,0.82665342092514
-"XGB Tweedie Spat.",182,"Earthslide",6,0.00574734341353178
-"XGB Tweedie Spat.",183,"Earthslide",0,0.00995813030749559
-"XGB Tweedie Spat.",184,"Earthslide",8,0.00333812064491212
-"XGB Tweedie Spat.",185,"Earthslide",8,0.00401111179962754
-"XGB Tweedie Spat.",186,"Earthslide",17,0.00984288938343525
-"XGB Tweedie Spat.",187,"Earthslide",3,0.00537207257002592
-"XGB Tweedie Spat.",188,"Earthslide",14,0.0202285945415497
-"XGB Tweedie Spat.",189,"Earthslide",9,0.0161032732576132
-"XGB Tweedie Spat.",190,"Earthslide",29,0.00476268632337451
-"XGB Tweedie Spat.",191,"Earthslide",27,0.00536115327849984
-"XGB Tweedie Spat.",192,"Earthslide",27,0.00754337245598435
-"XGB Tweedie Spat.",193,"Earthslide",13,0.0137662962079048
-"XGB Tweedie Spat.",194,"Earthslide",20,0.00496626785025001
-"XGB Tweedie Spat.",195,"Earthslide",5,0.011434574611485
-"XGB Tweedie Spat.",196,"Earthslide",6,0.0203727744519711
-"XGB Tweedie Spat.",197,"Earthslide",13,0.0209137108176947
-"XGB Tweedie Spat.",198,"Earthslide",0,0.0299326963722706
-"XGB Tweedie Spat.",199,"Earthslide",0,0.00507745007053018
-"XGB Tweedie Spat.",200,"Earthslide",0,0.00656098732724786
-"XGB Tweedie Spat.",201,"Earthslide",0,0.0138352746143937
-"XGB Tweedie Spat.",202,"Earthslide",0,0.00864169280976057
+"XGB Tweedie Spat.",157,"Frigid",12,2.34821844100952
+"XGB Tweedie Spat.",158,"Frigid",0,1.57766175270081
+"XGB Tweedie Spat.",159,"Frigid",0,1.95613837242126
+"XGB Tweedie Spat.",160,"Frigid",0,0.0217854473739862
+"XGB Tweedie Spat.",161,"Frigid",3,0.0325531549751759
+"XGB Tweedie Spat.",162,"Frigid",0,0.0012724653352052
+"XGB Tweedie Spat.",163,"Frigid",6,0.0249994397163391
+"XGB Tweedie Spat.",164,"Frigid",1,3.35825610160828
+"XGB Tweedie Spat.",165,"Frigid",7,3.20175099372864
+"XGB Tweedie Spat.",166,"Frigid",0,6.2210431098938
+"XGB Tweedie Spat.",167,"Bellview 2",10,0.00223659467883408
+"XGB Tweedie Spat.",168,"Bellview 2",6,0.00196482846513391
+"XGB Tweedie Spat.",169,"Bellview 2",4,0.0260341987013817
+"XGB Tweedie Spat.",170,"Bellview 2",0,0.00201468192972243
+"XGB Tweedie Spat.",171,"Bellview 2",6,0.00210398668423295
+"XGB Tweedie Spat.",172,"Bellview 2",7,0.118664033710957
+"XGB Tweedie Spat.",173,"Bellview 2",6,0.077586866915226
+"XGB Tweedie Spat.",174,"Bellview 2",0,0.00329833547584713
+"XGB Tweedie Spat.",175,"Bellview 2",0,0.00357102719135582
+"XGB Tweedie Spat.",176,"Bellview 2",5,0.162694200873375
+"XGB Tweedie Spat.",177,"Bellview 2",0,0.00684478180482984
+"XGB Tweedie Spat.",178,"Bellview 2",0,0.232680782675743
+"XGB Tweedie Spat.",179,"Bellview 2",0,0.340094089508057
+"XGB Tweedie Spat.",180,"Bellview 2",24,0.0033451970666647
+"XGB Tweedie Spat.",181,"Bellview 2",7,0.00901834759861231
+"XGB Tweedie Spat.",182,"Bellview 2",0,0.82665342092514
 "XGB Tweedie",1,"Antero",30,0.000331738119712099
 "XGB Tweedie",2,"Antero",171,0.000345632404787466
 "XGB Tweedie",3,"Antero",99,0.000352065253537148
@@ -672,7 +612,7 @@
 "XGB Tweedie",65,"Coche",0,6.08185243606567
 "XGB Tweedie",66,"Coche",1,42.4453811645508
 "XGB Tweedie",67,"Coche",39,17.7148036956787
-"XGB Tweedie",68,"Coche",96,0.00352424196898937
+"XGB Tweedie",68,"Coche",96,39.0291213989258
 "XGB Tweedie",69,"Coche",19,15.0151863098145
 "XGB Tweedie",70,"Coche",0,6.05572605133057
 "XGB Tweedie",71,"Coche",50,17.5374927520752
@@ -698,7 +638,7 @@
 "XGB Tweedie",91,"Virginia Basin",7,1.0471009016037
 "XGB Tweedie",92,"Virginia Basin",6,1.39602732658386
 "XGB Tweedie",93,"Virginia Basin",2,1.38121581077576
-"XGB Tweedie",94,"Crystal",1,0.00016255394439213
+"XGB Tweedie",94,"Crystal",1,5.60271691938397e-05
 "XGB Tweedie",95,"Crystal",2,0.000343584979418665
 "XGB Tweedie",96,"Crystal",2,0.00042034569196403
 "XGB Tweedie",97,"Crystal",12,0.00013592088362202
@@ -728,7 +668,7 @@
 "XGB Tweedie",121,"Bellview",7,1.59497570991516
 "XGB Tweedie",122,"Bellview",4,3.92424845695496
 "XGB Tweedie",123,"Bellview",3,0.00785151124000549
-"XGB Tweedie",124,"Bellview",8,0.000161944612045772
+"XGB Tweedie",124,"Bellview",8,3.17882466316223
 "XGB Tweedie",125,"Frigid",0,5.46848496014718e-05
 "XGB Tweedie",126,"Frigid",0,0.0948504135012627
 "XGB Tweedie",127,"Frigid",0,0.00145968678407371
@@ -761,52 +701,32 @@
 "XGB Tweedie",154,"Frigid",3,1.47965610027313
 "XGB Tweedie",155,"Frigid",7,1.0044070482254
 "XGB Tweedie",156,"Frigid",11,0.25777530670166
-"XGB Tweedie",157,"Frigid",0,0.330547899007797
-"XGB Tweedie",158,"Frigid",0,0.615201890468597
-"XGB Tweedie",159,"Frigid",0,0.00218674447387457
-"XGB Tweedie",160,"Frigid",3,0.00387732451781631
-"XGB Tweedie",161,"Frigid",0,0.000134784830152057
-"XGB Tweedie",162,"Frigid",6,0.00179821206256747
-"XGB Tweedie",163,"Frigid",1,3.59088182449341
-"XGB Tweedie",164,"Frigid",7,3.80912184715271
-"XGB Tweedie",165,"Frigid",0,3.45573306083679
-"XGB Tweedie",166,"Bellview 2",10,0.000123304038424976
-"XGB Tweedie",167,"Bellview 2",6,0.000154195193317719
-"XGB Tweedie",168,"Bellview 2",4,0.0077666980214417
-"XGB Tweedie",169,"Bellview 2",0,7.97820830484852e-05
-"XGB Tweedie",170,"Bellview 2",6,0.000160872936248779
-"XGB Tweedie",171,"Bellview 2",7,0.059335358440876
-"XGB Tweedie",172,"Bellview 2",6,0.0236447006464005
-"XGB Tweedie",173,"Bellview 2",0,0.00051906582666561
-"XGB Tweedie",174,"Bellview 2",0,0.000514196755830199
-"XGB Tweedie",175,"Bellview 2",5,0.107556402683258
-"XGB Tweedie",176,"Bellview 2",0,0.0036829134915024
-"XGB Tweedie",177,"Bellview 2",0,0.528338730335236
-"XGB Tweedie",178,"Bellview 2",0,0.0868628397583961
-"XGB Tweedie",179,"Bellview 2",24,0.0006733633344993
-"XGB Tweedie",180,"Bellview 2",7,0.00115384976379573
-"XGB Tweedie",181,"Bellview 2",0,0.587388575077057
-"XGB Tweedie",182,"Earthslide",6,9.13953626877628e-05
-"XGB Tweedie",183,"Earthslide",0,0.000138968302053399
-"XGB Tweedie",184,"Earthslide",8,7.67456585890613e-05
-"XGB Tweedie",185,"Earthslide",8,0.000146243517519906
-"XGB Tweedie",186,"Earthslide",17,0.00029127937159501
-"XGB Tweedie",187,"Earthslide",3,9.91752385743894e-05
-"XGB Tweedie",188,"Earthslide",14,0.000329716684063897
-"XGB Tweedie",189,"Earthslide",9,0.00125908374320716
-"XGB Tweedie",190,"Earthslide",29,0.000116252747830003
-"XGB Tweedie",191,"Earthslide",27,0.000373450544429943
-"XGB Tweedie",192,"Earthslide",27,0.000221368914935738
-"XGB Tweedie",193,"Earthslide",13,0.00103467376902699
-"XGB Tweedie",194,"Earthslide",20,0.000135318943648599
-"XGB Tweedie",195,"Earthslide",5,0.0012793029891327
-"XGB Tweedie",196,"Earthslide",6,0.00254260050132871
-"XGB Tweedie",197,"Earthslide",13,0.0020926094148308
-"XGB Tweedie",198,"Earthslide",0,0.00117275712545961
-"XGB Tweedie",199,"Earthslide",0,0.00022525159874931
-"XGB Tweedie",200,"Earthslide",0,0.000107234714960214
-"XGB Tweedie",201,"Earthslide",0,0.00176842405926436
-"XGB Tweedie",202,"Earthslide",0,0.000331909657688811
+"XGB Tweedie",157,"Frigid",12,0.682708442211151
+"XGB Tweedie",158,"Frigid",0,0.330547899007797
+"XGB Tweedie",159,"Frigid",0,0.615201890468597
+"XGB Tweedie",160,"Frigid",0,0.00218674447387457
+"XGB Tweedie",161,"Frigid",3,0.00387732451781631
+"XGB Tweedie",162,"Frigid",0,0.000134784830152057
+"XGB Tweedie",163,"Frigid",6,0.00179821206256747
+"XGB Tweedie",164,"Frigid",1,3.59088182449341
+"XGB Tweedie",165,"Frigid",7,3.80912184715271
+"XGB Tweedie",166,"Frigid",0,3.45573306083679
+"XGB Tweedie",167,"Bellview 2",10,0.000123304038424976
+"XGB Tweedie",168,"Bellview 2",6,0.000154195193317719
+"XGB Tweedie",169,"Bellview 2",4,0.0077666980214417
+"XGB Tweedie",170,"Bellview 2",0,7.97820830484852e-05
+"XGB Tweedie",171,"Bellview 2",6,0.000160872936248779
+"XGB Tweedie",172,"Bellview 2",7,0.059335358440876
+"XGB Tweedie",173,"Bellview 2",6,0.0236447006464005
+"XGB Tweedie",174,"Bellview 2",0,0.00051906582666561
+"XGB Tweedie",175,"Bellview 2",0,0.000514196755830199
+"XGB Tweedie",176,"Bellview 2",5,0.107556402683258
+"XGB Tweedie",177,"Bellview 2",0,0.0036829134915024
+"XGB Tweedie",178,"Bellview 2",0,0.528338730335236
+"XGB Tweedie",179,"Bellview 2",0,0.0868628397583961
+"XGB Tweedie",180,"Bellview 2",24,0.0006733633344993
+"XGB Tweedie",181,"Bellview 2",7,0.00115384976379573
+"XGB Tweedie",182,"Bellview 2",0,0.587388575077057
 "LGBM Poisson Spat.",1,"Antero",30,0.318878382198097
 "LGBM Poisson Spat.",2,"Antero",171,0.93798748714993
 "LGBM Poisson Spat.",3,"Antero",99,0.718715300908024
@@ -874,7 +794,7 @@
 "LGBM Poisson Spat.",65,"Coche",0,6.72483019852032
 "LGBM Poisson Spat.",66,"Coche",1,28.505682321896
 "LGBM Poisson Spat.",67,"Coche",39,25.1984225692673
-"LGBM Poisson Spat.",68,"Coche",96,2.45066655470493
+"LGBM Poisson Spat.",68,"Coche",96,22.9340350740832
 "LGBM Poisson Spat.",69,"Coche",19,10.7897432955497
 "LGBM Poisson Spat.",70,"Coche",0,5.2737798903073
 "LGBM Poisson Spat.",71,"Coche",50,55.3284657142718
@@ -900,7 +820,7 @@
 "LGBM Poisson Spat.",91,"Virginia Basin",7,4.76631943277905
 "LGBM Poisson Spat.",92,"Virginia Basin",6,6.68116213098103
 "LGBM Poisson Spat.",93,"Virginia Basin",2,4.69587694483154
-"LGBM Poisson Spat.",94,"Crystal",1,0.0537388113076212
+"LGBM Poisson Spat.",94,"Crystal",1,0.0525380665439942
 "LGBM Poisson Spat.",95,"Crystal",2,0.189739278697238
 "LGBM Poisson Spat.",96,"Crystal",2,0.104982707357579
 "LGBM Poisson Spat.",97,"Crystal",12,0.0165795504796993
@@ -930,7 +850,7 @@
 "LGBM Poisson Spat.",121,"Bellview",7,2.5464330254465
 "LGBM Poisson Spat.",122,"Bellview",4,8.90490338219439
 "LGBM Poisson Spat.",123,"Bellview",3,1.31307523010796
-"LGBM Poisson Spat.",124,"Bellview",8,0.0827462652485204
+"LGBM Poisson Spat.",124,"Bellview",8,12.5635557796034
 "LGBM Poisson Spat.",125,"Frigid",0,0.0145674137991878
 "LGBM Poisson Spat.",126,"Frigid",0,1.29807955005933
 "LGBM Poisson Spat.",127,"Frigid",0,0.0872110082359434
@@ -963,52 +883,32 @@
 "LGBM Poisson Spat.",154,"Frigid",3,6.32525763004386
 "LGBM Poisson Spat.",155,"Frigid",7,6.4684827648309
 "LGBM Poisson Spat.",156,"Frigid",11,3.98369513626178
-"LGBM Poisson Spat.",157,"Frigid",0,2.76827422321695
-"LGBM Poisson Spat.",158,"Frigid",0,5.17094271813916
-"LGBM Poisson Spat.",159,"Frigid",0,0.277099414787718
-"LGBM Poisson Spat.",160,"Frigid",3,0.352761959391427
-"LGBM Poisson Spat.",161,"Frigid",0,0.0487025247500014
-"LGBM Poisson Spat.",162,"Frigid",6,0.282248339236776
-"LGBM Poisson Spat.",163,"Frigid",1,5.92507995870575
-"LGBM Poisson Spat.",164,"Frigid",7,5.12951050844909
-"LGBM Poisson Spat.",165,"Frigid",0,9.83403296809952
-"LGBM Poisson Spat.",166,"Bellview 2",10,0.0439703677181394
-"LGBM Poisson Spat.",167,"Bellview 2",6,0.0450963744130912
-"LGBM Poisson Spat.",168,"Bellview 2",4,0.261595658455909
-"LGBM Poisson Spat.",169,"Bellview 2",0,0.0302077782816721
-"LGBM Poisson Spat.",170,"Bellview 2",6,0.0449673284825061
-"LGBM Poisson Spat.",171,"Bellview 2",7,0.369143207630591
-"LGBM Poisson Spat.",172,"Bellview 2",6,0.195784248717674
-"LGBM Poisson Spat.",173,"Bellview 2",0,0.0403258186220007
-"LGBM Poisson Spat.",174,"Bellview 2",0,0.0569494525117343
-"LGBM Poisson Spat.",175,"Bellview 2",5,0.410231978609658
-"LGBM Poisson Spat.",176,"Bellview 2",0,0.0932842233339889
-"LGBM Poisson Spat.",177,"Bellview 2",0,0.632927184242784
-"LGBM Poisson Spat.",178,"Bellview 2",0,0.490887570382225
-"LGBM Poisson Spat.",179,"Bellview 2",24,0.0335856637338844
-"LGBM Poisson Spat.",180,"Bellview 2",7,0.0925885166314492
-"LGBM Poisson Spat.",181,"Bellview 2",0,0.732629360456978
-"LGBM Poisson Spat.",182,"Earthslide",6,0.0808540193753623
-"LGBM Poisson Spat.",183,"Earthslide",0,0.0805478777866937
-"LGBM Poisson Spat.",184,"Earthslide",8,0.0349969112417364
-"LGBM Poisson Spat.",185,"Earthslide",8,0.059915997231744
-"LGBM Poisson Spat.",186,"Earthslide",17,0.0923026689068243
-"LGBM Poisson Spat.",187,"Earthslide",3,0.0313030390881578
-"LGBM Poisson Spat.",188,"Earthslide",14,0.196488890204086
-"LGBM Poisson Spat.",189,"Earthslide",9,0.227147192359798
-"LGBM Poisson Spat.",190,"Earthslide",29,0.0545579196269147
-"LGBM Poisson Spat.",191,"Earthslide",27,0.0633391847921657
-"LGBM Poisson Spat.",192,"Earthslide",27,0.0727403550538046
-"LGBM Poisson Spat.",193,"Earthslide",13,0.0578351912948544
-"LGBM Poisson Spat.",194,"Earthslide",20,0.0407121866659289
-"LGBM Poisson Spat.",195,"Earthslide",5,0.162087633010072
-"LGBM Poisson Spat.",196,"Earthslide",6,0.456892339280112
-"LGBM Poisson Spat.",197,"Earthslide",13,0.380933891857498
-"LGBM Poisson Spat.",198,"Earthslide",0,0.339233997512972
-"LGBM Poisson Spat.",199,"Earthslide",0,0.0400169500797208
-"LGBM Poisson Spat.",200,"Earthslide",0,0.0684722788213173
-"LGBM Poisson Spat.",201,"Earthslide",0,0.199196292640379
-"LGBM Poisson Spat.",202,"Earthslide",0,0.0623517710981363
+"LGBM Poisson Spat.",157,"Frigid",12,3.69369948841906
+"LGBM Poisson Spat.",158,"Frigid",0,2.76827422321695
+"LGBM Poisson Spat.",159,"Frigid",0,5.17094271813916
+"LGBM Poisson Spat.",160,"Frigid",0,0.277099414787718
+"LGBM Poisson Spat.",161,"Frigid",3,0.352761959391427
+"LGBM Poisson Spat.",162,"Frigid",0,0.0487025247500014
+"LGBM Poisson Spat.",163,"Frigid",6,0.282248339236776
+"LGBM Poisson Spat.",164,"Frigid",1,5.92507995870575
+"LGBM Poisson Spat.",165,"Frigid",7,5.12951050844909
+"LGBM Poisson Spat.",166,"Frigid",0,9.83403296809952
+"LGBM Poisson Spat.",167,"Bellview 2",10,0.0439703677181394
+"LGBM Poisson Spat.",168,"Bellview 2",6,0.0450963744130912
+"LGBM Poisson Spat.",169,"Bellview 2",4,0.261595658455909
+"LGBM Poisson Spat.",170,"Bellview 2",0,0.0302077782816721
+"LGBM Poisson Spat.",171,"Bellview 2",6,0.0449673284825061
+"LGBM Poisson Spat.",172,"Bellview 2",7,0.369143207630591
+"LGBM Poisson Spat.",173,"Bellview 2",6,0.195784248717674
+"LGBM Poisson Spat.",174,"Bellview 2",0,0.0403258186220007
+"LGBM Poisson Spat.",175,"Bellview 2",0,0.0569494525117343
+"LGBM Poisson Spat.",176,"Bellview 2",5,0.410231978609658
+"LGBM Poisson Spat.",177,"Bellview 2",0,0.0932842233339889
+"LGBM Poisson Spat.",178,"Bellview 2",0,0.632927184242784
+"LGBM Poisson Spat.",179,"Bellview 2",0,0.490887570382225
+"LGBM Poisson Spat.",180,"Bellview 2",24,0.0335856637338844
+"LGBM Poisson Spat.",181,"Bellview 2",7,0.0925885166314492
+"LGBM Poisson Spat.",182,"Bellview 2",0,0.732629360456978
 "kNN (within pop)",1,"Antero",30,8.5574564586357
 "kNN (within pop)",2,"Antero",171,8.5574564586357
 "kNN (within pop)",3,"Antero",99,8.5574564586357
@@ -1076,7 +976,7 @@
 "kNN (within pop)",65,"Coche",0,11.9028280083482
 "kNN (within pop)",66,"Coche",1,11.9028280083482
 "kNN (within pop)",67,"Coche",39,11.9028280083482
-"kNN (within pop)",68,"Coche",96,12.500005427703
+"kNN (within pop)",68,"Coche",96,11.9028280083482
 "kNN (within pop)",69,"Coche",19,11.9028280083482
 "kNN (within pop)",70,"Coche",0,11.9028280083482
 "kNN (within pop)",71,"Coche",50,11.9028280083482
@@ -1132,7 +1032,7 @@
 "kNN (within pop)",121,"Bellview",7,4.97925339825522
 "kNN (within pop)",122,"Bellview",4,4.97925339825522
 "kNN (within pop)",123,"Bellview",3,4.97925339825522
-"kNN (within pop)",124,"Bellview",8,5.88563637697863
+"kNN (within pop)",124,"Bellview",8,4.97925339825522
 "kNN (within pop)",125,"Frigid",0,6
 "kNN (within pop)",126,"Frigid",0,6
 "kNN (within pop)",127,"Frigid",0,6
@@ -1165,52 +1065,32 @@
 "kNN (within pop)",154,"Frigid",3,8
 "kNN (within pop)",155,"Frigid",7,8
 "kNN (within pop)",156,"Frigid",11,8
-"kNN (within pop)",157,"Frigid",0,8
+"kNN (within pop)",157,"Frigid",12,8
 "kNN (within pop)",158,"Frigid",0,8
 "kNN (within pop)",159,"Frigid",0,8
-"kNN (within pop)",160,"Frigid",3,5.6
-"kNN (within pop)",161,"Frigid",0,3.8
-"kNN (within pop)",162,"Frigid",6,5.4
-"kNN (within pop)",163,"Frigid",1,7.4
-"kNN (within pop)",164,"Frigid",7,6.8
-"kNN (within pop)",165,"Frigid",0,6.8
-"kNN (within pop)",166,"Bellview 2",10,5.88563637697863
-"kNN (within pop)",167,"Bellview 2",6,5.88563637697863
-"kNN (within pop)",168,"Bellview 2",4,5.88563637697863
-"kNN (within pop)",169,"Bellview 2",0,5.88563637697863
-"kNN (within pop)",170,"Bellview 2",6,5.88563637697863
-"kNN (within pop)",171,"Bellview 2",7,5.88563637697863
-"kNN (within pop)",172,"Bellview 2",6,5.88563637697863
-"kNN (within pop)",173,"Bellview 2",0,5.88563637697863
+"kNN (within pop)",160,"Frigid",0,8
+"kNN (within pop)",161,"Frigid",3,5.6
+"kNN (within pop)",162,"Frigid",0,3.8
+"kNN (within pop)",163,"Frigid",6,5.4
+"kNN (within pop)",164,"Frigid",1,7.4
+"kNN (within pop)",165,"Frigid",7,6.8
+"kNN (within pop)",166,"Frigid",0,6.8
+"kNN (within pop)",167,"Bellview 2",10,5.88563637697863
+"kNN (within pop)",168,"Bellview 2",6,5.88563637697863
+"kNN (within pop)",169,"Bellview 2",4,5.88563637697863
+"kNN (within pop)",170,"Bellview 2",0,5.88563637697863
+"kNN (within pop)",171,"Bellview 2",6,5.88563637697863
+"kNN (within pop)",172,"Bellview 2",7,5.88563637697863
+"kNN (within pop)",173,"Bellview 2",6,5.88563637697863
 "kNN (within pop)",174,"Bellview 2",0,5.88563637697863
-"kNN (within pop)",175,"Bellview 2",5,5.88563637697863
-"kNN (within pop)",176,"Bellview 2",0,4.97925339825522
+"kNN (within pop)",175,"Bellview 2",0,5.88563637697863
+"kNN (within pop)",176,"Bellview 2",5,5.88563637697863
 "kNN (within pop)",177,"Bellview 2",0,4.97925339825522
 "kNN (within pop)",178,"Bellview 2",0,4.97925339825522
-"kNN (within pop)",179,"Bellview 2",24,5.88563637697863
-"kNN (within pop)",180,"Bellview 2",7,5.88563637697863
-"kNN (within pop)",181,"Bellview 2",0,5.88563637697863
-"kNN (within pop)",182,"Earthslide",6,6.48420555936857
-"kNN (within pop)",183,"Earthslide",0,6.48420555936857
-"kNN (within pop)",184,"Earthslide",8,6.48420555936857
-"kNN (within pop)",185,"Earthslide",8,6.48420555936857
-"kNN (within pop)",186,"Earthslide",17,6.48420555936857
-"kNN (within pop)",187,"Earthslide",3,6.48420555936857
-"kNN (within pop)",188,"Earthslide",14,6.48420555936857
-"kNN (within pop)",189,"Earthslide",9,6.48420555936857
-"kNN (within pop)",190,"Earthslide",29,6.48420555936857
-"kNN (within pop)",191,"Earthslide",27,6.48420555936857
-"kNN (within pop)",192,"Earthslide",27,6.48420555936857
-"kNN (within pop)",193,"Earthslide",13,6.48420555936857
-"kNN (within pop)",194,"Earthslide",20,6.48420555936857
-"kNN (within pop)",195,"Earthslide",5,6.48420555936857
-"kNN (within pop)",196,"Earthslide",6,6.48420555936857
-"kNN (within pop)",197,"Earthslide",13,6.48420555936857
-"kNN (within pop)",198,"Earthslide",0,6.48420555936857
-"kNN (within pop)",199,"Earthslide",0,6.48420555936857
-"kNN (within pop)",200,"Earthslide",0,6.48420555936857
-"kNN (within pop)",201,"Earthslide",0,6.48420555936857
-"kNN (within pop)",202,"Earthslide",0,6.48420555936857
+"kNN (within pop)",179,"Bellview 2",0,4.97925339825522
+"kNN (within pop)",180,"Bellview 2",24,5.88563637697863
+"kNN (within pop)",181,"Bellview 2",7,5.88563637697863
+"kNN (within pop)",182,"Bellview 2",0,5.88563637697863
 "kNN (across pop)",1,"Antero",30,8.5574564586357
 "kNN (across pop)",2,"Antero",171,8.5574564586357
 "kNN (across pop)",3,"Antero",99,8.5574564586357
@@ -1278,7 +1158,7 @@
 "kNN (across pop)",65,"Coche",0,11.9028280083482
 "kNN (across pop)",66,"Coche",1,11.9028280083482
 "kNN (across pop)",67,"Coche",39,11.9028280083482
-"kNN (across pop)",68,"Coche",96,12.500005427703
+"kNN (across pop)",68,"Coche",96,11.9028280083482
 "kNN (across pop)",69,"Coche",19,11.9028280083482
 "kNN (across pop)",70,"Coche",0,11.9028280083482
 "kNN (across pop)",71,"Coche",50,11.9028280083482
@@ -1334,7 +1214,7 @@
 "kNN (across pop)",121,"Bellview",7,4.97925339825522
 "kNN (across pop)",122,"Bellview",4,4.97925339825522
 "kNN (across pop)",123,"Bellview",3,4.97925339825522
-"kNN (across pop)",124,"Bellview",8,5.88563637697863
+"kNN (across pop)",124,"Bellview",8,4.97925339825522
 "kNN (across pop)",125,"Frigid",0,5.44862312530237
 "kNN (across pop)",126,"Frigid",0,5.44862312530237
 "kNN (across pop)",127,"Frigid",0,5.44862312530237
@@ -1367,52 +1247,32 @@
 "kNN (across pop)",154,"Frigid",3,5.44862312530237
 "kNN (across pop)",155,"Frigid",7,5.44862312530237
 "kNN (across pop)",156,"Frigid",11,5.44862312530237
-"kNN (across pop)",157,"Frigid",0,5.29276726944651
+"kNN (across pop)",157,"Frigid",12,5.44862312530237
 "kNN (across pop)",158,"Frigid",0,5.29276726944651
-"kNN (across pop)",159,"Frigid",0,5.44862312530237
-"kNN (across pop)",160,"Frigid",3,5.44862312530237
-"kNN (across pop)",161,"Frigid",0,5.44862312530237
-"kNN (across pop)",162,"Frigid",6,5.44862312530237
-"kNN (across pop)",163,"Frigid",1,5.44862312530237
-"kNN (across pop)",164,"Frigid",7,5.44862312530237
-"kNN (across pop)",165,"Frigid",0,5.5694564586357
-"kNN (across pop)",166,"Bellview 2",10,5.88563637697863
-"kNN (across pop)",167,"Bellview 2",6,5.88563637697863
-"kNN (across pop)",168,"Bellview 2",4,5.88563637697863
-"kNN (across pop)",169,"Bellview 2",0,5.88563637697863
-"kNN (across pop)",170,"Bellview 2",6,5.88563637697863
-"kNN (across pop)",171,"Bellview 2",7,5.88563637697863
-"kNN (across pop)",172,"Bellview 2",6,5.88563637697863
-"kNN (across pop)",173,"Bellview 2",0,5.88563637697863
+"kNN (across pop)",159,"Frigid",0,5.29276726944651
+"kNN (across pop)",160,"Frigid",0,5.44862312530237
+"kNN (across pop)",161,"Frigid",3,5.44862312530237
+"kNN (across pop)",162,"Frigid",0,5.44862312530237
+"kNN (across pop)",163,"Frigid",6,5.44862312530237
+"kNN (across pop)",164,"Frigid",1,5.44862312530237
+"kNN (across pop)",165,"Frigid",7,5.44862312530237
+"kNN (across pop)",166,"Frigid",0,5.5694564586357
+"kNN (across pop)",167,"Bellview 2",10,5.88563637697863
+"kNN (across pop)",168,"Bellview 2",6,5.88563637697863
+"kNN (across pop)",169,"Bellview 2",4,5.88563637697863
+"kNN (across pop)",170,"Bellview 2",0,5.88563637697863
+"kNN (across pop)",171,"Bellview 2",6,5.88563637697863
+"kNN (across pop)",172,"Bellview 2",7,5.88563637697863
+"kNN (across pop)",173,"Bellview 2",6,5.88563637697863
 "kNN (across pop)",174,"Bellview 2",0,5.88563637697863
-"kNN (across pop)",175,"Bellview 2",5,5.88563637697863
-"kNN (across pop)",176,"Bellview 2",0,4.97925339825522
+"kNN (across pop)",175,"Bellview 2",0,5.88563637697863
+"kNN (across pop)",176,"Bellview 2",5,5.88563637697863
 "kNN (across pop)",177,"Bellview 2",0,4.97925339825522
 "kNN (across pop)",178,"Bellview 2",0,4.97925339825522
-"kNN (across pop)",179,"Bellview 2",24,5.88563637697863
-"kNN (across pop)",180,"Bellview 2",7,5.88563637697863
-"kNN (across pop)",181,"Bellview 2",0,5.88563637697863
-"kNN (across pop)",182,"Earthslide",6,6.48420555936857
-"kNN (across pop)",183,"Earthslide",0,6.48420555936857
-"kNN (across pop)",184,"Earthslide",8,6.48420555936857
-"kNN (across pop)",185,"Earthslide",8,6.48420555936857
-"kNN (across pop)",186,"Earthslide",17,6.48420555936857
-"kNN (across pop)",187,"Earthslide",3,6.48420555936857
-"kNN (across pop)",188,"Earthslide",14,6.48420555936857
-"kNN (across pop)",189,"Earthslide",9,6.48420555936857
-"kNN (across pop)",190,"Earthslide",29,6.48420555936857
-"kNN (across pop)",191,"Earthslide",27,6.48420555936857
-"kNN (across pop)",192,"Earthslide",27,6.48420555936857
-"kNN (across pop)",193,"Earthslide",13,6.48420555936857
-"kNN (across pop)",194,"Earthslide",20,6.48420555936857
-"kNN (across pop)",195,"Earthslide",5,6.48420555936857
-"kNN (across pop)",196,"Earthslide",6,6.48420555936857
-"kNN (across pop)",197,"Earthslide",13,6.48420555936857
-"kNN (across pop)",198,"Earthslide",0,6.48420555936857
-"kNN (across pop)",199,"Earthslide",0,6.48420555936857
-"kNN (across pop)",200,"Earthslide",0,6.48420555936857
-"kNN (across pop)",201,"Earthslide",0,6.48420555936857
-"kNN (across pop)",202,"Earthslide",0,6.48420555936857
+"kNN (across pop)",179,"Bellview 2",0,4.97925339825522
+"kNN (across pop)",180,"Bellview 2",24,5.88563637697863
+"kNN (across pop)",181,"Bellview 2",7,5.88563637697863
+"kNN (across pop)",182,"Bellview 2",0,5.88563637697863
 "brms Poisson",1,"Antero",30,9.98367273520056e+74
 "brms Poisson",2,"Antero",171,5.48829285267462e+74
 "brms Poisson",3,"Antero",99,1.53081107198336e+74
@@ -1480,7 +1340,7 @@
 "brms Poisson",65,"Coche",0,45.1928827264794
 "brms Poisson",66,"Coche",1,38.7283756613561
 "brms Poisson",67,"Coche",39,37.458271088953
-"brms Poisson",68,"Coche",96,1.59376318477512e+55
+"brms Poisson",68,"Coche",96,38.5949926828358
 "brms Poisson",69,"Coche",19,40.9751074629334
 "brms Poisson",70,"Coche",0,45.6309081967114
 "brms Poisson",71,"Coche",50,117.605728540382
@@ -1506,7 +1366,7 @@
 "brms Poisson",91,"Virginia Basin",7,0.00231314668536223
 "brms Poisson",92,"Virginia Basin",6,0.00221297649869526
 "brms Poisson",93,"Virginia Basin",2,0.00106172432835539
-"brms Poisson",94,"Crystal",1,0.189194530024976
+"brms Poisson",94,"Crystal",1,0.383250330741662
 "brms Poisson",95,"Crystal",2,0.725419333891025
 "brms Poisson",96,"Crystal",2,0.934706902174035
 "brms Poisson",97,"Crystal",12,0.351242313258467
@@ -1536,7 +1396,7 @@
 "brms Poisson",121,"Bellview",7,8.13548509250339
 "brms Poisson",122,"Bellview",4,8.4534826469314
 "brms Poisson",123,"Bellview",3,4.43390199775002
-"brms Poisson",124,"Bellview",8,0.87222233564501
+"brms Poisson",124,"Bellview",8,5.09419423269548
 "brms Poisson",125,"Frigid",0,0.557554350680913
 "brms Poisson",126,"Frigid",0,2.05000845405011
 "brms Poisson",127,"Frigid",0,0.658435823672599
@@ -1569,49 +1429,29 @@
 "brms Poisson",154,"Frigid",3,6.53979373702397
 "brms Poisson",155,"Frigid",7,5.18220153512401
 "brms Poisson",156,"Frigid",11,5.98287445823815
-"brms Poisson",157,"Frigid",0,6.30473494364069
-"brms Poisson",158,"Frigid",0,6.75738333646909
-"brms Poisson",159,"Frigid",0,1.81574952504449
-"brms Poisson",160,"Frigid",3,1.69926099945281
-"brms Poisson",161,"Frigid",0,0.842798820142411
-"brms Poisson",162,"Frigid",6,2.11515342679276
-"brms Poisson",163,"Frigid",1,6.11951191076707
-"brms Poisson",164,"Frigid",7,6.37876436803637
-"brms Poisson",165,"Frigid",0,5.92743586185613
-"brms Poisson",166,"Bellview 2",10,1.65895675269935
-"brms Poisson",167,"Bellview 2",6,1.53028336103267
-"brms Poisson",168,"Bellview 2",4,2.27872479955062
-"brms Poisson",169,"Bellview 2",0,0.816652679124468
-"brms Poisson",170,"Bellview 2",6,1.91054780365214
-"brms Poisson",171,"Bellview 2",7,4.82918297521865
-"brms Poisson",172,"Bellview 2",6,3.13056562979143
-"brms Poisson",173,"Bellview 2",0,2.11930908906722
-"brms Poisson",174,"Bellview 2",0,1.62726108550355
-"brms Poisson",175,"Bellview 2",5,1.92854601824551
-"brms Poisson",176,"Bellview 2",0,2.03928074817327
-"brms Poisson",177,"Bellview 2",0,2.47922161527484
-"brms Poisson",178,"Bellview 2",0,5.60475112579294
-"brms Poisson",179,"Bellview 2",24,2.06930355217018
-"brms Poisson",180,"Bellview 2",7,1.48091193981582
-"brms Poisson",181,"Bellview 2",0,2.4775853001871
-"brms Poisson",182,"Earthslide",6,28311.9714775605
-"brms Poisson",183,"Earthslide",0,12829.0694711547
-"brms Poisson",184,"Earthslide",8,0.0256626162256803
-"brms Poisson",185,"Earthslide",8,5541.0499893429
-"brms Poisson",186,"Earthslide",17,8944.56996598779
-"brms Poisson",187,"Earthslide",3,2832.82913724208
-"brms Poisson",188,"Earthslide",14,2751.94967651263
-"brms Poisson",189,"Earthslide",9,5943.37088859983
-"brms Poisson",190,"Earthslide",29,22371.9712572968
-"brms Poisson",191,"Earthslide",27,59178.4103393482
-"brms Poisson",192,"Earthslide",27,2223145.31438717
-"brms Poisson",193,"Earthslide",13,784599.838472169
-"brms Poisson",194,"Earthslide",20,725747.507594367
-"brms Poisson",195,"Earthslide",5,916580.627989219
-"brms Poisson",196,"Earthslide",6,1408362.97973365
-"brms Poisson",197,"Earthslide",13,501018.553685897
-"brms Poisson",198,"Earthslide",0,22502.6289974948
-"brms Poisson",199,"Earthslide",0,1058.40164780408
-"brms Poisson",200,"Earthslide",0,5004314.44578351
-"brms Poisson",201,"Earthslide",0,0.00744718726234584
-"brms Poisson",202,"Earthslide",0,4258087.30850966
+"brms Poisson",157,"Frigid",12,5.83627583303811
+"brms Poisson",158,"Frigid",0,6.30473494364069
+"brms Poisson",159,"Frigid",0,6.75738333646909
+"brms Poisson",160,"Frigid",0,1.81574952504449
+"brms Poisson",161,"Frigid",3,1.69926099945281
+"brms Poisson",162,"Frigid",0,0.842798820142411
+"brms Poisson",163,"Frigid",6,2.11515342679276
+"brms Poisson",164,"Frigid",1,6.11951191076707
+"brms Poisson",165,"Frigid",7,6.37876436803637
+"brms Poisson",166,"Frigid",0,5.92743586185613
+"brms Poisson",167,"Bellview 2",10,1.65895675269935
+"brms Poisson",168,"Bellview 2",6,1.53028336103267
+"brms Poisson",169,"Bellview 2",4,2.27872479955062
+"brms Poisson",170,"Bellview 2",0,0.816652679124468
+"brms Poisson",171,"Bellview 2",6,1.91054780365214
+"brms Poisson",172,"Bellview 2",7,4.82918297521865
+"brms Poisson",173,"Bellview 2",6,3.13056562979143
+"brms Poisson",174,"Bellview 2",0,2.11930908906722
+"brms Poisson",175,"Bellview 2",0,1.62726108550355
+"brms Poisson",176,"Bellview 2",5,1.92854601824551
+"brms Poisson",177,"Bellview 2",0,2.03928074817327
+"brms Poisson",178,"Bellview 2",0,2.47922161527484
+"brms Poisson",179,"Bellview 2",0,5.60475112579294
+"brms Poisson",180,"Bellview 2",24,2.06930355217018
+"brms Poisson",181,"Bellview 2",7,1.48091193981582
+"brms Poisson",182,"Bellview 2",0,2.4775853001871

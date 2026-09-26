@@ -26,8 +26,11 @@
 library(sf)
 library(dplyr)
 
-p2proj <- '/home/sagesteppe/Documents/Ecoloradense'
-gt_project <- path.expand('~/Documents/Ecolo_groundtruth/ecolo_gt2/ground_truth_median.gpkg')
+p2proj <- Find(dir.exists, c('/media/steppe/hdd/EriogonumColoradenseTaxonomy', '~/Documents/Ecoloradense'))
+## falls back to the repo's copy of the QGIS project when the working project
+## isn't on this machine; its known_pres fids match (verified 0m for all flags)
+gt_project <- Find(file.exists, c(path.expand('~/Documents/Ecolo_groundtruth/ecolo_gt2/ground_truth_median.gpkg'),
+                                  file.path(p2proj, 'data', 'GroundTruthPts', 'ground_truth_median-VISITED.gpkg')))
 
 to_remove <- read.csv(file.path(p2proj, 'data', 'GroundTruthing',
                                  'PublicPresenceRecordsToRemoveBasedOn2026GroundTruth.csv')) |>
