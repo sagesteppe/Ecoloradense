@@ -44,18 +44,20 @@ ensure_multipolygons <- function(X) { # @ stackoverflow
 #' @param truth Numeric or factor coding 0 = absence, 1 = presence, for the holdout set.
 #' @param prob Numeric, predicted probability of presence for the same rows as `truth`.
 #' @param thresholds Numeric vector of threshold probabilities to evaluate net benefit at.
+#' @param weights Optional numeric case weights (see prevalenceWeights()); NULL = equal.
 #' @return A long data.frame with one row per threshold x strategy (`model`, `treat_all`,
 #' `treat_none`), columns `threshold`, `strategy`, `net_benefit`.
-decisionCurve <- function(truth, prob, thresholds = seq(0.01, 0.99, by = 0.01)){
+decisionCurve <- function(truth, prob, thresholds = seq(0.01, 0.99, by = 0.01), weights = NULL){
 
   truth <- as.numeric(as.character(truth))
-  n <- length(truth)
-  prevalence <- mean(truth)
+  if(is.null(weights)) weights <- rep(1, length(truth))
+  n <- sum(weights)
+  prevalence <- sum(weights * truth) / n
 
   model_nb <- vapply(thresholds, function(pt){
     predicted_pos <- prob >= pt
-    tp <- sum(predicted_pos & truth == 1)
-    fp <- sum(predicted_pos & truth == 0)
+    tp <- sum(weights[predicted_pos & truth == 1])
+    fp <- sum(weights[predicted_pos & truth == 0])
     (tp / n) - (fp / n) * (pt / (1 - pt))
   }, numeric(1))
 
@@ -84,34 +86,47 @@ decisionCurve <- function(truth, prob, thresholds = seq(0.01, 0.99, by = 0.01)){
 #' probability values) and Brier score (a single number that conflates the two).
 #' @param truth Numeric or factor coding 0 = absence, 1 = presence, for the holdout set.
 #' @param prob Numeric, predicted probability of presence for the same rows as `truth`.
+#' @param weights Optional numeric case weights (see prevalenceWeights()); NULL = equal.
+#' With weights, both fits are weighted and the standard errors are sandwich (robust)
+#' errors, since the model-based ones would treat the weights as replicate counts.
 #' @return A data.frame with two rows (`cox_intercept`, `cox_slope`), columns `metric`,
 #' `estimator`, `estimate`, `std_error`.
-coxCalibration <- function(truth, prob){
+coxCalibration <- function(truth, prob, weights = NULL){
 
   truth <- as.numeric(as.character(truth))
+  weighted <- !is.null(weights)
+  if(!weighted) weights <- rep(1, length(truth))
   # clamp away from 0/1 so qlogis() doesn't return +-Inf for a holdout point the
   # model was (near-)perfectly confident about.
   prob <- pmin(pmax(prob, 1e-6), 1 - 1e-6)
   logit_p <- qlogis(prob)
 
-  slope_fit <- glm(truth ~ logit_p, family = binomial)
+  # quasibinomial: same estimates as binomial, without the non-integer-weights warning
+  slope_fit <- glm(truth ~ logit_p, family = if(weighted) quasibinomial else binomial,
+                   weights = weights)
 
   # The intercept-only fit with logit_p as an offset is solved directly from its score
-  # equation, sum(truth - plogis(a + logit_p)) = 0, which is monotone in a with a single
-  # root - glm(truth ~ offset(logit_p)) can run off to ~1e14 (still reporting
+  # equation, sum(w * (truth - plogis(a + logit_p))) = 0, which is monotone in a with a
+  # single root - glm(truth ~ offset(logit_p)) can run off to ~1e14 (still reporting
   # converged = TRUE) when many clamped predictions sit at +-13.8 on the logit scale.
-  intercept <- uniroot(function(a) sum(truth - plogis(a + logit_p)),
+  intercept <- uniroot(function(a) sum(weights * (truth - plogis(a + logit_p))),
                        interval = c(-50, 50), tol = 1e-10)$root
   fitted_p <- plogis(intercept + logit_p)
+  info <- sum(weights * fitted_p * (1 - fitted_p))
+
+  if(weighted){
+    intercept_se <- sqrt(sum((weights * (truth - fitted_p))^2)) / info
+    slope_se <- sqrt(sandwich::sandwich(slope_fit)['logit_p', 'logit_p'])
+  } else {
+    intercept_se <- 1 / sqrt(info)
+    slope_se <- sqrt(vcov(slope_fit)['logit_p', 'logit_p'])
+  }
 
   data.frame(
     metric = c('cox_intercept', 'cox_slope'),
     estimator = 'glm',
     estimate = c(intercept, coef(slope_fit)[['logit_p']]),
-    std_error = c(
-      1 / sqrt(sum(fitted_p * (1 - fitted_p))),
-      sqrt(vcov(slope_fit)['logit_p', 'logit_p'])
-    )
+    std_error = c(intercept_se, slope_se)
   )
 }
 
@@ -137,6 +152,25 @@ dca_scalars <- function(dca){
 }
 
 
+#' Case weights that make a truth set behave as if it had a given prevalence
+#'
+#' @description A holdout's prevalence is fixed by the PAratio its model was built
+#' with, so each model's calibration is scored against its own assumed prevalence and
+#' models built at different PAratios can't be compared on Brier/Cox/DCA. Weighting
+#' presences by target / observed and absences by (1 - target) / (1 - observed)
+#' puts every holdout on the same footing - the scores then answer "if presences made
+#' up `target` of the landscape, how good are these probabilities?" - while keeping
+#' every point. Weights average to 1.
+#' @param truth Numeric 0/1.
+#' @param target Single number in (0, 1), the prevalence to score against.
+#' @return Numeric vector of weights, same length as `truth`.
+prevalenceWeights <- function(truth, target){
+  observed <- mean(truth)
+  stopifnot(target > 0, target < 1, observed > 0, observed < 1)
+  ifelse(truth == 1, target / observed, (1 - target) / (1 - observed))
+}
+
+
 #' Discrimination, calibration and decision-curve scores for presence predictions
 #'
 #' @description One place to compute the full set of binary scores used to evaluate
@@ -145,34 +179,46 @@ dca_scalars <- function(dca){
 #' prevalence everywhere), Cox calibration intercept/slope, and the dca_scalars()
 #' summary of the decision curve. Brier is computed directly, not with
 #' yardstick::brier_class(), which ignores event_level = 'second' (see modeller()).
+#' With `target_prevalence`, every score is computed as if the truth set had that
+#' prevalence, by reweighting presences and absences (prevalenceWeights()) - see
+#' there for why. ROC-AUC is unaffected by reweighting; PR-AUC, Brier, Cox and the
+#' decision curve all change.
 #' @param truth Numeric or factor coding 0 = absence, 1 = presence.
 #' @param prob Numeric, predicted probability of presence for the same rows as `truth`.
+#' @param target_prevalence Optional single number in (0, 1); NULL = score as observed.
 #' @return A list: `metrics`, a long data.frame (`metric`, `estimate`, `std_error`);
 #' `wide`, the same estimates as a one-row tibble (plus the Cox standard errors); and
-#' `dca`, the full decisionCurve() output.
-presenceScores <- function(truth, prob){
+#' `dca`, the full decisionCurve() output. `prevalence` is the (effective) prevalence
+#' scored against; with `target_prevalence`, `observed_prevalence` (the truth set's
+#' own) is added.
+presenceScores <- function(truth, prob, target_prevalence = NULL){
 
   truth <- as.numeric(as.character(truth))
-  df_auc <- data.frame(truth = factor(truth, levels = c(0, 1)), Class1 = prob)
-  brier <- mean((truth - prob)^2)
-  prevalence <- mean(truth)
+  observed_prevalence <- mean(truth)
+  w <- if(is.null(target_prevalence)) rep(1, length(truth)) else prevalenceWeights(truth, target_prevalence)
+  df_auc <- data.frame(truth = factor(truth, levels = c(0, 1)), Class1 = prob,
+                       w = hardhat::importance_weights(w))
+  brier <- sum(w * (truth - prob)^2) / sum(w)
+  prevalence <- sum(w * truth) / sum(w)
   brier_ref <- prevalence * (1 - prevalence)
 
   # glm() warns on (quasi-)separation for near-perfect fits; the estimates are still
-  # returned (and will be large), so keep them.
-  cox <- suppressWarnings(coxCalibration(truth = truth, prob = prob))
-  dca <- decisionCurve(truth = truth, prob = prob)
+  # returned (and will be large), so keep them. Unweighted calls keep the original
+  # (model-based SE) path so existing results reproduce exactly.
+  cox_w <- if(is.null(target_prevalence)) NULL else w
+  cox <- suppressWarnings(coxCalibration(truth = truth, prob = prob, weights = cox_w))
+  dca <- decisionCurve(truth = truth, prob = prob, weights = w)
 
   metrics <- dplyr::bind_rows(
     data.frame(
-      metric = c('pr_auc', 'roc_auc', 'brier_class', 'brier_scaled', 'prevalence'),
+      metric = c('pr_auc', 'roc_auc', 'brier_class', 'brier_scaled', 'prevalence', 'observed_prevalence'),
       estimate = c(
-        yardstick::pr_auc(df_auc, truth, Class1, event_level = 'second')$.estimate,
-        yardstick::roc_auc(df_auc, truth, Class1, event_level = 'second')$.estimate,
-        brier, 1 - brier / brier_ref, prevalence
+        yardstick::pr_auc(df_auc, truth, Class1, event_level = 'second', case_weights = w)$.estimate,
+        yardstick::roc_auc(df_auc, truth, Class1, event_level = 'second', case_weights = w)$.estimate,
+        brier, 1 - brier / brier_ref, prevalence, observed_prevalence
       ),
       std_error = NA_real_
-    ),
+    ) |> dplyr::filter(!is.null(target_prevalence) | metric != 'observed_prevalence'),
     cox[, c('metric', 'estimate', 'std_error')],
     dplyr::mutate(dca_scalars(dca), std_error = NA_real_)
   )
