@@ -24,7 +24,7 @@ suppressPackageStartupMessages({
   library(dplyr)
   library(ranger)
 })
-source('functions.R') # coxCalibration(), decisionCurve()
+source('functions.R') # presenceScores(), dca_scalars()
 
 results_root <- file.path('..', 'results')
 results_dir <- file.path(results_root, 'tables')
@@ -47,22 +47,6 @@ parse_fname <- function(f){
   )
 }
 
-# Reduce a decisionCurve() output to scalars. "Best reference" at each threshold is
-# the better of treat_all / treat_none, i.e. max(treat_all, 0).
-#   dca_prop_useful   - fraction of the threshold grid where the model beats both references
-#   dca_mean_excess_nb - mean (model NB - best reference NB) over the grid; > 0 = useful on average
-#   dca_nb_pt25/50/75  - model net benefit at threshold probabilities 0.25, 0.5, 0.75
-dca_scalars <- function(dca){
-  w <- tidyr::pivot_wider(dca, names_from = strategy, values_from = net_benefit)
-  best_ref <- pmax(w$treat_all, w$treat_none)
-  nb_at <- function(pt) w$model[which.min(abs(w$threshold - pt))]
-  data.frame(
-    metric = c('dca_prop_useful', 'dca_mean_excess_nb', 'dca_nb_pt25', 'dca_nb_pt50', 'dca_nb_pt75'),
-    estimate = c(mean(w$model > best_ref), mean(w$model - best_ref),
-                 nb_at(0.25), nb_at(0.5), nb_at(0.75))
-  )
-}
-
 eval_one <- function(f){
   fname <- sub('\\.csv$', '', basename(f))
   model_path <- file.path(results_root, 'models', paste0(fname, '.rds'))
@@ -77,38 +61,13 @@ eval_one <- function(f){
   prob <- predict(rf_model, Test)$predictions[,2]
   truth <- Test$Occurrence
 
-  df_auc <- data.frame(truth = factor(truth, levels = c(0, 1)), Class1 = prob)
-  # not yardstick::brier_class(): it ignores event_level = 'second' here and scores
-  # the column as P(absence) (see modeller()).
-  brier <- mean((truth - prob)^2)
-  prevalence <- mean(truth)
-  brier_ref <- prevalence * (1 - prevalence)
-
-  # glm() warns on (quasi-)separation for near-perfect holdout fits; the estimates
-  # are still returned (and will be large), so keep them rather than drop the run.
-  cox <- suppressWarnings(coxCalibration(truth = truth, prob = prob))
-
-  dca <- decisionCurve(truth = truth, prob = prob)
+  scores <- presenceScores(truth = truth, prob = prob)
   dca_path <- file.path(results_root, 'evaluations', paste0(fname, '-dca.csv'))
-  if(!file.exists(dca_path)) write.csv(dca, dca_path, row.names = FALSE)
-
-  metrics <- dplyr::bind_rows(
-    data.frame(
-      metric = c('pr_auc', 'roc_auc', 'brier_class', 'brier_scaled', 'prevalence'),
-      estimate = c(
-        yardstick::pr_auc(df_auc, truth, Class1, event_level = 'second')$.estimate,
-        yardstick::roc_auc(df_auc, truth, Class1, event_level = 'second')$.estimate,
-        brier, 1 - brier / brier_ref, prevalence
-      ),
-      std_error = NA_real_
-    ),
-    cox[, c('metric', 'estimate', 'std_error')],
-    dplyr::mutate(dca_scalars(dca), std_error = NA_real_)
-  )
+  if(!file.exists(dca_path)) write.csv(scores$dca, dca_path, row.names = FALSE)
 
   list(
-    metrics = cbind(metrics, parse_fname(f), n_test = length(truth)),
-    dca = cbind(dca, parse_fname(f))
+    metrics = cbind(scores$metrics, parse_fname(f), n_test = length(truth)),
+    dca = cbind(scores$dca, parse_fname(f))
   )
 }
 

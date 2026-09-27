@@ -9,6 +9,7 @@ library(tidyverse)
 library(yardstick)
 
 p2proj <- Find(dir.exists, c('/media/steppe/hdd/EriogonumColoradenseTaxonomy', '~/Documents/Ecoloradense'))
+source(file.path(p2proj, 'scripts', 'functions.R')) # presenceScores()
 
 ## 1. Digitize -----------------------------------------------------------
 
@@ -59,36 +60,42 @@ suit_rasters <- list.files(file.path(p2proj, 'results', 'suitability_maps'),
 
 res_labels <- c('3arc' = '3 arc-second', '1arc' = '1 arc-second', '1-3arc' = '1/3 arc-second')
 
+## PR-AUC plus Brier / Cox calibration / decision-curve scores (presenceScores()); the
+## full per-model decision curves go to their own tables.
 evaluate_surface <- function(f, within_m = NULL) {
   model <- sub('-Pr\\.tif$', '', basename(f))
   res_tag <- sub('-Iteration.*$', '', model)
   iteration <- as.integer(sub('.*-Iteration([0-9]+)-.*', '\\1', model))
+  base <- tibble(model = model, resolution = unname(res_labels[res_tag]), iteration = iteration)
   r <- rast(f)
   pts <- if (is.null(within_m)) gt else filter(gt, dist_known_occ <= within_m)
   pred <- terra::extract(r, vect(pts))[, 2]
-  keep <- !is.na(pred)
+  keep <- !is.na(pred) & !is.na(pts$Presence)
   if (sum(keep) == 0 || length(unique(pts$Presence[keep])) < 2) {
-    return(tibble(model = model, resolution = unname(res_labels[res_tag]), iteration = iteration,
-                   n = sum(keep), pr_auc = NA_real_))
+    return(list(metrics = bind_cols(base, n = sum(keep), pr_auc = NA_real_), dca = NULL))
   }
-  df <- tibble(truth = factor(pts$Presence[keep], levels = c(0, 1)), pred = pred[keep])
-  tibble(model = model, resolution = unname(res_labels[res_tag]), iteration = iteration,
-         n = nrow(df),
-         pr_auc = yardstick::pr_auc(df, truth, pred, event_level = 'second')$.estimate)
+  scores <- presenceScores(truth = pts$Presence[keep], prob = pred[keep])
+  list(metrics = bind_cols(base, n = sum(keep), scores$wide),
+       dca = bind_cols(base, scores$dca))
 }
 
 if (length(suit_rasters) == 0) {
   message('No suitability rasters found under results/suitability_maps/ - nothing to evaluate yet.')
-  eval_all <- eval_270 <- tibble(model = character(), resolution = character(), iteration = integer(),
-                                  n = integer(), pr_auc = double())
+  res_all <- res_270 <- list(list(metrics = tibble(model = character(), resolution = character(),
+                                                    iteration = integer(), n = integer(), pr_auc = double()),
+                                  dca = NULL))
 } else {
-  eval_all <- map_dfr(suit_rasters, evaluate_surface)
-  eval_270 <- map_dfr(suit_rasters, evaluate_surface, within_m = 270)
+  res_all <- map(suit_rasters, evaluate_surface)
+  res_270 <- map(suit_rasters, evaluate_surface, within_m = 270)
 }
+eval_all <- map_dfr(res_all, 'metrics')
+eval_270 <- map_dfr(res_270, 'metrics')
 
 dir.create(file.path(p2proj, 'results', 'tables'), showWarnings = FALSE, recursive = TRUE)
 write.csv(eval_all, file.path(p2proj, 'results', 'tables', '2026-groundtruth-evaluation-all.csv'), row.names = FALSE)
 write.csv(eval_270, file.path(p2proj, 'results', 'tables', '2026-groundtruth-evaluation-270m.csv'), row.names = FALSE)
+write.csv(map_dfr(res_all, 'dca'), file.path(p2proj, 'results', 'tables', '2026-groundtruth-dca-curve-all.csv'), row.names = FALSE)
+write.csv(map_dfr(res_270, 'dca'), file.path(p2proj, 'results', 'tables', '2026-groundtruth-dca-curve-270m.csv'), row.names = FALSE)
 
 eval_all
 eval_270

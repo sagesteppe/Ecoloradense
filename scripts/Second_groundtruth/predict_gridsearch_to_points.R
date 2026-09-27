@@ -106,7 +106,7 @@ evaluate_model <- function(path, model, resolution, iteration, pa_ratio, dist_or
   keep_dist <- if (is.null(within_m)) rep(TRUE, nrow(gt)) else gt$dist_known_occ <= within_m
   rf_model <- readRDS(path)
   pred <- predict(rf_model, data = covs, type = 'response')$predictions[, '1']
-  keep <- keep_dist & !is.na(pred)
+  keep <- keep_dist & !is.na(pred) & !is.na(gt$Presence)
 
   base <- tibble(model = model, resolution = unname(res_labels[resolution]), iteration = iteration,
                  pa_ratio = pa_ratio, dist_order = dist_order, seed = seed, cv_structure = cv_structure,
@@ -115,9 +115,9 @@ evaluate_model <- function(path, model, resolution, iteration, pa_ratio, dist_or
   if (sum(keep) == 0 || length(unique(gt$Presence[keep])) < 2) {
     return(bind_cols(base, tibble(n = sum(keep), pr_auc = NA_real_)))
   }
-  df <- tibble(truth = factor(gt$Presence[keep], levels = c(0, 1)), pred = pred[keep])
-  bind_cols(base, tibble(n = nrow(df),
-    pr_auc = yardstick::pr_auc(df, truth, pred, event_level = 'second')$.estimate))
+  # PR-AUC plus Brier / Cox calibration / decision-curve scalars
+  scores <- presenceScores(truth = gt$Presence[keep], prob = pred[keep])
+  bind_cols(base, tibble(n = sum(keep)), scores$wide)
 }
 
 eval_all <- pmap_dfr(model_files, evaluate_model)
@@ -135,6 +135,10 @@ summarise_over_seeds <- function(eval_tbl) {
               mean_pr_auc = mean(pr_auc, na.rm = TRUE), sd_pr_auc = sd(pr_auc, na.rm = TRUE),
               min_pr_auc = min(pr_auc, na.rm = TRUE), max_pr_auc = max(pr_auc, na.rm = TRUE),
               mean_orig_pr_auc = mean(orig_pr_auc, na.rm = TRUE), sd_orig_pr_auc = sd(orig_pr_auc, na.rm = TRUE),
+              across(c(roc_auc, brier_class, brier_scaled, cox_intercept, cox_slope,
+                       starts_with('dca_')),
+                     list(mean = ~ mean(.x, na.rm = TRUE), sd = ~ sd(.x, na.rm = TRUE)),
+                     .names = '{.fn}_{.col}'),
               .groups = 'drop') |>
     arrange(desc(mean_pr_auc))
 }

@@ -116,6 +116,76 @@ coxCalibration <- function(truth, prob){
 }
 
 
+#' Reduce a decisionCurve() output to scalars
+#'
+#' @description "Best reference" at each threshold is the better of treat_all /
+#' treat_none, i.e. max(treat_all, 0).
+#'   dca_prop_useful    - fraction of the threshold grid where the model beats both references
+#'   dca_mean_excess_nb - mean (model NB - best reference NB) over the grid; > 0 = useful on average
+#'   dca_nb_pt25/50/75  - model net benefit at threshold probabilities 0.25, 0.5, 0.75
+#' @param dca Output of decisionCurve().
+#' @return A data.frame with columns `metric`, `estimate`.
+dca_scalars <- function(dca){
+  w <- tidyr::pivot_wider(dca, names_from = strategy, values_from = net_benefit)
+  best_ref <- pmax(w$treat_all, w$treat_none)
+  nb_at <- function(pt) w$model[which.min(abs(w$threshold - pt))]
+  data.frame(
+    metric = c('dca_prop_useful', 'dca_mean_excess_nb', 'dca_nb_pt25', 'dca_nb_pt50', 'dca_nb_pt75'),
+    estimate = c(mean(w$model > best_ref), mean(w$model - best_ref),
+                 nb_at(0.25), nb_at(0.5), nb_at(0.75))
+  )
+}
+
+
+#' Discrimination, calibration and decision-curve scores for presence predictions
+#'
+#' @description One place to compute the full set of binary scores used to evaluate
+#' SDM predictions against an independent truth set (e.g. the 2026 ground truth):
+#' PR-AUC, ROC-AUC, Brier score (raw and scaled against predicting the observed
+#' prevalence everywhere), Cox calibration intercept/slope, and the dca_scalars()
+#' summary of the decision curve. Brier is computed directly, not with
+#' yardstick::brier_class(), which ignores event_level = 'second' (see modeller()).
+#' @param truth Numeric or factor coding 0 = absence, 1 = presence.
+#' @param prob Numeric, predicted probability of presence for the same rows as `truth`.
+#' @return A list: `metrics`, a long data.frame (`metric`, `estimate`, `std_error`);
+#' `wide`, the same estimates as a one-row tibble (plus the Cox standard errors); and
+#' `dca`, the full decisionCurve() output.
+presenceScores <- function(truth, prob){
+
+  truth <- as.numeric(as.character(truth))
+  df_auc <- data.frame(truth = factor(truth, levels = c(0, 1)), Class1 = prob)
+  brier <- mean((truth - prob)^2)
+  prevalence <- mean(truth)
+  brier_ref <- prevalence * (1 - prevalence)
+
+  # glm() warns on (quasi-)separation for near-perfect fits; the estimates are still
+  # returned (and will be large), so keep them.
+  cox <- suppressWarnings(coxCalibration(truth = truth, prob = prob))
+  dca <- decisionCurve(truth = truth, prob = prob)
+
+  metrics <- dplyr::bind_rows(
+    data.frame(
+      metric = c('pr_auc', 'roc_auc', 'brier_class', 'brier_scaled', 'prevalence'),
+      estimate = c(
+        yardstick::pr_auc(df_auc, truth, Class1, event_level = 'second')$.estimate,
+        yardstick::roc_auc(df_auc, truth, Class1, event_level = 'second')$.estimate,
+        brier, 1 - brier / brier_ref, prevalence
+      ),
+      std_error = NA_real_
+    ),
+    cox[, c('metric', 'estimate', 'std_error')],
+    dplyr::mutate(dca_scalars(dca), std_error = NA_real_)
+  )
+
+  wide <- tibble::as_tibble(as.list(setNames(metrics$estimate, metrics$metric))) |>
+    dplyr::mutate(cox_intercept_se = cox$std_error[cox$metric == 'cox_intercept'],
+                  cox_slope_se = cox$std_error[cox$metric == 'cox_slope'],
+                  .after = cox_slope)
+
+  list(metrics = metrics, wide = wide, dca = dca)
+}
+
+
 #' @param x input occurrence data
 #' @param resolution list of paths to geodata at different resolutions.
 #' @param iteration numeric, which iteration of modelling is being performed?
