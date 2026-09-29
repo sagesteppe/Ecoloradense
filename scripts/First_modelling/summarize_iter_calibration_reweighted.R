@@ -17,7 +17,8 @@
 ## spread (the sd column of the summaries) is the more honest uncertainty here.
 ##
 ## Run with the working directory set to scripts/ - e.g.
-## `Rscript First_modelling/summarize_iter_calibration_reweighted.R`.
+## `Rscript First_modelling/summarize_iter_calibration_reweighted.R` or, for the
+## high-PA grid, `Rscript First_modelling/summarize_iter_calibration_reweighted.R results_highPA`.
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -31,7 +32,10 @@ source('functions.R') # presenceScores(), prevalenceWeights()
 # targeted near known populations, so it overstates landscape prevalence).
 target_prevalences <- round(seq(0.01, 0.40, by = 0.01), 2)
 
-results_root <- file.path('..', 'results')
+# optional argument: the results tree to summarize (default results/; e.g. results_highPA
+# for highPA_grid.R's fits). Tables are written into that tree's tables/ directory.
+args <- commandArgs(trailingOnly = TRUE)
+results_root <- file.path('..', if(length(args) >= 1) args[1] else 'results')
 results_dir <- file.path(results_root, 'tables')
 
 # fname format (see functions.R's modeller()): {resolution}-Iteration{0,1}-PA{PAratio}DO:{distOrder}-Seed{seed}.csv
@@ -44,12 +48,15 @@ message(sprintf('Found %d finished iteration-0/1 production eval files; scoring 
 parse_fname <- function(f){
   bn <- basename(f)
   m <- regmatches(bn, regexec(fname_re, bn))[[1]]
+  seed <- as.numeric(m[6])
   data.frame(
     resolution = m[2],
     iteration  = m[3],
     PAratio    = as.numeric(sub('^1:', '', m[4])),
     distOrder  = as.numeric(m[5]),
-    seed       = as.numeric(m[6])
+    seed       = seed,
+    # highPA_grid.R's spatial splits: seeds 5000 + 100 * (split - 1) + 1..n
+    split      = if(grepl('results_highPA(_fieldabs)?$', results_root) && seed > 5000) (seed - 5001) %/% 100 + 1 else NA
   )
 }
 
@@ -101,6 +108,16 @@ out_per_run        <- file.path(results_dir, 'iter0_iter1_calibration_reweighted
 out_by_res_iter_pa <- file.path(results_dir, 'iter0_iter1_calibration_reweighted_summary_by_resolution_PAratio.csv')
 write.csv(all_metrics, out_per_run, row.names = FALSE)
 write.csv(summary_by_res_iter_pa, out_by_res_iter_pa, row.names = FALSE)
+
+# per-split summaries, for the high-PA spatial grid's repeated knndm draws - how much of
+# the PA-ratio pattern survives a different train/test draw
+if(any(!is.na(all_metrics$split))){
+  out_by_split <- file.path(results_dir, 'iter0_iter1_calibration_reweighted_summary_by_split_PAratio.csv')
+  summary_by_split <- summarise_metrics(all_metrics, target_prevalence, resolution, iteration, split, PAratio) |>
+    dplyr::arrange(target_prevalence, iteration, resolution, split, PAratio, metric)
+  write.csv(summary_by_split, out_by_split, row.names = FALSE)
+  message('Written to: ', out_by_split)
+}
 
 message('\n=== mean scaled Brier by PAratio (rows) x selected target prevalences (cols), iteration x resolution ===')
 summary_by_res_iter_pa |>

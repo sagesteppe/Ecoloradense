@@ -1094,6 +1094,14 @@ assign_population <- function(x, areas, max_dist = 500){
 #' and evaluated against its own held-out population.
 #' @param results_root As \code{modeller()}'s; point this at its own tree (e.g.
 #' \code{results_populationsplit/}) rather than overwriting the primary results.
+#' @param ratio_train_only Passed to \code{distOrder_PAratio_simulator()}. FALSE (the
+#' default, as the production LOPO runs were fit) subsamples absences landscape-wide, test
+#' zone included. TRUE subsamples only the training absences and tests each population
+#' on every absence in its zone - needed with a large absence pool, where a low-ratio
+#' subsample can leave a small zone's test fold with no absences at all, and it keeps each
+#' fold's test set identical across ratios.
+#' @param fixed_col Passed to \code{distOrder_PAratio_simulator()}: a logical column of
+#' absences always kept (e.g. manually placed field absences), NULL by default.
 #' @return A list: \code{per_population} (data.frame, one row per held-out population:
 #' \code{population}, \code{n_train}, \code{n_presence_test}, \code{n_absence_test},
 #' \code{pr_auc}, \code{roc_auc} - a population whose zone happens to catch only one class
@@ -1105,7 +1113,7 @@ assign_population <- function(x, areas, max_dist = 500){
 #' and the same path with a \code{-summary} suffix.
 population_lopo_search <- function(x, resolution, distOrder, iteration, p2proc, PAratio,
                                     areas, max_dist = 500, min_presence = 3,
-                                    base_seed = 1000,
+                                    base_seed = 1000, ratio_train_only = FALSE, fixed_col = NULL,
                                     results_root = file.path(PROJ_ROOT, 'results_populationsplit')){
 
   x <- dplyr::mutate(x, .id = seq_len(nrow(x)))
@@ -1148,6 +1156,7 @@ population_lopo_search <- function(x, resolution, distOrder, iteration, p2proc, 
     out <- distOrder_PAratio_simulator(
       x = x, distOrder = distOrder, PAratio = PAratio, resolution = resolution,
       seed = base_seed + i, predict_surface = FALSE, split = split,
+      ratio_train_only = ratio_train_only, fixed_col = fixed_col,
       results_root = results_root, iteration = iteration, se_prediction = FALSE,
       train_split = NA, p2proc = p2proc
     )
@@ -1213,12 +1222,23 @@ summarize_lopo <- function(x){
 #' @param seed Numeric. Seeds both the absence subsample drawn below and (via passthrough
 #' to \code{modeller()}) the train/test split and model fit, so repeated calls at the same
 #' PAratio use independent replicates rather than the identical absence subsample every time.
+#' @param ratio_train_only Boolean, default FALSE. If TRUE (needs \code{split} and an
+#' \code{.id} column), subsample only the training absences to \code{PAratio} - relative
+#' to the training presences - and keep every test absence, so the test set is identical
+#' at every ratio. See \code{population_lopo_search()}, where a small held-out zone can
+#' otherwise lose all its absences to a landscape-wide subsample at low ratios.
+#' @param fixed_col Optional character, the name of a logical column in \code{x}. Absences
+#' TRUE there are always kept - they still go to train or test through \code{split} as
+#' usual - and only the other absences are subsampled to reach \code{PAratio}. If the fixed
+#' absences alone exceed the requested ratio, the fit uses just them and reports that
+#' (higher) ratio. NULL (the default) subsamples all absences alike.
 #' @return Whatever \code{modeller()} returns, with one extra element: \code{PAratio} - the
 #' ratio actually used. This equals the requested \code{PAratio} unless the absence pool
 #' (after the distOrder filter) is too small to supply it, in which case it's capped to
 #' every available absence and this reports what was actually achieved, so callers label
 #' and record the fit by what it really is rather than what was asked for.
-distOrder_PAratio_simulator <- function(x, distOrder, PAratio, resolution, seed = 1, split = NULL, ...){
+distOrder_PAratio_simulator <- function(x, distOrder, PAratio, resolution, seed = 1, split = NULL,
+                                        ratio_train_only = FALSE, fixed_col = NULL, ...){
 
   set.seed(seed)
 
@@ -1241,17 +1261,48 @@ distOrder_PAratio_simulator <- function(x, distOrder, PAratio, resolution, seed 
   # Cap at the available pool rather than erroring: a resolution can have too few absences
   # left (post distOrder filter) to supply a high requested ratio, and duplicating points via
   # sampling with replacement would just be fake data, not a real ratio of that size.
-  n_requested <- round(nrow(prs) * PAratio)
+  # With fixed_col, absences flagged TRUE there (e.g. manually placed field absences) are
+  # always kept and only the remaining (background) absences are subsampled to fill out
+  # the ratio - otherwise a large background pool dilutes them away at any ratio.
+  fixed_abs <- abs[0, ]
+  if(!is.null(fixed_col)){
+    is_fixed <- abs[[fixed_col]] %in% TRUE
+    fixed_abs <- abs[is_fixed, ]
+    abs <- abs[!is_fixed, ]
+  }
+
+  # With ratio_train_only, set the test absences aside untouched and subsample only the
+  # training absences, relative to the training presences.
+  test_abs <- NULL
+  n_prs <- nrow(prs)
+  if(ratio_train_only){
+    stopifnot('ratio_train_only needs a split and an .id column' =
+                !is.null(split) && '.id' %in% names(x))
+    test_abs <- dplyr::bind_rows(abs[abs$.id %in% split$test_id, ],
+                                 fixed_abs[fixed_abs$.id %in% split$test_id, ])
+    abs <- abs[abs$.id %in% split$train_id, ]
+    fixed_abs <- fixed_abs[fixed_abs$.id %in% split$train_id, ]
+    n_prs <- sum(prs$.id %in% split$train_id)
+  }
+
+  n_requested <- round(n_prs * PAratio) - nrow(fixed_abs)
+  if(n_requested < 0){
+    PAratio <- round(nrow(fixed_abs) / n_prs, 3)
+    message(
+      'The ', nrow(fixed_abs), ' fixed absences alone exceed the requested ratio; ',
+      'fitting at 1:', PAratio, ' with no background absences.')
+    n_requested <- 0
+  }
   if(n_requested > nrow(abs)){
     message(
       'Requested PAratio ', PAratio, ' needs ', n_requested, ' absences but only ',
       nrow(abs), ' are available after the distOrder filter; capping to ',
-      round(nrow(abs) / nrow(prs), 3), '.')
+      round((nrow(abs) + nrow(fixed_abs)) / n_prs, 3), '.')
     n_requested <- nrow(abs)
-    PAratio <- nrow(abs) / nrow(prs)
+    PAratio <- (nrow(abs) + nrow(fixed_abs)) / n_prs
   }
   abs <- abs[sample(1:nrow(abs), size = n_requested, replace = F),]
-  x <- dplyr::bind_rows(prs, abs)
+  x <- dplyr::bind_rows(prs, fixed_abs, abs, test_abs)
 
   out <- modeller(x, PAratio = paste0("1:", PAratio),
            resolution = res_str, distOrder = paste0('DO:', distOrder), seed = seed, split = split, ...)

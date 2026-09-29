@@ -89,3 +89,7 @@ wombling.pdf
 
 ## models
 .*/rds
+
+## high-PA background absence pools (regenerate with scripts/First_modelling/generate_highPA_absences.R)
+data/Data4modelling/iter1-pa-highPA-candidates.gpkg
+data/Data4modelling/iter1-pa-highPA-reviewed.gpkg

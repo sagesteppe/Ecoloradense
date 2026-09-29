@@ -53,9 +53,20 @@ gt <- gt |>
 
 cv_roots <- c(
   'results'              = 'spatial knndm',
-  'results_classicsplit' = 'classic'
+  'results_classicsplit' = 'classic',
+  # First_modelling/highPA_grid.R's three split designs on the extended absence pool
+  'results_highPA'                 = 'spatial knndm, high-PA pool',
+  'results_highPA_classicsplit'    = 'classic, high-PA pool',
+  'results_highPA_populationsplit' = 'LOPO, high-PA pool',
+  # ... and with every field absence kept in every fit (highPA_grid.R keep_field_absences)
+  'results_highPA_fieldabs'                 = 'spatial knndm, high-PA pool + field abs',
+  'results_highPA_classicsplit_fieldabs'    = 'classic, high-PA pool + field abs',
+  'results_highPA_populationsplit_fieldabs' = 'LOPO, high-PA pool + field abs'
   # 'results_spatialblock' = 'spatial block'  # add once population-blocked CV is fit
 )
+# roots that haven't been fit yet (or have no models so far) are skipped
+cv_roots <- cv_roots[vapply(names(cv_roots), function(root)
+  length(list.files(file.path(p2proj, root, 'models'), pattern = '\\.rds$')) > 0, logical(1))]
 
 parse_model_id <- function(f) {
   id <- sub('\\.rds$', '', basename(f))
