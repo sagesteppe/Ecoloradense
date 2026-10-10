@@ -93,3 +93,6 @@ wombling.pdf
 ## high-PA background absence pools (regenerate with scripts/First_modelling/generate_highPA_absences.R)
 data/Data4modelling/iter1-pa-highPA-candidates.gpkg
 data/Data4modelling/iter1-pa-highPA-reviewed.gpkg
+
+## high-PA ratio testing outputs (highPA_grid.R and its scoring scripts)
+results_highPA*/

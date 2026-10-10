@@ -35,6 +35,8 @@ source('functions.R')
 set.seed(52)
 
 target_ratio <- 52
+
+
 p2proc <- file.path('..', 'data', 'spatial', 'processed')
 p2dat  <- file.path('..', 'data', 'Data4modelling')
 

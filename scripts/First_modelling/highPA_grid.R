@@ -191,11 +191,25 @@ if(mode %in% c('spatial', 'classic')){
     for(r in ratios){
       for(s in seeds_of(k)){
         t0 <- Sys.time()
+        # Each fit runs in its own R subprocess: a crash in compiled code (CAST::knndm()
+        # died with a floating point exception at 1/3 arc-second, 1:12 seed 5007) can't be
+        # caught in-process and would otherwise kill the whole grid. Here it only fails
+        # that fit, which is logged with NA metrics, and the grid moves on.
         fit <- tryCatch(
-          distOrder_PAratio_simulator(
+          callr::r(function(args, wd){
+            setwd(wd)
+            suppressPackageStartupMessages({ library(sf); library(tidyverse); library(terra)
+                                             library(caret); library(ranger) })
+            source('functions.R')
+            out <- do.call(distOrder_PAratio_simulator, args)
+            list(PAratio = out$PAratio, metrics = out$metrics)
+          },
+          args = list(args = list(
             x = x, distOrder = 0, PAratio = r, resolution = resolution, seed = s,
             predict_surface = FALSE, se_prediction = FALSE, split = split, fixed_col = fixed_col,
             results_root = results_root, iteration = iteration, train_split = 0.8, p2proc = p2proc),
+            wd = getwd()),
+          stdout = '', stderr = '2>&1'),
           error = function(e){ message('FAILED 1:', r, ' seed ', s, ': ', conditionMessage(e)); NULL })
         mins <- as.numeric(difftime(Sys.time(), t0, units = 'mins'))
         row <- data.frame(

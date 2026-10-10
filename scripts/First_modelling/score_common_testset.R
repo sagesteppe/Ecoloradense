@@ -51,7 +51,10 @@ x <- filter(x, st_is(x, 'POINT')) |>
   select(Occurrence, field_abs) |>
   mutate(.id = seq_len(n()))
 
-split <- readRDS(file.path(PROJ_ROOT, 'results_highPA', 'tables', paste0(res_str, '-split.rds')))
+# the diluted and field-absence trees share one split where both exist (highPA_grid.R
+# copies it); a resolution only ever fit with field absences has it in that tree alone
+split_path <- Find(file.exists, file.path(PROJ_ROOT, roots, 'tables', paste0(res_str, '-split.rds')))
+split <- readRDS(split_path)
 stopifnot('split was built on different points than rebuilt here' =
             identical(sort(c(split$train_id, split$test_id)), x$.id))
 

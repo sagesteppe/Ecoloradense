@@ -232,6 +232,61 @@ presenceScores <- function(truth, prob, target_prevalence = NULL){
 }
 
 
+#' Area of applicability surfaces, keeping every intermediate CAST produces
+#'
+#' @description Computes \code{CAST::trainDI()} once for the model and saves it (training
+#' dissimilarities, the AOA threshold, variable weights, and training LPD) as
+#' \code{results_root/modelsTune/{fname}-trainDI.rds}, then predicts
+#' \code{CAST::aoa()} over the raster stack block-wise with that trainDI - rather than
+#' letting aoa() recompute it for every block - and writes all three surfaces as layers of
+#' \code{results_root/suitability_maps/{fname}-AOA-surfaces.tif}: \code{DI} (dissimilarity
+#' index), \code{AOA} (1 inside / 0 outside), and, with \code{LPD = TRUE}, \code{LPD}
+#' (local point density: how many training points are within the DI threshold of each
+#' pixel). The binary layer is also written on its own to \code{{fname}-AOA.tif}, the
+#' single-layer file downstream scripts already read. Earlier versions kept only that
+#' binary layer. Callable on its own to (re)build the surfaces for an already-fitted model
+#' without refitting it.
+#' @param model The caret \code{train} object (\code{results_root/modelsTune/{fname}.rds}).
+#' @param rast_dat SpatRaster of predictors the model was fit on.
+#' @param fname Model file stem.
+#' @param results_root Results tree to write into.
+#' @param LPD Logical. Also compute local point density; noticeably slower, especially at
+#' 1/3 arc-second. Default TRUE so nothing is left to recompute later.
+#' @param overwrite Logical. Recompute and overwrite an existing AOA raster/trainDI.
+#' @return The trainDI object, invisibly.
+aoaSurfaces <- function(model, rast_dat, fname, results_root, LPD = TRUE, overwrite = TRUE){
+
+  tdi_path <- file.path(results_root, 'modelsTune', paste0(fname, '-trainDI.rds'))
+  if(file.exists(tdi_path) && !overwrite){
+    tdi <- readRDS(tdi_path)
+  } else {
+    message('Computing trainDI (once) for ', fname)
+    tdi <- CAST::trainDI(model, LPD = LPD, verbose = FALSE)
+    saveRDS(tdi, tdi_path)
+  }
+
+  layers <- c('DI', 'AOA', if(LPD) 'LPD')
+  AOAfun <- function(model, r, tdi, LPD, layers){
+    a <- CAST::aoa(r, model, trainDI = tdi, LPD = LPD, verbose = FALSE)
+    as.data.frame(a[layers])
+  }
+
+  message('Writing Area of Applicability surfaces (', paste(layers, collapse = ', '), ') to raster')
+  pout <- file.path(results_root, 'suitability_maps')
+  surf <- terra::predict(
+    rast_dat, model = model, fun = AOAfun, tdi = tdi, LPD = LPD, layers = layers,
+    cores = 1, cpkgs = 'CAST', na.rm = TRUE,
+    filename = file.path(pout, paste0(fname, '-AOA-surfaces.tif')),
+    wopt = list(names = layers), overwrite = overwrite)
+  # the single-layer binary AOA raster every downstream script reads (threshold masks,
+  # patches, cost distances, maps) - unchanged in name and content
+  terra::writeRaster(surf[['AOA']], file.path(pout, paste0(fname, '-AOA.tif')),
+                     names = 'AOA', overwrite = overwrite)
+
+  invisible(tdi)
+}
+
+
 #' @param x input occurrence data
 #' @param resolution list of paths to geodata at different resolutions.
 #' @param iteration numeric, which iteration of modelling is being performed?
@@ -543,20 +598,10 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   
   
   ################ AREA OF APPLICABILITY SURFACE    ############################
-  message('Writing Area of Applicability to Raster')
   if(!exists('rf_model')){
     rf_model <- readRDS(paste0(results_root, '/models/', fname, '.rds'))
   }
-  AOAfun <- function(model, r) {
-    CAST::aoa(r, model, LPD = FALSE, verbose=FALSE)$AOA
-  }
-
-  terra::predict( # rasters, skip straight to modelling.
-    cores = 1, f = AOAfun,
-    rast_dat, model = model, cpkgs = "CAST",
-    filename = file.path(pout, paste0(fname, '-AOA', '.tif')),
-    wopt = list(names = 'AOA'), na.rm=TRUE,
-    overwrite = T)
+  aoaSurfaces(model, rast_dat, fname, results_root)
   
   ###############      STANDARD ERROR PREDICTION        ########################
   # the SE predictions are absurdly memory hungry, We will create 'tiles' to 
