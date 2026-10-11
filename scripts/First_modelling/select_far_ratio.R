@@ -117,15 +117,16 @@ selection <- per_ratio |>
   group_modify(~ select_ratio(.x)) |>
   ungroup()
 
-# median-performing replicate at the chosen ratio (primary target only)
+# median-performing replicate at the chosen ratio, for every target (1% is the primary;
+# 5% was added later for surface prediction - predict_far_surfaces.R)
 median_model <- selection |>
-  filter(target_prevalence == primary_target, !is.na(chosen_ratio)) |>
+  filter(!is.na(chosen_ratio)) |>
   pmap_dfr(function(design, resolution, target_prevalence, chosen_ratio, ...){
     r <- bind_rows(classic, spatial) |>
       filter(design == !!design, resolution == !!resolution, target_prevalence == !!target_prevalence,
              ratio == chosen_ratio)
     r[which.min(abs(r$brier_scaled - median(r$brier_scaled))), ] |>
-      select(design, resolution, chosen_ratio = ratio, median_replicate = replicate,
+      select(design, resolution, target_prevalence, chosen_ratio = ratio, median_replicate = replicate,
              brier_scaled, cox_intercept, roc_auc)
   })
 
@@ -150,7 +151,7 @@ selection |>
   select(design, resolution, target_prevalence, chosen_ratio) |>
   pivot_wider(names_from = target_prevalence, values_from = chosen_ratio, names_prefix = 'pi=') |>
   as.data.frame() |> print(row.names = FALSE)
-message('\n=== median models at the chosen ratio (', primary_target * 100, '% target) ===')
+message('\n=== median models at the chosen ratio ===')
 print(as.data.frame(median_model), digits = 3, row.names = FALSE)
 message('\n=== LOPO direction check (presences vs background @1%) ===')
 print(as.data.frame(lopo), digits = 3, row.names = FALSE)

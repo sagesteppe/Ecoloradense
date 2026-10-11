@@ -1,0 +1,53 @@
+"Model","Metric","Value"
+"Arithmetic Mean","MAE",4.66011636112973
+"Arithmetic Mean","MSE",42.860229411125
+"Arithmetic Mean","RMSE",6.54677244228979
+"IDW (idp=2)","MAE",4.86447449831341
+"IDW (idp=2)","MSE",47.3980233136688
+"IDW (idp=2)","RMSE",6.88462223463778
+"Ordinary Kriging","MAE",5.22303064074342
+"Ordinary Kriging","MSE",49.6664266924008
+"Ordinary Kriging","RMSE",7.04744114501148
+"kNN (within pop)","MAE",4.09431818181818
+"kNN (within pop)","MSE",43.4748295454545
+"kNN (within pop)","RMSE",6.59354453579064
+"kNN (across pop)","MAE",5.33963898430261
+"kNN (across pop)","MSE",50.495281862054
+"kNN (across pop)","RMSE",7.10600322699434
+"XGB Poisson Spat.","MAE",4.0046824669857
+"XGB Poisson Spat.","MSE",49.9550897646678
+"XGB Poisson Spat.","RMSE",7.06789146525807
+"XGB Poisson","MAE",4.10261769670284
+"XGB Poisson","MSE",52.1378772707001
+"XGB Poisson","RMSE",7.22065629085751
+"XBG Tweedie Spat.","MAE",3.4361130468632
+"XBG Tweedie Spat.","MSE",44.1593407751736
+"XBG Tweedie Spat.","RMSE",6.64524948930991
+"XGB Tweedie","MAE",3.34549947878854
+"XGB Tweedie","MSE",43.4809183045649
+"XGB Tweedie","RMSE",6.59400624086487
+"LGBM Poisson Spat.","MAE",4.01027138138509
+"LGBM Poisson Spat.","MSE",49.613619681272
+"LGBM Poisson Spat.","RMSE",7.04369361068978
+"Poisson","MAE",3.07398298473421
+"Poisson","MSE",26.3454548523077
+"Poisson","RMSE",5.13278236946665
+"NegBin","MAE",3.70329164895483
+"NegBin","MSE",41.8392238995005
+"NegBin","RMSE",6.4683246594076
+"Hurdle Poisson","MAE",10.1400113993157
+"Hurdle Poisson","MSE",255.649998933605
+"Hurdle Poisson","RMSE",15.9890587256913
+"Hurdle NegBin","MAE",7.42776332636203
+"Hurdle NegBin","MSE",84.5629189356638
+"Hurdle NegBin","RMSE",9.1958098575201
+"XGB Poisson Spat.","IntervalWidth90_split",25.7221285908133
+"XGB Poisson Spat.","IntervalWidth90_cvplus",22.3083133339882
+"XGB Poisson","IntervalWidth90_split",27.0101519953197
+"XGB Poisson","IntervalWidth90_cvplus",22.1488901138306
+"XBG Tweedie Spat.","IntervalWidth90_split",22.6
+"XBG Tweedie Spat.","IntervalWidth90_cvplus",21.8497225761413
+"XGB Tweedie","IntervalWidth90_split",22.6
+"XGB Tweedie","IntervalWidth90_cvplus",21.9530296087265
+"LGBM Poisson Spat.","IntervalWidth90_split",25.3720128552354
+"LGBM Poisson Spat.","IntervalWidth90_cvplus",23.3263562512976

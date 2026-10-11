@@ -2047,7 +2047,7 @@ tweed <- function(rec, cv, train, test, tune_gr, tune_metric = 'mae'){
 #' resembles its nearest neighbours".
 #' - `within_population`: a test plot's prediction is the mean `Prsnc_All`
 #'   of its k nearest *training* plots in the same population (`Lctn_bb`) -
-#'   exploits local spatial autocorrelation the same way Kriging does.
+#'   exploits local spatial autocorrelation the same way IDW/kriging do.
 #' - `across_population`: training data is first collapsed to one mean-
 #'   density point per population (at that population's centroid); a test
 #'   plot's prediction is the mean of its k nearest population means. Falls
@@ -2057,8 +2057,8 @@ tweed <- function(rec, cv, train, test, tune_gr, tune_metric = 'mae'){
 #'
 #' @param train.sf,test sf data.frames with `Prsnc_All`, `Lctn_bb`,
 #' `Pr.SuitHab` and point geometry - the same shape `densityModeller()`
-#' passes to `gstat::krige()` for the Kriging null model, before geometry is
-#' dropped.
+#' passes to `gstat::krige()` for the IDW and ordinary-kriging null models,
+#' before geometry is dropped.
 #' @param k number of neighbours to average.
 #' @return list(within_population = , across_population = ) each
 #' data.frame(Observed, Predicted, Pr.suit), matching `mets()`'s expected shape.
@@ -2248,12 +2248,62 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
     # sanity-check baseline matters most.
     dplyr::mutate(Predicted = dplyr::coalesce(Predicted, mean(train$Prsnc_All)))
   
-  # kriging interpolation, a spatial null model.
-  krig_preds <- data.frame(
+  # Inverse distance weighted interpolation, a spatial null model. NOTE: this
+  # rung was labelled 'Kriging' until 2026-10-10, but `gstat::krige()` called
+  # without a `model=` argument does IDW at idp = 2.0, not kriging (see
+  # ?krige) - so IDW is what this pipeline has actually been reporting all
+  # along. Relabelled to match what it computes; true ordinary kriging is the
+  # separate rung below.
+  idw_preds <- data.frame(
     'Observed' = test$Prsnc_All,
     'Predicted' = gstat::krige(Prsnc_All ~ 1, train.sf, newdata = test)$var1.pred,
     'Pr.suit' = test$Pr.SuitHab
   )
+
+  # Ordinary kriging with an actual fitted variogram - the rung the pipeline
+  # claimed to have but never ran. Scored separately from IDW because the two
+  # answer different questions: IDW assumes a fixed distance decay, kriging
+  # estimates the decay from the data, so the fitted variogram also reports
+  # whether there is exploitable local structure at all. On the 2026 field
+  # validation the answer was mostly "no" - nugget was 71% of the total sill
+  # with a 48.5 km range (see
+  # finding_density_model_extrapolation_limits.md) - so expect this to land
+  # close to IDW rather than beat it.
+  #
+  # gstat needs unique training locations (duplicates make the kriging
+  # covariance matrix singular); co-located plots are averaged. IDW above is
+  # left on the full `train.sf` since it needs no matrix inversion.
+  krige_train <- local({
+    xy <- sf::st_coordinates(train.sf)
+    data.frame(Prsnc_All = train.sf$Prsnc_All, .kx = xy[, 1], .ky = xy[, 2]) |>
+      dplyr::group_by(.kx, .ky) |>
+      dplyr::summarize(Prsnc_All = mean(Prsnc_All), .groups = 'drop') |>
+      sf::st_as_sf(coords = c('.kx', '.ky'), crs = sf::st_crs(train.sf))
+  })
+
+  krig_preds <- local({
+    emp <- try(gstat::variogram(Prsnc_All ~ 1, krige_train), silent = TRUE)
+    vgm_model <- if(inherits(emp, 'try-error')) emp else
+      try(gstat::fit.variogram(emp, gstat::vgm(c('Exp', 'Sph', 'Gau', 'Mat'))), silent = TRUE)
+
+    # A singular (pure-nugget) fit means no spatial structure survived, so
+    # ordinary kriging degenerates to the global training mean. Predict that
+    # directly rather than feeding gstat a degenerate model: it keeps this
+    # rung's row shape stable across split replicates (some replicates do fit
+    # cleanly while others don't) and is exactly what kriging would return.
+    if(inherits(vgm_model, 'try-error') || attr(vgm_model, 'singular')){
+      warning('densityModeller(): ordinary-kriging variogram fit singular/failed; ',
+              'falling back to the training mean for the Ordinary Kriging rung ',
+              '(pure nugget - no spatial structure to exploit).', call. = FALSE)
+      pred <- rep(mean(krige_train$Prsnc_All), nrow(test))
+    } else {
+      pred <- gstat::krige(Prsnc_All ~ 1, krige_train, newdata = test,
+                            model = vgm_model, debug.level = 0)$var1.pred
+    }
+    data.frame('Observed' = test$Prsnc_All,
+               'Predicted' = pmax(pred, 0),
+               'Pr.suit' = test$Pr.SuitHab)
+  })
 
   # k-NN null models (census_uncertainty_roadmap.md Phase 1b) - motivated by
   # the brms gp() term's catastrophic out-of-domain extrapolation failure
@@ -2448,9 +2498,15 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
                    as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
 
   # now calculate the evaluation statistics.
-  namev <- c('Arithmetic Mean', 'Kriging', 'kNN (within pop)', 'kNN (across pop)',
+  # 'Kriging' was renamed to 'IDW (idp=2)' on 2026-10-10 - it was never
+  # kriging (see the idw_preds note above) - and a real 'Ordinary Kriging'
+  # rung added. Result CSVs written before that date carry the old label for
+  # what is now the IDW row.
+  namev <- c('Arithmetic Mean', 'IDW (idp=2)', 'Ordinary Kriging',
+             'kNN (within pop)', 'kNN (across pop)',
              'XGB Poisson Spat.', 'XGB Poisson', 'XBG Tweedie Spat.',  'XGB Tweedie', 'LGBM Poisson Spat.')
-  mods <- list(mean_preds, krig_preds, knn_preds$within_population, knn_preds$across_population,
+  mods <- list(mean_preds, idw_preds, krig_preds,
+               knn_preds$within_population, knn_preds$across_population,
                poiss_spat_cv$Predictions, poiss_cv$Predictions,
                tweedie_spat_cv$Predictions, tweedie_cv$Predictions, lgbm_cv$Predictions)
 

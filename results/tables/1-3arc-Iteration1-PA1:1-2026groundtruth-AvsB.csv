@@ -1,0 +1,9 @@
+"Model","MAE_occ_HighElev_Phase A (pooled)","MAE_occ_HighElev_Phase B (per-phase)","MAE_occ_LowElev_Phase A (pooled)","MAE_occ_LowElev_Phase B (per-phase)","MdAE_occ_HighElev_Phase A (pooled)","MdAE_occ_HighElev_Phase B (per-phase)","MdAE_occ_LowElev_Phase A (pooled)","MdAE_occ_LowElev_Phase B (per-phase)","delta_MAE_HighElev","delta_MAE_LowElev"
+"XGB Tweedie",5.784,5.298,62.885,51.577,4.92,4.038,52.98,30.76,-0.486,-11.308
+"XGB Tweedie Spat.",5.701,5.29,59.481,59.376,4.653,3.873,40.059,36.532,-0.411,-0.105000000000004
+"XGB Poisson",5.45,5.959,59.309,63.74,4.212,5.61,42.846,54.64,0.508999999999999,4.431
+"XGB Poisson Spat.",4.818,5.8,57.8,63.558,3.994,4.976,46.036,52.638,0.982,5.758
+"LGBM Poisson Spat.",5.613,5.951,58.464,66.509,4.577,5.105,44.935,57.768,0.337999999999999,8.045
+"brms Poisson",5.007,2055110827257930240,6.92019296554551e+73,1.60489615470295e+294,3.712,4.97,97.521,87.324,2055110827257930240,1.60489615470295e+294
+"brms Negbinomial",4.917,NA,64.893,NA,3.07,NA,43.519,NA,NA,NA
+"brms Hurdlenegbinomial",3.667,NA,117.744,NA,2.353,NA,93.16,NA,NA,NA

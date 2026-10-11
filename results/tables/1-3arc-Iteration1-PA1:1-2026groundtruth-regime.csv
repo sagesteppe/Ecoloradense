@@ -1,0 +1,61 @@
+"ScoredBy","Regime","Tier","Model","n_occ","n_occ_HighElev","n_occ_LowElev","MAE_occ","MAE_occ_HighElev","MAE_occ_LowElev","MdAE_occ_HighElev","MdAE_occ_LowElev"
+"Phase A (pooled)","KNOWN (resurvey)","3 Spatial interpolation","IDW (gstat default, idp=2)",66,49,17,11.81,3.659,35.305,2.794,26.22
+"Phase A (pooled)","KNOWN (resurvey)","4 Fitted model","XGB Poisson Spat.",66,49,17,12.729,4.542,36.326,4.079,32.893
+"Phase A (pooled)","KNOWN (resurvey)","4 Fitted model","brms Poisson",66,49,17,12.455,4.162,36.356,3.063,30.058
+"Phase A (pooled)","KNOWN (resurvey)","3 Spatial interpolation","Ordinary kriging (raw count)",66,49,17,11.822,3.214,36.635,2.094,28.217
+"Phase A (pooled)","KNOWN (resurvey)","3 Spatial interpolation","kNN (within pop)",66,49,17,12.982,4.763,36.671,4,33
+"Phase A (pooled)","KNOWN (resurvey)","4 Fitted model","LGBM Poisson Spat.",66,49,17,13.369,5.224,36.845,4.905,40.254
+"Phase A (pooled)","KNOWN (resurvey)","4 Fitted model","XGB Poisson",66,49,17,13.537,5.184,37.611,4.835,37.216
+"Phase A (pooled)","KNOWN (resurvey)","4 Fitted model","XGB Tweedie Spat.",66,49,17,13.68,5.292,37.858,4.569,32.625
+"Phase A (pooled)","KNOWN (resurvey)","2 Single covariate","GLM Poisson: elevation only",66,49,17,12.735,3.579,39.128,3.075,26.421
+"Phase A (pooled)","KNOWN (resurvey)","4 Fitted model","brms Hurdlenegbinomial",66,49,17,13.741,3.265,43.935,2.341,36.469
+"Phase A (pooled)","KNOWN (resurvey)","4 Fitted model","brms Negbinomial",66,49,17,14.841,4.673,44.15,3.757,31.995
+"Phase A (pooled)","KNOWN (resurvey)","4 Fitted model","XGB Tweedie",66,49,17,15.549,5.312,45.053,4.947,44.564
+"Phase A (pooled)","KNOWN (resurvey)","2 Single covariate","GLM Poisson: suitability only",66,49,17,15.491,4.508,47.148,4.456,37.509
+"Phase A (pooled)","KNOWN (resurvey)","3 Spatial interpolation","kNN (across pop)",66,49,17,15.056,3.049,49.663,2.238,41.097
+"Phase A (pooled)","KNOWN (resurvey)","1 Constant","Constant: training mean (9.65)",66,49,17,16.995,5.062,51.388,4.647,43.353
+"Phase A (pooled)","KNOWN (resurvey)","1 Constant","Constant: training median (0)",66,49,17,19.636,5.816,59.471,6,53
+"Phase A (pooled)","NEW (fresh survey)","2 Single covariate","GLM Poisson: elevation only",30,11,19,36.568,6.13,54.19,2.331,36.342
+"Phase A (pooled)","NEW (fresh survey)","3 Spatial interpolation","Ordinary kriging (raw count)",30,11,19,41.547,5.894,62.189,2.779,50.338
+"Phase A (pooled)","NEW (fresh survey)","2 Single covariate","GLM Poisson: suitability only",30,11,19,43.835,6.292,65.57,4.053,52.1
+"Phase A (pooled)","NEW (fresh survey)","3 Spatial interpolation","IDW (gstat default, idp=2)",30,11,19,45.078,5.67,67.893,1.659,58.429
+"Phase A (pooled)","NEW (fresh survey)","1 Constant","Constant: training mean (9.65)",30,11,19,46.975,7.385,69.895,5.647,57.353
+"Phase A (pooled)","NEW (fresh survey)","3 Spatial interpolation","kNN (across pop)",30,11,19,46.664,5.766,70.341,4.156,58.443
+"Phase A (pooled)","NEW (fresh survey)","3 Spatial interpolation","kNN (within pop)",30,11,19,46.664,5.766,70.341,4.156,58.443
+"Phase A (pooled)","NEW (fresh survey)","4 Fitted model","XGB Poisson Spat.",30,11,19,50.993,6.049,77.013,3.811,65.294
+"Phase A (pooled)","NEW (fresh survey)","4 Fitted model","LGBM Poisson Spat.",30,11,19,51.972,7.345,77.808,3.886,66.261
+"Phase A (pooled)","NEW (fresh survey)","4 Fitted model","XGB Poisson",30,11,19,52.291,6.636,78.722,2.941,66.942
+"Phase A (pooled)","NEW (fresh survey)","4 Fitted model","XGB Tweedie Spat.",30,11,19,52.684,7.525,78.828,4.737,66.99
+"Phase A (pooled)","NEW (fresh survey)","4 Fitted model","XGB Tweedie",30,11,19,52.823,7.884,78.841,4.604,66.998
+"Phase A (pooled)","NEW (fresh survey)","1 Constant","Constant: training median (0)",30,11,19,53.167,8.818,78.842,5,67
+"Phase A (pooled)","NEW (fresh survey)","4 Fitted model","brms Negbinomial",30,11,19,55.054,6.002,83.452,2.656,66.91
+"Phase A (pooled)","NEW (fresh survey)","4 Fitted model","brms Hurdlenegbinomial",30,11,19,118.397,5.457,183.783,2.365,171.617
+"Phase A (pooled)","NEW (fresh survey)","4 Fitted model","brms Poisson",30,11,19,8.30423155865461e+73,8.767,1.31119445662968e+74,4.997,5.03281514712146e+70
+"Phase B (per-phase)","KNOWN (resurvey)","4 Fitted model","XGB Tweedie",66,49,17,12.089,5.102,32.228,4.945,22.178
+"Phase B (per-phase)","KNOWN (resurvey)","1 Constant","Constant: Low-phase training mean (31.53)",17,0,17,36.37,NA,36.37,NA,27.469
+"Phase B (per-phase)","KNOWN (resurvey)","2 Single covariate","GLM Poisson (Low-phase): suitability only",17,0,17,36.499,NA,36.499,NA,27.504
+"Phase B (per-phase)","KNOWN (resurvey)","4 Fitted model","XGB Tweedie Spat.",66,49,17,13.904,5.088,39.315,4.988,25.837
+"Phase B (per-phase)","KNOWN (resurvey)","2 Single covariate","GLM Poisson (Low-phase): elevation only",17,0,17,39.328,NA,39.328,NA,27.895
+"Phase B (per-phase)","KNOWN (resurvey)","4 Fitted model","XGB Poisson Spat.",66,49,17,16.159,5.577,46.659,5.961,47.17
+"Phase B (per-phase)","KNOWN (resurvey)","4 Fitted model","XGB Poisson",66,49,17,16.311,5.712,46.863,5.99,41.245
+"Phase B (per-phase)","KNOWN (resurvey)","4 Fitted model","brms Poisson",66,49,17,15.566,4.6,47.173,4.061,32.752
+"Phase B (per-phase)","KNOWN (resurvey)","1 Constant","Constant: Low-phase training median (14)",17,0,17,47.676,NA,47.676,NA,38.5
+"Phase B (per-phase)","KNOWN (resurvey)","4 Fitted model","LGBM Poisson Spat.",66,49,17,17.726,5.582,52.726,6,52.611
+"Phase B (per-phase)","KNOWN (resurvey)","1 Constant","Constant: High-phase training mean (4.77)",49,49,0,3.379,3.379,NA,2.773,NA
+"Phase B (per-phase)","KNOWN (resurvey)","1 Constant","Constant: High-phase training median (0)",49,49,0,5.816,5.816,NA,6,NA
+"Phase B (per-phase)","KNOWN (resurvey)","2 Single covariate","GLM Poisson (High-phase): elevation only",49,49,0,3.503,3.503,NA,2.902,NA
+"Phase B (per-phase)","KNOWN (resurvey)","2 Single covariate","GLM Poisson (High-phase): suitability only",49,49,0,4.606,4.606,NA,4.618,NA
+"Phase B (per-phase)","NEW (fresh survey)","2 Single covariate","GLM Poisson (Low-phase): elevation only",19,0,19,49.476,NA,49.476,NA,45.862
+"Phase B (per-phase)","NEW (fresh survey)","1 Constant","Constant: Low-phase training mean (31.53)",19,0,19,54.012,NA,54.012,NA,35.469
+"Phase B (per-phase)","NEW (fresh survey)","2 Single covariate","GLM Poisson (Low-phase): suitability only",19,0,19,54.562,NA,54.562,NA,35.785
+"Phase B (per-phase)","NEW (fresh survey)","1 Constant","Constant: Low-phase training median (14)",19,0,19,65.605,NA,65.605,NA,52.5
+"Phase B (per-phase)","NEW (fresh survey)","4 Fitted model","XGB Tweedie",30,11,19,45.893,6.172,68.889,3.038,58.716
+"Phase B (per-phase)","NEW (fresh survey)","4 Fitted model","XGB Tweedie Spat.",30,11,19,51.242,6.187,77.326,3.017,66.64
+"Phase B (per-phase)","NEW (fresh survey)","4 Fitted model","XGB Poisson Spat.",30,11,19,52.321,6.794,78.679,2.975,66.818
+"Phase B (per-phase)","NEW (fresh survey)","4 Fitted model","XGB Poisson",30,11,19,52.521,7.061,78.84,3.781,66.998
+"Phase B (per-phase)","NEW (fresh survey)","4 Fitted model","LGBM Poisson Spat.",30,11,19,52.718,7.595,78.841,4.836,67
+"Phase B (per-phase)","NEW (fresh survey)","4 Fitted model","brms Poisson",30,11,19,1.94880247356786e+294,11209695421406892032,3.20979230940589e+294,27872580181793608,1.07983444794888e+42
+"Phase B (per-phase)","NEW (fresh survey)","1 Constant","Constant: High-phase training mean (4.77)",11,11,0,5.839,5.839,NA,2.227,NA
+"Phase B (per-phase)","NEW (fresh survey)","1 Constant","Constant: High-phase training median (0)",11,11,0,8.818,8.818,NA,5,NA
+"Phase B (per-phase)","NEW (fresh survey)","2 Single covariate","GLM Poisson (High-phase): elevation only",11,11,0,5.817,5.817,NA,1.832,NA
+"Phase B (per-phase)","NEW (fresh survey)","2 Single covariate","GLM Poisson (High-phase): suitability only",11,11,0,7.07,7.07,NA,6.375,NA

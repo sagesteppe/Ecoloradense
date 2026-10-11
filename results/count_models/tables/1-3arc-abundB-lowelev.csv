@@ -1,0 +1,53 @@
+"Model","Metric","Value"
+"Arithmetic Mean","MAE",33.2076923076923
+"Arithmetic Mean","MSE",1477.65147928994
+"Arithmetic Mean","RMSE",38.4402325602999
+"IDW (idp=2)","MAE",32.8680055835804
+"IDW (idp=2)","MSE",1735.28303317214
+"IDW (idp=2)","RMSE",41.6567285462041
+"Ordinary Kriging","MAE",33.2076923076923
+"Ordinary Kriging","MSE",1477.65147928994
+"Ordinary Kriging","RMSE",38.4402325602999
+"kNN (within pop)","MAE",27.03
+"kNN (within pop)","MSE",1260.242
+"kNN (within pop)","RMSE",35.4998873237648
+"kNN (across pop)","MAE",33.2076923076923
+"kNN (across pop)","MSE",1477.65147928994
+"kNN (across pop)","RMSE",38.4402325602999
+"XGB Poisson Spat.","MAE",27.1244746573269
+"XGB Poisson Spat.","MSE",1936.3108617785
+"XGB Poisson Spat.","RMSE",44.0035323784182
+"XGB Poisson","MAE",28.0786577455699
+"XGB Poisson","MSE",1792.35952759807
+"XGB Poisson","RMSE",42.3362672846588
+"XBG Tweedie Spat.","MAE",27.7410382946022
+"XBG Tweedie Spat.","MSE",1900.49280951269
+"XBG Tweedie Spat.","RMSE",43.594641981701
+"XGB Tweedie","MAE",28.0661038398743
+"XGB Tweedie","MSE",1255.60984413352
+"XGB Tweedie","RMSE",35.4345854234746
+"LGBM Poisson Spat.","MAE",28.057002586266
+"LGBM Poisson Spat.","MSE",2085.03058564629
+"LGBM Poisson Spat.","RMSE",45.6621351411242
+"Poisson","MAE",54.6180556688092
+"Poisson","MSE",12050.332046403
+"Poisson","RMSE",109.774004420004
+"NegBin","MAE",60.2676174384021
+"NegBin","MSE",6512.71209692798
+"NegBin","RMSE",80.7013760534972
+"Hurdle Poisson","MAE",Inf
+"Hurdle Poisson","MSE",Inf
+"Hurdle Poisson","RMSE",Inf
+"Hurdle NegBin","MAE",78.7827960925212
+"Hurdle NegBin","MSE",38255.0276197327
+"Hurdle NegBin","RMSE",195.588925094783
+"XGB Poisson Spat.","IntervalWidth90_split",123.585903860629
+"XGB Poisson Spat.","IntervalWidth90_cvplus",122.712218163162
+"XGB Poisson","IntervalWidth90_split",125.384278988838
+"XGB Poisson","IntervalWidth90_cvplus",139.919967585057
+"XBG Tweedie Spat.","IntervalWidth90_split",114.852240625024
+"XBG Tweedie Spat.","IntervalWidth90_cvplus",121.334957706928
+"XGB Tweedie","IntervalWidth90_split",115.524809265137
+"XGB Tweedie","IntervalWidth90_cvplus",135.91669254303
+"LGBM Poisson Spat.","IntervalWidth90_split",105.457146165249
+"LGBM Poisson Spat.","IntervalWidth90_cvplus",116.173829376829

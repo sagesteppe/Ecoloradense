@@ -31,6 +31,7 @@ metrics <- c(
   roc_auc       = 'ROC-AUC'
 )
 
+
 long <- d |>
   pivot_longer(all_of(names(metrics)), names_to = 'metric', values_to = 'value') |>
   mutate(metric = factor(metrics[metric], levels = metrics))
