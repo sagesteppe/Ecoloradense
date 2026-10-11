@@ -1,0 +1,441 @@
+---
+title: "A unified spatial–environmental partitioner for clustered, bimodal SDM data"
+subtitle: "One framework for the test/train holdout *and* the CV folds"
+author: "Reed Benkendorf"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+    df-print: paged
+    fig-width: 8
+    fig-height: 6
+knitr:
+  opts_chunk:
+    message: false
+    warning: false
+    collapse: true
+  opts_knit:
+    # run every chunk from the repository root, regardless of where this .qmd lives
+    # (scripts/final_sdm/ -> ../.. is the repo root)
+    root.dir: "../.."
+---
+
+## Principle
+
+The test/train split and the cross-validation folds are **one problem**, not
+two. Pili et al. (2025) report internal CV with no stated holdout; CAST
+(`geodist`/`knndm`) gives a prediction-matched holdout *or* a fold diagnostic,
+but not a single object that derives both from the same logic. Here the
+partition is one artifact whose:
+
+- **unit** is the *connected component* (a graph of nearby points), not an
+  arbitrary `k`;
+- **separation** is measured on **two explicit axes** — geography (governs
+  leakage / connectivity) and environment (governs representativeness /
+  coverage) — kept separate because the cases where they *decouple* are exactly
+  the ecologically interesting ones;
+- **split and fold rules** are parameterized by `purpose ∈ {discovery, mapping,
+  projection}`, because "can this cluster be split?" is not a property of the
+  cluster — it is a property of the question being asked.
+
+The failure this is built to avoid: on bimodal / clustered rare-plant data,
+both E-clustering (collapse a cluster to one point) and vanilla LOPO/NNDM (hold
+a whole cluster out) destroy the within-condition replication that a sparse
+endemic needs. We want clusters that can be **cut and re-represented** when the
+question is *mapping*, and held out intact when the question is *discovery*.
+
+We build this piecewise: every step emits its intermediate object **and** a
+plot, so we can see the graphs before anything is folded into a function. The
+per-step helpers (`partition_*`) compose into the final `build_partition()` at
+the end.
+
+## Parameters
+
+Everything tunable lives here so the rest of the document is logic, not knobs.
+
+```{r params}
+params_part <- list(
+  resolution   = 90,            # nominal res for the env stack (90/30/10/3 -> dem_3arc/1arc/1-3arc/3m)
+  connect_m    = 500,           # Step 1 graph edge threshold (metres). Derived/justified in Step 1.
+  train_target = c(0.70, 0.80), # Step 4/5 soft train-proportion window
+  purpose      = "mapping",     # discovery | mapping | projection
+  n_pca        = 3,             # env PCA axes to retain for Step 2a/3
+  seed         = 1021
+)
+set.seed(params_part$seed)
+```
+
+## Setup
+
+This document runs from the **repository root** (set via `knitr$opts_knit$root.dir`
+in the YAML), so every path below is root-relative. Source the project's
+`functions.R` for `rastReader()`, `res_string()`, `assign_population()`, etc.
+`PROJ_ROOT` defined in that file is the data-machine path; the raster probe below
+also checks a local `data/spatial/processed` and prefers whichever actually holds
+the stack.
+
+```{r setup}
+suppressPackageStartupMessages({
+  library(sf)
+  library(terra)
+  library(tidyverse)
+  library(igraph)
+})
+
+source("scripts/functions.R")  # defines PROJ_ROOT (data-machine), rastReader, res_string, ...
+
+p2dat   <- "data/Data4modelling"
+p2areas <- "data/GroundTruthPts/ground_truth_median-VISITED.gpkg"
+# raster stack may live under the data-machine root or locally; Step 0 probes both
+p2proc_candidates <- c(
+  file.path(PROJ_ROOT, "data", "spatial", "processed"),
+  "data/spatial/processed"
+)
+```
+
+## Step 0 — Points, populations, and the environmental space
+
+The **presences are the graph unit** — the population structure we want to see —
+so they drive Steps 1–2. We load the collated iter2 set
+(`3m-presence-iter2.gpkg`), which folds the **2026 field records** (opportunistic
++ transect) into the iter1 presences; `source` carries provenance so the 2026
+points are visible on every plot. Background **absences** (`iter1-pa.gpkg`, the
+2026 campaign added presences, not new background) are loaded aside here and
+only enter in the class-aware Steps 4–5. Then we extract predictors and reduce
+to a PCA env space; if the raster stack isn't mounted, Steps 1–2 still run on
+geography alone.
+
+```{r step0-points}
+# presences: iter2 collated set (iter1 + 2026 field data). Occurrence = 1.
+pts <- st_read(file.path(p2dat, "3m-presence-iter2.gpkg"), quiet = TRUE) |>
+  transmute(Occurrence = 1L, source = as.character(source),
+            site = as.character(site), .id = row_number())
+
+# background absences, held aside for the class-aware split/folds (Steps 4–5).
+bg <- st_read(file.path(p2dat, "iter1-pa.gpkg"), quiet = TRUE) |>
+  transmute(Occurrence = 0L, source = "iter1-pa", site = NA_character_)
+
+cat(nrow(pts), "presences (",
+    paste(sprintf("%s: %d", names(table(pts$source)), table(pts$source)), collapse = ", "),
+    ") +", nrow(bg), "background absences\n")
+```
+
+```{r step0-env}
+# Try to attach environmental predictors + PCA scores; fall back gracefully.
+res_str <- res_string(params_part$resolution)
+p2proc  <- p2proc_candidates[file.exists(file.path(p2proc_candidates, paste0("dem_", res_str)))][1]
+
+env_ok <- !is.na(p2proc)
+if (env_ok) {
+  rast_dat <- rastReader(paste0("dem_", res_str), p2proc)
+  env <- terra::extract(rast_dat, pts, ID = FALSE)
+  keep <- names(env)[complete.cases(t(!is.na(env))) & vapply(env, is.numeric, logical(1))]
+  env  <- env[, keep, drop = FALSE]
+  pca  <- prcomp(env[complete.cases(env), ], center = TRUE, scale. = TRUE)
+  scores <- predict(pca, env)[, seq_len(params_part$n_pca), drop = FALSE]
+  colnames(scores) <- paste0("PC", seq_len(ncol(scores)))
+  pts <- bind_cols(pts, as_tibble(scores))
+  message("Env stack found at: ", p2proc, " — PCA on ", ncol(env), " predictors.")
+} else {
+  message("No raster stack mounted; Steps 1–2 run on geography alone.")
+}
+```
+
+```{r step0-plot}
+# presences coloured by provenance — the 2026 field data shown explicitly
+ggplot(pts) +
+  geom_sf(aes(colour = source), alpha = .8, size = 1.8) +
+  labs(title = "Step 0 — presences by source (2026 field data folded in)",
+       colour = "source") +
+  theme_minimal()
+
+if (env_ok) {
+  ggplot(pts, aes(PC1, PC2, colour = source)) +
+    geom_point(alpha = .8, size = 1.8) +
+    labs(title = "Step 0 — environmental (PCA) space, by source", colour = "source") +
+    theme_minimal()
+}
+```
+
+## Step 1 — Graph construction (connected components in geographic space)
+
+Connect any two points within `connect_m`; the connected components of that
+graph are our partition units. Graph-based (vs k-means / fixed-k) because it
+respects the real gaps in irregular, bimodal data: a dense population becomes
+one component we *can* later split, an isolated outlier becomes its own
+singleton component we handle explicitly.
+
+### Deriving the threshold (don't trust the round number)
+
+`connect_m` is the master knob — it decides whether two nearby populations are
+one component (held together) or two (splittable). Rather than default it, look
+at the presence-to-presence nearest-neighbour distance distribution and put the
+threshold at the gap between within-population and between-population scales.
+(On the data machine, also compare against `CAST::geodist()`'s
+sample-to-prediction distances — the knee there is the principled choice.)
+
+```{r step1-threshold}
+# pts are all presences; NN distance between each presence and its nearest other
+nn_m <- as.numeric(sf::st_distance(
+  pts, pts[sf::st_nearest_feature(pts), ], by_element = TRUE))
+
+tibble(nn_m = nn_m) |>
+  ggplot(aes(nn_m)) +
+  geom_histogram(bins = 40) +
+  geom_vline(xintercept = params_part$connect_m, colour = "red", linetype = 2) +
+  scale_x_log10() +
+  labs(title = "Step 1 — presence NN-distance distribution (red = chosen connect_m)",
+       x = "nearest-neighbour distance (m, log10)", y = "count") +
+  theme_minimal()
+
+quantile(nn_m, c(.5, .75, .9, .95, .99)) |> round(1)
+```
+
+### Build components
+
+```{r step1-graph}
+partition_components <- function(x, connect_m) {
+  within <- sf::st_is_within_distance(x, dist = connect_m)  # sparse list, includes self
+  g      <- igraph::graph_from_adj_list(within, mode = "all")
+  memb   <- igraph::components(g)$membership
+  x$component <- factor(memb)
+  attr(x, "adj") <- within   # keep for edge plotting / hull distances
+  x
+}
+
+pts <- partition_components(pts, params_part$connect_m)
+cat("components:", nlevels(pts$component),
+    "| sizes:", paste(sort(table(pts$component), decreasing = TRUE)[1:min(8, nlevels(pts$component))],
+                      collapse = ", "), "...\n")
+```
+
+```{r step1-plot}
+# edge list from the sparse within-distance object (small n, cheap)
+adj   <- attr(pts, "adj")
+co    <- sf::st_coordinates(pts)
+edges <- do.call(rbind, lapply(seq_along(adj), function(i) {
+  j <- adj[[i]][adj[[i]] > i]
+  if (length(j)) cbind(x = co[i, 1], y = co[i, 2], xend = co[j, 1], yend = co[j, 2]) else NULL
+})) |> as.data.frame()
+
+ggplot() +
+  { if (nrow(edges)) geom_segment(data = edges, aes(x, y, xend = xend, yend = yend),
+                                  colour = "grey70", linewidth = .3) } +
+  geom_sf(data = pts, aes(colour = component), size = 1.8, show.legend = FALSE) +
+  labs(title = sprintf("Step 1 — graph components (connect_m = %d m)", params_part$connect_m)) +
+  theme_minimal()
+
+# where does the 2026 field data land across the distance-based components?
+pts |> st_drop_geometry() |>
+  count(component, source) |>
+  pivot_wider(names_from = source, values_from = n, values_fill = 0) |>
+  arrange(desc(rowSums(across(where(is.numeric)))))
+```
+
+## Step 2 — Inter-component geographic distance (minimum, hull-cheapened)
+
+Leakage is about the *closest* points between components, so we want the
+**minimum** nearest distance, not centroid distance. Collapsing each component
+to a MULTIPOINT and taking `st_distance` gives the exact pairwise minima; for
+large components this is where the convex-hull shortcut goes (only hull
+vertices can carry the minimum).
+
+```{r step2-geo}
+partition_geo_dist <- function(x, hull = FALSE) {
+  parts <- x |>
+    group_by(component) |>
+    summarise(do_union = TRUE, .groups = "drop")        # one (MULTI)geometry per component
+  if (hull) parts <- st_convex_hull(parts)
+  d <- sf::st_distance(parts)                            # min distance between geometries
+  units::drop_units(d) -> d
+  dimnames(d) <- list(levels(x$component), levels(x$component))
+  d
+}
+
+geo_d <- partition_geo_dist(pts)
+as.data.frame(round(geo_d)) |> head(8)
+```
+
+```{r step2-plot}
+as.data.frame(as.table(geo_d)) |>
+  setNames(c("a", "b", "dist_m")) |>
+  ggplot(aes(a, b, fill = dist_m)) +
+  geom_tile() +
+  scale_fill_viridis_c(trans = "sqrt") +
+  labs(title = "Step 2 — min geographic distance between components", x = NULL, y = NULL) +
+  theme_minimal() + theme(axis.text = element_text(size = 6))
+```
+
+## Step 2a — Inter-component environmental distance + the geo/env decoupling diagnostic
+
+Component location in env space = medoid of its PCA scores (robust to the
+stochastic within-cluster spread). The key diagnostic — **before** building any
+rule — is how correlated the geographic and environmental between-component
+distances actually are. High correlation ⇒ geographic folds already control env
+extrapolation and the env axis is cheap insurance; low correlation ⇒ the env
+axis is doing real work and the two must stay separate (the Cochetopa-twin
+case: far in space, near in env).
+
+```{r step2a-env, eval=env_ok}
+partition_env_dist <- function(x, pcs) {
+  sc <- x |> st_drop_geometry() |> select(component, all_of(pcs))
+  medoids <- sc |>
+    group_by(component) |>
+    summarise(across(all_of(pcs), ~ median(.x, na.rm = TRUE)), .groups = "drop")
+  m <- as.matrix(medoids[, pcs]); rownames(m) <- medoids$component
+  as.matrix(dist(m))
+}
+
+pcs   <- grep("^PC", names(pts), value = TRUE)
+env_d <- partition_env_dist(pts, pcs)
+
+# align and correlate the off-diagonal pairs
+ut <- upper.tri(geo_d)
+decouple <- tibble(geo_m = geo_d[ut], env_d = env_d[ut])
+rho <- cor(decouple$geo_m, decouple$env_d, method = "spearman")
+
+ggplot(decouple, aes(geo_m, env_d)) +
+  geom_point(alpha = .5) +
+  geom_smooth(method = "lm", se = FALSE, colour = "red") +
+  labs(title = sprintf("Step 2a — geo vs env between-component distance (Spearman rho = %.2f)", rho),
+       x = "min geographic distance (m)", y = "env (PCA medoid) distance") +
+  theme_minimal()
+```
+
+```{r step2a-fallback, eval=!env_ok}
+message("Env stack not mounted — Step 2a skipped. Run on the data machine for the geo/env decoupling diagnostic.")
+```
+
+---
+
+# Stubs — the decision-bearing steps (to flesh out next)
+
+The pieces above are the *inputs*. Steps 3–5 are where the design choices we
+discussed get encoded; they are scaffolded with real signatures and explicit
+`TODO` decision points, and left `eval: false` until we build them together.
+
+## Step 3 — Separation & splittability (purpose-dependent)
+
+A component is a candidate to be **cut and re-represented** only when it is both
+well-separated and self-contained. *But* a component well-separated in
+environment is the most dangerous one to split under `purpose = "discovery"`
+(splitting turns an honest extrapolation test into near-interpolation), and the
+most useful one to split under `purpose = "mapping"`. So splittability =
+separation × purpose.
+
+```{r step3-splittability, eval=FALSE}
+partition_splittable <- function(x, geo_d, env_d, purpose, pcs) {
+  comps <- levels(x$component)
+
+  # --- separation: Mahalanobis of each medoid against the POOLED within-component
+  #     covariance (per-component cov is unstable for the many tiny components) ---
+  # TODO decide: Mahalanobis in raw-PC space vs standardised; pooled vs shrinkage cov.
+  pooled_cov <- x |> st_drop_geometry() |>
+    group_by(component) |>
+    group_modify(~ { .x[pcs] <- scale(.x[pcs], scale = FALSE); .x }) |>  # centre within comp
+    ungroup() |> select(all_of(pcs)) |> cov()
+  # ... medoid-to-grand-centroid Mahalanobis, or medoid-to-nearest-other-medoid ...
+
+  # --- "alone": nearest other component beyond a geo AND env radius ---
+  # TODO decide the radii. Candidate: geo radius = connect_m * k; env radius = quantile(env_d).
+  nearest_geo <- apply(geo_d + diag(Inf, length(comps)), 1, min)
+  nearest_env <- apply(env_d + diag(Inf, length(comps)), 1, min)
+
+  # --- purpose gate ---
+  # mapping:    split well-separated components (want within-condition interpolation)
+  # discovery:  do NOT split well-separated env-distinct components (keep as extrapolation test)
+  # projection: defer to env-space thinning (E-clustering/E-distThinning) — flag, don't split
+  splittable <- switch(purpose,
+    mapping    = nearest_geo > Inf,   # TODO: separated & large enough -> TRUE
+    discovery  = rep(FALSE, length(comps)),
+    projection = rep(FALSE, length(comps))
+  )
+  tibble(component = comps, nearest_geo, nearest_env, splittable)
+}
+```
+
+## Step 4 — Test/train split (two-axis, soft 70–80 %, two-sided coverage)
+
+Soft target, not a hard per-fold invariant — let withheld-component
+*configurations* land in the window rather than forcing points across the line
+(the compromise `spatial_class_split()` currently has to make at
+`functions.R:1024`). Enforce the **two-sided** coverage rule: the test space is
+covered (each unit can be tested) *and* every test unit's environment is
+represented in train — unless this is explicitly a discovery/extrapolation
+holdout.
+
+```{r step4-split, eval=FALSE}
+partition_split <- function(x, geo_d, env_d, splittable, train_target, purpose, seed) {
+  # 1. optionally cut splittable components into sub-units (balanced halves in env space)
+  # 2. search configurations of (sub)units whose cumulative size lands in train_target
+  # 3. score each candidate by:
+  #      - achieved train proportion (soft, inside window)
+  #      - W-like distance match (test sample-to-train ~ sample-to-prediction)
+  #      - coverage: does train env-range contain each test unit's env-range?  (two-sided)
+  # 4. return the config maximising coverage within the window; tag out-of-AOA holdouts
+  # TODO: define the W/coverage objective precisely; decide search (greedy vs exhaustive for small n).
+  list(train_id = NULL, test_id = NULL, config = NULL, achieved_prop = NA, coverage = NA)
+}
+```
+
+## Step 5 — CV folds (same logic, every subgraph out ≥ 1)
+
+Folds are *not* leave-one-graph-out. We keep drawing `train_target`-sized
+configurations such that **every (sub)graph is held out at least once**, and we
+tag any fold where `test-env ⊄ train-env` as an **out-of-AOA fold** to be scored
+*separately* — never averaged into the mapping CV. Output mirrors
+`CAST::knndm()` (`indx_train` / `indx_test`) so `modeller()`'s
+`trainControl(index = ...)` consumes it unchanged.
+
+```{r step5-folds, eval=FALSE}
+partition_folds <- function(x, geo_d, env_d, splittable, train_target, purpose, seed) {
+  # greedily assemble folds covering all units with >=1 holdout each, each ~train_target;
+  # per fold record: achieved prop, W match, in/out-of-AOA flag.
+  # TODO: termination (min #folds to cover all units) and the AOA-coverage test.
+  list(indx_train = list(), indx_test = list(), fold_meta = NULL)  # caret/knndm-shaped
+}
+```
+
+## Assembly — `build_partition()`
+
+The single artifact every downstream consumer reads. Shape deliberately
+mirrors `spatial_class_split()` + `knndm()` so `modeller(split = ...)` and
+`trainControl(index = ...)` both work, and it subsumes LOPO (populations =
+components), edist folds (split within env-homogeneous components), and the
+whole-population-leakage audit (the two-sided coverage rule) in one object.
+
+```{r build-partition, eval=FALSE}
+build_partition <- function(x, connect_m, train_target, purpose, pcs, seed) {
+  x     <- partition_components(x, connect_m)
+  geo_d <- partition_geo_dist(x)
+  env_d <- partition_env_dist(x, pcs)
+  spl   <- partition_splittable(x, geo_d, env_d, purpose, pcs)
+  split <- partition_split(x, geo_d, env_d, spl$splittable, train_target, purpose, seed)
+  folds <- partition_folds(x, geo_d, env_d, spl$splittable, train_target, purpose, seed)
+
+  list(
+    train_id   = split$train_id,
+    test_id    = split$test_id,
+    indx_train = folds$indx_train,   # knndm-shaped, for caret::trainControl(index=)
+    indx_test  = folds$indx_test,
+    components = select(st_drop_geometry(x), .id, component),
+    geo_d = geo_d, env_d = env_d,
+    splittable = spl, fold_meta = folds$fold_meta,
+    meta = list(connect_m = connect_m, train_target = train_target,
+                purpose = purpose, seed = seed)
+  )
+}
+```
+
+## Open questions carried forward
+
+- **`connect_m` derivation** — formalise the variogram-range / geodist-knee
+  choice instead of the default; sensitivity-test across resolutions.
+- **Separation metric** (Step 3) — Mahalanobis space, covariance estimator,
+  and the "alone" radii in geo and env.
+- **The objective** (Steps 4–5) — the exact W/coverage score that balances
+  "test looks like prediction" against "train covers test".
+- **Out-of-AOA folds** — the coverage test that routes a fold to the separate,
+  discovery-style score rather than the mapping average.
+```

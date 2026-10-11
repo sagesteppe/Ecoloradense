@@ -1,0 +1,357 @@
+---
+title: "Niche estimation as a function of occurrence sample size"
+subtitle: "SVM hypervolumes across iter0, iter1, and 2026 field data"
+author: "Reed Benkendorf"
+format:
+  html:
+    toc: true
+    code-fold: false
+    df-print: paged
+knitr:
+  opts_chunk:
+    message: false
+    warning: false
+    collapse: true
+---
+
+## Motivation
+
+Each data iteration changes two things at once: the number of occurrence
+points, and their geocoding quality. iter0 is public data (noisy),
+iter1 adds presences and removes some bad geocodes, and the 2026 field
+data adds more vetted presences. A direct comparison of per-iteration
+niche estimates confounds *size* with *purity*.
+
+This document estimates the realized niche with one-class SVM
+hypervolumes (Blonder's `hypervolume_svm`) and sets up two panels:
+
+- **Panel A** — three as-observed hypervolumes, one per iteration. The
+  descriptive, observational story.
+- **Panel B** — rarefaction on the clean 2026 universe. Isolates the
+  size effect, estimates the asymptotic volume, and reports how much of
+  it the current sample captures.
+
+A later Panel C (purity, with-and-without known-bad points at matched
+n) reuses the `point_status` bookkeeping created below but is not
+executed here.
+
+## Setup
+
+Freeze SVM knobs once; the same `(nu, gamma)` is used for every fit so
+nothing downstream depends on a tuning decision.
+
+```{r setup}
+library(tidyverse)
+library(hypervolume)
+library(terra)
+
+svm_nu    <- 0.05
+svm_gamma <- 0.5
+```
+
+```{r}
+# ---- synthetic test data ---------------------------------------------
+library(tidyverse)
+library(MASS, exclude = "select")
+
+set.seed(42)
+
+env_vars <- paste0("env", 1:4)
+
+# two modes in 4D env space; a mild shared correlation structure
+Sigma <- matrix(0.3, 4, 4); diag(Sigma) <- 1
+mu_a  <- c(-1.5, -1.5,  0.5,  0.0)
+mu_b  <- c( 1.5,  1.5, -0.5,  0.2)
+
+draw_clean <- function(n) {
+  k <- rbinom(1, n, 0.5)
+  rbind(mvrnorm(k,     mu_a, Sigma),
+        mvrnorm(n - k, mu_b, Sigma)) |>
+    as_tibble(.name_repair = ~ env_vars)
+}
+
+draw_bad <- function(n) {
+  # "bad geocodes" land in random env space, uniform over a wide box
+  matrix(runif(n * 4, -4, 4), ncol = 4) |>
+    as_tibble(.name_repair = ~ env_vars)
+}
+
+# clean universe of 2026 points
+clean_2026 <- draw_clean(300) |>
+  mutate(point_id = paste0("c", row_number()), iter = "iter2026")
+
+# iter1 = subsample of clean 2026 + a few bad points
+iter1_clean <- slice_sample(clean_2026, n = 150) |>
+  mutate(iter = "iter1")
+iter1_bad   <- draw_bad(15) |>
+  mutate(point_id = paste0("b1_", row_number()), iter = "iter1")
+
+# iter0 = subsample of iter1_clean + more bad points
+iter0_clean <- slice_sample(iter1_clean, n = 80) |>
+  mutate(iter = "iter0")
+iter0_bad   <- draw_bad(20) |>
+  mutate(point_id = paste0("b0_", row_number()), iter = "iter0")
+
+occs_env <- bind_rows(iter0_clean, iter0_bad,
+                      iter1_clean, iter1_bad,
+                      clean_2026) |>
+  select(iter, point_id, all_of(env_vars))
+```
+
+## Environmental axes from a seed SDM
+
+Pulling the top four variables from a saved SDM so this document stays
+synchronized with the modeling pipeline. When the final cleaned-data
+SDM is fit, replace `results/sdm_seed_top.rds` and rerun; nothing else
+changes.
+
+```{r env-vars}
+seed_model <- read_rds("results/sdm_seed_top.rds")
+
+env_vars <- seed_model |>
+  varImp() |>                    # swap for your SDM's accessor
+  as_tibble() |>
+  slice_max(Importance, n = 4) |>
+  pull(Variable)
+```
+
+## Occurrences and pooled standardization
+
+One long tibble with an `iter` label. Scaling is done across the pooled
+rows so the three iterations live in the same standardized space and
+overlaps are meaningful.
+
+```{r occs}
+env_stack <- rast("data/env_stack.tif")[[env_vars]]
+
+occs <- bind_rows(
+  read_csv("data/occ_iter0.csv")    |> mutate(iter = "iter0"),
+  read_csv("data/occ_iter1.csv")    |> mutate(iter = "iter1"),
+  read_csv("data/occ_iter2026.csv") |> mutate(iter = "iter2026")
+) |>
+  select(iter, point_id, lon, lat)
+
+occs_env <- occs |>
+  bind_cols(terra::extract(env_stack, as.matrix(occs[, c("lon", "lat")]))) |>
+  drop_na(all_of(env_vars)) |>
+  mutate(across(all_of(env_vars), ~ as.numeric(scale(.x))))
+```
+
+## Point bookkeeping and the clean universe
+
+`point_status` tags each unique `point_id` by its iteration membership
+pattern. Points that were present in iter0 but dropped by iter1 are
+"removed_iter0_to_iter1"; the same logic defines
+"removed_iter1_to_2026". Everything surviving to iter2026 is treated as
+the clean universe for Panel B's rarefaction.
+
+```{r bookkeeping}
+point_status <- occs_env |>
+  group_by(point_id) |>
+  summarise(
+    in_iter0    = any(iter == "iter0"),
+    in_iter1    = any(iter == "iter1"),
+    in_iter2026 = any(iter == "iter2026"),
+    .groups     = "drop"
+  ) |>
+  mutate(
+    status = case_when(
+      !in_iter1    &  in_iter0 ~ "removed_iter0_to_iter1",
+      !in_iter2026 &  in_iter1 ~ "removed_iter1_to_2026",
+      in_iter2026              ~ "kept_clean",
+      TRUE                     ~ "other"
+    )
+  )
+
+clean_pool <- occs_env |>
+  filter(iter == "iter2026") |>
+  semi_join(filter(point_status, status == "kept_clean"), by = "point_id") |>
+  distinct(point_id, .keep_all = TRUE)
+```
+
+## Panel A: three as-observed hypervolumes
+
+```{r panel-a-fits}
+hv_fits <- occs_env |>
+  select(iter, all_of(env_vars)) |>
+  nest(data = all_of(env_vars)) |>
+  mutate(
+    hv = map2(data, iter, ~ hypervolume_svm(
+      as.matrix(.x), name = .y,
+      svm.nu = svm_nu, svm.gamma = svm_gamma, verbose = FALSE
+    ))
+  )
+
+panel_a_volumes <- hv_fits |>
+  mutate(volume = map_dbl(hv, get_volume)) |>
+  select(iter, volume)
+```
+
+### Pairwise overlap
+
+```{r panel-a-overlaps}
+panel_a_overlaps <- hv_fits |>
+  select(iter, hv) |>
+  (\(x) inner_join(x, x, by = character(), suffix = c("_a", "_b")))() |>
+  filter(iter_a < iter_b) |>
+  mutate(
+    stats = map2(hv_a, hv_b, ~ hypervolume_overlap_statistics(
+      hypervolume_set(.x, .y, check.memory = FALSE, verbose = FALSE)
+    ))
+  ) |>
+  mutate(
+    jaccard  = map_dbl(stats, "jaccard"),
+    sorensen = map_dbl(stats, "sorensen")
+  ) |>
+  select(iter_a, iter_b, jaccard, sorensen)
+```
+
+## Panel B: rarefaction on the clean universe
+
+### Reference hypervolume
+
+The full-clean-pool fit serves as the comparison "truth" that each
+subsampled fit is scored against. Same knobs as Panel A.
+
+```{r reference-hv}
+hv_reference <- hypervolume_svm(
+  as.matrix(clean_pool[, env_vars]),
+  name = "reference_full",
+  svm.nu = svm_nu, svm.gamma = svm_gamma, verbose = FALSE
+)
+
+n_full <- nrow(clean_pool)
+```
+
+### Bootstrap grid
+
+The `n_sample` ladder is a placeholder; replace with the real
+`n_iter0`, `n_iter1`, `n_full`, plus a few interpolated anchors. Drop
+`replicate` to 25 for a dry run; 100 is where the quantile bands
+usually tighten.
+
+```{r bs-grid}
+bs_grid <- expand_grid(
+  n_sample  = c(20, 40, 80, 160, n_full),
+  replicate = 1:100
+)
+```
+
+### Unified bootstrap worker
+
+One draw per replicate feeds the hypervolume fit, the overlap-with-
+reference, and the per-axis 95% range used by the honest-complement
+diagnostic. Keeping all three in the same worker guarantees they share
+the same subsample.
+
+```{r fit-one}
+fit_one <- function(n_sample, replicate) {
+  draw <- slice_sample(clean_pool, n = n_sample, replace = FALSE)
+
+  hv <- hypervolume_svm(
+    as.matrix(draw[, env_vars]),
+    name = paste0("n", n_sample, "_r", replicate),
+    svm.nu = svm_nu, svm.gamma = svm_gamma, verbose = FALSE
+  )
+
+  ov <- hypervolume_overlap_statistics(
+    hypervolume_set(hv, hv_reference, check.memory = FALSE, verbose = FALSE)
+  )
+
+  axis_ranges <- draw |>
+    summarise(across(all_of(env_vars),
+                     ~ diff(quantile(.x, c(.025, .975))))) |>
+    pivot_longer(everything(), names_to = "axis", values_to = "range_q95")
+
+  tibble(
+    volume   = get_volume(hv),
+    jaccard  = ov["jaccard"],
+    sorensen = ov["sorensen"],
+    axes     = list(axis_ranges)
+  )
+}
+```
+
+### Run the grid
+
+Cache this chunk so iterating on the asymptote fit and the plots does
+not retrigger every SVM fit.
+
+```{r bs-run, cache=TRUE}
+bs_results <- bs_grid |>
+  mutate(result = map2(n_sample, replicate, fit_one, .progress = TRUE)) |>
+  unnest(result)
+
+bs_axes <- bs_results |>
+  select(n_sample, replicate, axes) |>
+  unnest(axes)
+```
+
+## Completeness: asymptote fits on volume vs n
+
+Fit both `SSasymp` (asymptotic regression) and `SSmicmen`
+(Michaelis-Menten). MM approaches its asymptote more slowly, so the two
+bracket the completeness estimate; report the range.
+
+```{r completeness}
+volume_by_n <- bs_results |>
+  group_by(n_sample) |>
+  summarise(volume = mean(volume), .groups = "drop")
+
+fit_asymp  <- nls(volume ~ SSasymp(n_sample, Asym, R0, lrc), data = volume_by_n)
+fit_micmen <- nls(volume ~ SSmicmen(n_sample, Vm, K),        data = volume_by_n)
+
+v_full <- bs_results |> filter(n_sample == n_full) |> pull(volume) |> mean()
+
+completeness <- tibble(
+  model        = c("asymp", "micmen"),
+  v_inf        = c(coef(fit_asymp)["Asym"], coef(fit_micmen)["Vm"]),
+  v_at_n_full  = v_full
+) |>
+  mutate(completeness = v_at_n_full / v_inf)
+```
+
+## Per-axis range curves (honest-complement diagnostic)
+
+Hypervolume plateau can be an SVM-trim artifact: `svm.nu` discards a
+fixed fraction of points regardless of n, so the boundary stops
+chasing new extremes even if the data keep extending. The per-axis
+95%-range at each n is the diagnostic. If the hypervolume curve
+flattens while axis ranges keep climbing, the completeness number is
+optimistic.
+
+```{r axis-curves}
+axis_curves <- bs_axes |>
+  group_by(axis, n_sample) |>
+  summarise(
+    mean = mean(range_q95),
+    lo   = quantile(range_q95, .025),
+    hi   = quantile(range_q95, .975),
+    .groups = "drop"
+  )
+```
+
+## Outputs
+
+- `panel_a_volumes`, `panel_a_overlaps` — observational panel.
+- `bs_results` — long table of volume, Jaccard-with-reference,
+  Sorensen-with-reference per `(n_sample, replicate)`.
+- `completeness` — one row per asymptote model; the pair gives the
+  reportable range.
+- `axis_curves` — per-env-axis 95%-range at each n for the
+  diagnostic plot.
+
+## Known caveats
+
+- **SVM-nu behavior.** Because `svm.nu` trims a fixed fraction of
+  points at every n, SVM-based completeness tends to look higher than
+  the KDE-based equivalent. Report the estimator explicitly in
+  methods.
+- **Reference as asymptote.** The reference hypervolume is the full
+  clean-pool fit, not a true asymptote. If the volume curve has not
+  plateaued at `n_full`, overlap-with-reference is still interpretable
+  as "fraction of the current-best estimate recovered," but should
+  not be read as "fraction of the true niche."
+- **Correlated env axes.** If the seed SDM's top four variables are
+  collinear, consider pre-pruning with `caret::findCorrelation` before
+  freezing `env_vars`.
