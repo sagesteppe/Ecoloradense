@@ -23,32 +23,29 @@ knitr:
 
 ## Principle
 
-The test/train split and the cross-validation folds are **one problem**, not
-two. Pili et al. (2025) report internal CV with no stated holdout; CAST
-(`geodist`/`knndm`) gives a prediction-matched holdout *or* a fold diagnostic,
-but not a single object that derives both from the same logic. Here the
-partition is one artifact whose:
+The test/train split and the CV folds are **one problem**, not two. Pili et al.
+(2025) report internal CV with no stated holdout. CAST (`geodist`/`knndm`) gives
+a prediction-matched holdout *or* a fold diagnostic, but not one object that
+derives both. Here the partition is a single artifact. Its:
 
 - **unit** is the *connected component* (a graph of nearby points), not an
   arbitrary `k`;
-- **separation** is measured on **two explicit axes** — geography (governs
-  leakage / connectivity) and environment (governs representativeness /
-  coverage) — kept separate because the cases where they *decouple* are exactly
-  the ecologically interesting ones;
-- **split and fold rules** are parameterized by `purpose ∈ {discovery, mapping,
-  projection}`, because "can this cluster be split?" is not a property of the
-  cluster — it is a property of the question being asked.
+- **separation** is measured on **two axes** — geography (leakage) and
+  environment (coverage) — kept apart because the cases where they *decouple*
+  are the ecologically interesting ones;
+- **split and fold rules** depend on `purpose ∈ {discovery, mapping,
+  projection}`. "Can this cluster be split?" is a property of the question, not
+  the cluster.
 
-The failure this is built to avoid: on bimodal / clustered rare-plant data,
-both E-clustering (collapse a cluster to one point) and vanilla LOPO/NNDM (hold
-a whole cluster out) destroy the within-condition replication that a sparse
-endemic needs. We want clusters that can be **cut and re-represented** when the
-question is *mapping*, and held out intact when the question is *discovery*.
+The failure this avoids: on bimodal, clustered rare-plant data, both
+E-clustering (collapse a cluster to one point) and vanilla LOPO/NNDM (hold a
+whole cluster out) destroy the within-condition replication a sparse endemic
+needs. We want clusters **cut and re-represented** for *mapping*, held out
+intact for *discovery*.
 
-We build this piecewise: every step emits its intermediate object **and** a
-plot, so we can see the graphs before anything is folded into a function. The
-per-step helpers (`partition_*`) compose into the final `build_partition()` at
-the end.
+We build it piecewise. Every step emits its object **and** a plot, so we see
+the graphs before anything is folded into a function. The `partition_*` helpers
+compose into `build_partition()` at the end.
 
 ## Parameters
 
@@ -57,16 +54,16 @@ Everything tunable lives here so the rest of the document is logic, not knobs.
 ```{r params}
 params_part <- list(
   resolution     = 90,            # nominal res for the env stack (90/30/10/3 -> dem_3arc/1arc/1-3arc/3m)
-  connect_m      = 250,           # Step 1 graph edge threshold (metres). Derived/justified in Step 1.
+  connect_m      = 500,           # Step 1 graph edge threshold (metres). Derived/justified in Step 1.
   superclust_m   = 40000,         # Step 2a super-cluster cut (metres), inside the 30-75 km gap
   train_target   = c(0.70, 0.80), # Step 4 outer test-holdout: soft train-proportion window
-  n_folds        = 10,            # Step 5 inner CV folds (each validates ~1/n_folds of training)
+  k              = 10,            # Step 5 inner CV folds (each validates ~1/k of training); CAST's `k`
   purpose        = "mapping",     # discovery | mapping | projection
   pca_var_target = 0.90,          # retain enough env PCA axes to reach this cumulative variance
   min_split_n    = 12,            # Step 3: min presences for a component to be worth cutting
-  mode_sep_factor = 1.5,          # Step 3: env_nn / ref mode-radius above this = a resolved env mode
-                                  #   (higher ⇒ fewer forced-train singletons ⇒ more small env-isolated
-                                  #    units allowed into test as flagged extrapolation points)
+  extrap_frac    = 0.8,           # Step 3: a segment whose whole-holdout puts >= this fraction of its
+                                  #   points beyond rest-of-data env-NN p95 is an EXTRAPOLATION segment:
+                                  #   kept out of training and its points spread across the holdouts
   seed           = 1021
 )
 set.seed(params_part$seed)
@@ -74,25 +71,28 @@ set.seed(params_part$seed)
 
 ## Setup
 
-This document runs from the **repository root** (set via `knitr$opts_knit$root.dir`
-in the YAML), so every path below is root-relative. Source the project's
-`functions.R` for `rastReader()`, `res_string()`, `assign_population()`, etc.
-`PROJ_ROOT` defined in that file is the data-machine path; the raster probe below
-also checks a local `data/spatial/processed` and prefers whichever actually holds
-the stack.
+This document runs from the **repository root** (`knitr$opts_knit$root.dir` in
+the YAML), so every path is root-relative. We source `functions.R` for
+`rastReader()`, `res_string()`, etc. Its `PROJ_ROOT` is the data-machine path;
+the raster probe below also checks a local `data/spatial/processed` and uses
+whichever holds the stack.
 
 ```{r setup}
 suppressPackageStartupMessages({
   library(sf)
   library(terra)
   library(tidyverse)
-  library(igraph)
+  library(CAST)   # geodist/knndm/nndm vocabulary; trainDI/aoa (DI + AOA) used in Steps 3-5
+})
+# distances via FNN and the W statistic via twosamples — the same leaf functions CAST calls
+# internally (so these pieces are wraps, not reimplementations); referenced with ::
+suppressPackageStartupMessages({
+  requireNamespace("FNN"); requireNamespace("twosamples")
 })
 
 source("scripts/functions.R")  # defines PROJ_ROOT (data-machine), rastReader, res_string, ...
 
 p2dat   <- "data/Data4modelling"
-p2areas <- "data/GroundTruthPts/ground_truth_median-VISITED.gpkg"
 # raster stack may live under the data-machine root or locally; Step 0 probes both
 p2proc_candidates <- c(
   file.path(PROJ_ROOT, "data", "spatial", "processed"),
@@ -102,15 +102,13 @@ p2proc_candidates <- c(
 
 ## Step 0 — Points, populations, and the environmental space
 
-The **presences are the graph unit** — the population structure we want to see —
-so they drive Steps 1–2. We load the collated iter2 set
-(`3m-presence-iter2.gpkg`), which folds the **2026 field records** (opportunistic
-+ transect) into the iter1 presences; `source` carries provenance so the 2026
-points are visible on every plot. Background **absences** (`iter1-pa.gpkg`, the
-2026 campaign added presences, not new background) are loaded aside here and
-only enter in the class-aware Steps 4–5. Then we extract predictors and reduce
-to a PCA env space; if the raster stack isn't mounted, Steps 1–2 still run on
-geography alone.
+The **presences are the graph unit**, so they drive Steps 1–2. We load the
+collated iter2 set (`3m-presence-iter2.gpkg`), which folds the **2026 field
+records** into the iter1 presences; `source` keeps provenance so the 2026 points
+show on every plot. Background **absences** (`iter1-pa.gpkg`) are loaded aside
+here and only enter the class-aware Step 6. We then extract predictors and
+reduce to a PCA env space. Without the raster stack, Steps 1–2 run on geography
+alone.
 
 ```{r step0-points}
 # presences: iter2 collated set (iter1 + 2026 field data). Occurrence = 1.
@@ -172,13 +170,6 @@ if (env_ok) {
 ```
 
 ```{r step0-plot}
-# presences coloured by provenance — the 2026 field data shown explicitly
-ggplot(pts) +
-  geom_sf(aes(colour = source), alpha = .8, size = 1.8) +
-  labs(title = "Step 0 — presences by source (2026 field data folded in)",
-       colour = "source") +
-  theme_minimal()
-
 if (env_ok) {
   ggplot(pts, aes(PC1, PC2, colour = source)) +
     geom_point(alpha = .8, size = 1.8) +
@@ -189,20 +180,21 @@ if (env_ok) {
 
 ## Step 1 — Graph construction (connected components in geographic space)
 
-Connect any two points within `connect_m`; the connected components of that
-graph are our partition units. Graph-based (vs k-means / fixed-k) because it
-respects the real gaps in irregular, bimodal data: a dense population becomes
-one component we *can* later split, an isolated outlier becomes its own
-singleton component we handle explicitly.
+Connect any two points within `connect_m`. The connected components of that
+graph are our units — the analog of `knndm()$clusters`, but built single-linkage
+from a distance graph rather than by `knndm()`'s `ward.D2` hierarchical cut:
+single-linkage respects the real gaps in irregular, bimodal data, where Ward
+would balance cluster sizes across them. A dense population becomes one component
+we can later split; an isolated outlier becomes its own singleton.
 
 ### Deriving the threshold (don't trust the round number)
 
-`connect_m` is the master knob — it decides whether two nearby populations are
-one component (held together) or two (splittable). Rather than default it, look
-at the presence-to-presence nearest-neighbour distance distribution and put the
-threshold at the gap between within-population and between-population scales.
-(On the data machine, also compare against `CAST::geodist()`'s
-sample-to-prediction distances — the knee there is the principled choice.)
+`connect_m` is the master knob: it decides whether two nearby populations are
+one component or two. Don't default it. Look at the presence-to-presence
+nearest-neighbour distances and set the threshold at the gap between
+within-population and between-population scales. (On the data machine, also
+check `CAST::geodist()`'s sample-to-prediction distances — the knee there is
+the principled choice.)
 
 ```{r step1-threshold}
 # pts are all presences; NN distance between each presence and its nearest other
@@ -225,9 +217,13 @@ quantile(nn_m, c(.5, .75, .9, .95, .99)) |> round(1)
 
 ```{r step1-graph}
 partition_components <- function(x, connect_m) {
-  within <- sf::st_is_within_distance(x, dist = connect_m)  # sparse list, includes self
-  g      <- igraph::graph_from_adj_list(within, mode = "all")
-  memb   <- igraph::components(g)$membership
+  # Connected components of the within-connect_m graph are identical to single-linkage clusters
+  # cut at height connect_m (single-linkage = transitive closure of <=connect_m edges; verified
+  # bit-for-bit on these data). Use stats::hclust so the clustering matches CAST's idiom and
+  # carries no igraph dependency; the super-cluster step (Step 2a) already uses the same call.
+  within <- sf::st_is_within_distance(x, dist = connect_m)  # sparse list kept for the edge plot
+  d      <- sf::st_distance(x); units(d) <- NULL
+  memb   <- stats::cutree(stats::hclust(stats::as.dist(d), method = "single"), h = connect_m)
   x$component <- factor(memb)
   attr(x, "adj") <- within   # keep for edge plotting / hull distances
   x
@@ -249,25 +245,20 @@ edges <- do.call(rbind, lapply(seq_along(adj), function(i) {
 })) |> as.data.frame()
 
 ggplot() +
-  { if (nrow(edges)) geom_segment(data = edges, aes(x, y, xend = xend, yend = yend),
-                                  colour = "grey70", linewidth = .3) } +
-  geom_sf(data = pts, aes(colour = component), size = 1.8, show.legend = FALSE) +
-  labs(title = sprintf("Step 1 — graph components (connect_m = %d m)", params_part$connect_m)) +
+  geom_segment(data = edges, aes(x, y, xend = xend, yend = yend),
+               colour = "grey70", linewidth = .3) +
+  geom_sf(data = pts, aes(colour = component), size = 1.2, show.legend = FALSE) +
+  labs(title = sprintf("Step 1 — %d components (connect_m = %d m)",
+                       nlevels(pts$component), params_part$connect_m)) +
   theme_minimal()
-
-# where does the 2026 field data land across the distance-based components?
-pts |> st_drop_geometry() |>
-  count(component, source) |>
-  pivot_wider(names_from = source, values_from = n, values_fill = 0) |>
-  arrange(desc(rowSums(across(where(is.numeric)))))
 ```
 
 ## Step 2 — Inter-component geographic distance (minimum, hull-cheapened)
 
 Leakage is about the *closest* points between components, so we want the
-**minimum** nearest distance, not centroid distance. Collapsing each component
-to a MULTIPOINT and taking `st_distance` gives the exact pairwise minima; for
-large components this is where the convex-hull shortcut goes (only hull
+**minimum** between-component distance, not centroid distance. Collapsing each
+component to a MULTIPOINT and taking `st_distance` gives the exact pairwise
+minima. For large components, the convex-hull shortcut applies (only hull
 vertices can carry the minimum).
 
 ```{r step2-geo}
@@ -286,38 +277,27 @@ geo_d <- partition_geo_dist(pts)
 as.data.frame(round(geo_d)) |> head(8)
 ```
 
-```{r step2-plot}
-as.data.frame(as.table(geo_d)) |>
-  setNames(c("a", "b", "dist_m")) |>
-  ggplot(aes(a, b, fill = dist_m)) +
-  geom_tile() +
-  scale_fill_viridis_c(trans = "sqrt") +
-  labs(title = "Step 2 — min geographic distance between components", x = NULL, y = NULL) +
-  theme_minimal() + theme(axis.text = element_text(size = 6))
-```
-
 ## Step 2a — Inter-component environmental distance + the geo/env decoupling diagnostic
 
-Component location in env space = medoid of its PCA scores (robust to the
-stochastic within-cluster spread). The key diagnostic — **before** building any
-rule — is how the geographic and environmental between-component distances
-relate. The global Spearman rho is *not* the whole story: for this species the
-scatter is **two clouds and a gap** (a ~30–75 km geographic gap separating
-population super-clusters), and the relationship is non-linear and strongly
-heteroscedastic. The decisive feature is the **conditional env spread at small
-geographic distance** — if geographically adjacent components span a wide env
-range, geographic folds will *not* control environmental extrapolation and the
-two axes must stay separate.
+A component's env location is the medoid of its PCA scores (robust to within-
+cluster spread). The key diagnostic, **before** any rule, is how geographic and
+environmental between-component distances relate. Where `knndm()`/`geodist()`
+commit to a single `dist_space` (`"geographical"` *or* `"feature"`), we keep both,
+because for this species they decouple. The global Spearman rho is not the whole
+story. For this species the scatter is **two clouds and a gap** (a
+~30–75 km geographic gap between population super-clusters), non-linear and
+strongly heteroscedastic. What matters is the **env spread at small geographic
+distance**: if adjacent components span a wide env range, geographic folds will
+*not* control env extrapolation, and the two axes must stay separate.
 
-Empirically here: `rho ≈ 0.64`, but within ~25 km env distance ranges from ~0
-to the maximum, and the two most spatially extreme components are env-*closer*
-than mid-range pairs (far in space, near in env). Colouring the env-space
-ordination by **geographic super-cluster** (a single-linkage cut across the
-30–75 km gap) shows why: at the *super-cluster* scale geo and env largely agree
-(Cochetopa-south and the eastern outliers are the distinct env mode), while
-*within* the northern massif env varies independently of geography. That split
-is exactly the `purpose` hierarchy — super-cluster = discovery unit,
-within-super-cluster = mapping unit.
+Here `rho ≈ 0.64`, but within ~25 km env distance ranges from ~0 to its maximum,
+and the two most spatially extreme components are env-*closer* than mid-range
+pairs. Colouring the env ordination by **geographic super-cluster** (a single-
+linkage cut across the gap) shows why: at the super-cluster scale geo and env
+agree (Cochetopa-south and the eastern outliers are the distinct env mode),
+while *within* the northern massif env varies independently of geography. That
+is the `purpose` hierarchy — super-cluster = discovery unit, within-super-cluster
+= mapping unit.
 
 ```{r step2a-env, eval=env_ok}
 partition_env_dist <- function(x, pcs) {
@@ -347,11 +327,11 @@ ggplot(decouple, aes(geo_m / 1000, env_d)) +
 
 ### Geographic super-clusters and the env-space view
 
-A single-linkage cut of the component min-distance matrix across the 30–75 km
-gap recovers the geographic super-clusters. Colouring the env-space ordination
-by them is the plot that resolves the structure: where a super-cluster occupies
-its own env region (geo≈env, discovery-valid holdout) versus where one
-super-cluster smears across env space (geo⊥env, mapping needs env-aware folds).
+A single-linkage cut of the component min-distance matrix across the gap
+recovers the super-clusters. Colouring the env ordination by them resolves the
+structure: a super-cluster that occupies its own env region (geo≈env, a valid
+discovery holdout) versus one that smears across env space (geo⊥env, where
+mapping needs env-aware folds).
 
 ```{r step2a-superclusters, eval=env_ok}
 # super-clusters: single-linkage so the cut respects the inter-cluster gap, not centroids
@@ -381,89 +361,74 @@ ggplot(med, aes(PC1, PC2, colour = supercluster, size = n)) +
 
 # Decision-bearing steps
 
-The pieces above are the *inputs*. Steps 3–5 encode the design choices. Step 3
-is now implemented; Steps 4–5 remain scaffolded (`eval: false`) with real
-signatures and `TODO` decision points.
+The pieces above are the *inputs*. Steps 3–6 encode the design choices, all for
+`purpose = "mapping"` here (discovery/projection branches are stubbed).
 
-## Step 3 — Separation & splittability (purpose-dependent)
+## Step 3 — Roles: extrapolation, splittable, atomic
 
-Splittability is **not** a property of a component — it is `separation × purpose`.
-A component well-separated in environment is the most *dangerous* one to split
-under `discovery` (splitting an env-distinct unit turns an honest extrapolation
-test into near-interpolation) and the most *useful* one to split under `mapping`
-(you want within-condition interpolation). Grounded in Step 2a: the **super-cluster
-is the discovery atom** (geo≈env between super-clusters), while **within** a
-super-cluster env ⊥ geo, so mapping needs env-aware cutting.
+Each component gets one role, and the role drives how Steps 4–6 allocate it. The
+decision rests on one **realized** measure: hold a component out *whole*, and ask
+what fraction of its points fall **outside the Area of Applicability** of
+everything else (`frac_beyond`). This is CAST's DI/AOA logic (`trainDI`/`aoa`)
+applied per component: the env-NN 95th percentile of the rest-of-data is the AOA
+threshold, each held-out point's env-NN distance is its DI, and `frac_beyond` is
+the share with `DI >` threshold.
 
-Separation is measured without inverting a per-component covariance (unstable for
-the many tiny components): a **silhouette-like** ratio of each component's gap to
-its nearest neighbour in env space (`env_nn`) over a **stable global mode-radius**
-— the median internal env dispersion of the *well-populated* components
-(`n ≥ min_split_n`). Using a global reference rather than each component's own
-spread is essential: a 1–2 point component has near-zero spread, so its own ratio
-would blow up and falsely flag it as a distinct mode. `mode_sep > mode_sep_factor`
-⇒ the component is a *resolved env mode*. The gate:
+- **extrapolation** (`frac_beyond ≥ extrap_frac`) — an env-distinct segment: an
+  outlier population or a resolved env mode (e.g. the east outliers, the 2026
+  mode). It is **kept out of training** and its points are **spread across the
+  holdouts** (Steps 4–5), so no single fold absorbs a whole env-distinct lump.
+- **splittable** (`n ≥ min_split_n`, not extrap) — large enough to cut: Step 4
+  takes a representative test subset, Step 5 re-represents it across folds.
+- **atomic** (the rest) — env-redundant small units, held out whole as filler.
 
-- **mapping** — `splittable` if a component is large enough to cut
-  (`n ≥ min_split_n`); a resolved env mode that is *too small to cut*
-  (`env_isolated & n < min_split_n`, e.g. the 2026 discovery comp 37) is a
-  **`singleton_mode`**: it can be neither split nor honestly held out, so it is
-  forced into train and flagged (held out, it would guarantee extrapolation
-  failure — that belongs to a discovery fold, not a mapping average).
-- **discovery** — keep every unit intact (`splittable = FALSE`); the holdout atom
-  is the super-cluster.
-- **projection** — defer to env-space thinning (E-clustering / E-distThinning).
+`frac_beyond` is direct and tuning-light. It cleanly separates genuine
+extrapolation units (`frac_beyond` ≈ 1) from the ordinary spatial-holdout
+penalty (a fraction only).
+
+For `discovery`, every unit stays intact and the holdout atom is the
+super-cluster; `projection` defers to env-space thinning.
 
 ```{r step3-splittable, eval=env_ok}
-partition_splittable <- function(x, geo_d, env_d, pcs, purpose,
-                                 min_split_n = 12, mode_sep_factor = 1) {
+partition_splittable <- function(x, pcs, purpose, min_split_n = 12, extrap_frac = 0.8) {
   xd    <- sf::st_drop_geometry(x)
   comps <- levels(x$component)
+  P     <- as.matrix(xd[pcs])
+  sizes <- count(xd, component, name = "n")
 
-  # medoid per component, and each component's internal env dispersion
-  med <- xd |> group_by(component) |>
-    summarise(across(all_of(pcs), ~ median(.x, na.rm = TRUE)), n = n(), .groups = "drop")
-  P   <- as.matrix(xd[pcs])
-  Pm  <- as.matrix(med[match(xd$component, med$component), pcs])
-  spread <- tibble(component = xd$component, d2med = sqrt(rowSums((P - Pm)^2))) |>
-    group_by(component) |> summarise(env_spread = mean(d2med), .groups = "drop")
+  # REALIZED extrapolation flag (shared by Steps 4-5): CAST's DI/AOA per component. Hold each
+  # component out WHOLE; the env-NN p95 of the rest-of-data is the AOA threshold (`thr`), each
+  # held-out point's env-NN distance is its DI (`enn`), and frac_beyond is the share outside
+  # the AOA (DI > thr). frac_beyond ~1 ⇒ an env-distinct segment (an outlier population or a
+  # resolved mode); a fraction only means a self-exclusion gap. Direct and tuning-light, and it
+  # drives allocation in Steps 4-5: extrap segments are kept out of training and spread across
+  # the holdouts. (trainDI()/aoa() give the same DI/threshold for a global cross-check.)
+  seg_extrap <- purrr::map_dfr(comps, function(cmp) {
+    te <- P[xd$component == cmp, , drop = FALSE]
+    tr <- P[xd$component != cmp, , drop = FALSE]
+    tnn <- c(FNN::knn.dist(tr, k = 1))                             # rest-of-data sample-to-sample NN
+    thr <- stats::quantile(tnn, 0.95)                             # AOA threshold
+    enn <- c(FNN::knnx.dist(data = tr, query = te, k = 1))         # held-out component's DI
+    tibble(component = cmp, n_beyond = sum(enn > thr), frac_beyond = mean(enn > thr))
+  })
 
-  # stable global mode-radius: median spread of well-populated components (falls
-  # back to all components if none clear min_split_n). Avoids the tiny-component
-  # spread→0 degeneracy that would flag every small cluster as its own mode.
-  well <- med$component[med$n >= min_split_n]
-  ref_spread <- stats::median(spread$env_spread[spread$component %in% well])
-  if (!is.finite(ref_spread)) ref_spread <- stats::median(spread$env_spread)
-
-  # nearest OTHER component in each space
-  gd <- geo_d; diag(gd) <- Inf
-  ed <- env_d; diag(ed) <- Inf
-  near <- tibble(component = comps, geo_nn = apply(gd, 1, min), env_nn = apply(ed, 1, min))
-
-  tab <- distinct(xd, component, supercluster) |>
-    left_join(select(med, component, n), by = "component") |>
-    left_join(spread, by = "component") |>
-    left_join(near,   by = "component") |>
+  distinct(xd, component, supercluster) |>
+    left_join(sizes,      by = "component") |>
+    left_join(seg_extrap, by = "component") |>
     mutate(
-      mode_sep     = env_nn / ref_spread,               # >factor ⇒ resolved env mode
-      env_isolated = mode_sep > mode_sep_factor,
-      splittable   = if (purpose == "mapping") n >= min_split_n else FALSE,
-      must_train   = purpose == "mapping" & env_isolated & n < min_split_n,
+      extrap     = purpose == "mapping" & frac_beyond >= extrap_frac,
+      splittable = purpose == "mapping" & !extrap & n >= min_split_n,
       role = dplyr::case_when(
         purpose == "discovery"  ~ "atomic (supercluster = unit)",
         purpose == "projection" ~ "defer to env thinning",
-        must_train              ~ "singleton_mode (force train, flag)",
-        splittable              ~ "splittable",
-        TRUE                    ~ "atomic (env-redundant)"))
-  attr(tab, "ref_spread") <- ref_spread   # stable mode-radius, reused by Step 4
-  tab
+        extrap                  ~ "extrapolation (spread, held from training)",
+        splittable              ~ "splittable (interpolation)",
+        TRUE                    ~ "atomic (interpolation)"))
 }
 
-spl <- partition_splittable(pts, geo_d, env_d, pcs, params_part$purpose,
-                            params_part$min_split_n, params_part$mode_sep_factor)
-ref_spread <- attr(spl, "ref_spread")
-cat("purpose =", params_part$purpose, "| ref mode-radius =", round(ref_spread, 2),
-    "| role counts:\n"); print(table(spl$role))
+spl <- partition_splittable(pts, pcs, params_part$purpose,
+                            params_part$min_split_n, params_part$extrap_frac)
+cat("purpose =", params_part$purpose, "| role counts:\n"); print(table(spl$role))
 arrange(spl, desc(n))
 ```
 
@@ -471,9 +436,9 @@ arrange(spl, desc(n))
 med_role <- pts |> st_drop_geometry() |>
   group_by(component, supercluster) |>
   summarise(across(all_of(pcs), ~ median(.x, na.rm = TRUE)), n = n(), .groups = "drop") |>
-  left_join(select(spl, component, role, mode_sep), by = "component")
+  left_join(select(spl, component, role), by = "component")
 
-# env-space: which components are splittable / atomic / singleton modes
+# env-space: which components are extrapolation / splittable / atomic
 ggplot(med_role, aes(PC1, PC2, colour = role, size = n)) +
   geom_point(alpha = .8) +
   ggrepel::geom_text_repel(aes(label = component), size = 2.2, max.overlaps = 40,
@@ -493,48 +458,40 @@ ggplot(pts_role) +
   theme_minimal()
 ```
 
-## Step 4 — Test/train split (two-axis, soft 70–80 %, two-sided coverage)
+## Step 4 — Test/train split (soft 70–80 %, NNDM coverage check)
 
-First pass, `purpose = "mapping"`. The Step-3 roles make the **two-sided
-coverage** rule fall out automatically, so the allocation is simple:
+`purpose = "mapping"`. The Step-3 roles drive a simple allocation:
 
-1. **`singleton_mode` → train** (forced; held out they would guarantee
-   extrapolation, which is a discovery question, not a mapping one).
-2. **`splittable` → cut and re-represented**: within each such component take a
-   **k-means-medoid** test subset — cluster the component in the retained env
-   space into `n_test` groups and take the point nearest each centre. The medoids
-   are *representative/interior* (not extremes), and every component's extremes
-   stay in train, so both sets span the mode while test stays in-distribution.
-3. **`atomic` → whole-unit filler, most env-isolated first**: held out intact to
-   top the test set up toward the budget, prioritising the most env-isolated units
-   so the extrapolation budget is spent deliberately (and flagged by the coverage
-   check) rather than left to a random draw.
+1. **extrapolation -> spread**: a representative `test_frac` slice of the flagged
+   points (k-means-medoid picks) goes to test; the rest stay in train, so Step 5's
+   folds still have extrapolation to spread.
+2. **splittable -> cut**: within each component, take a k-means-medoid test subset
+   — cluster in env space into `n_test` groups, take the point nearest each centre.
+   The picks are representative, not extreme, so both sets span the mode and test
+   stays in-distribution.
+3. **atomic -> whole-unit filler, hardest first**: held out intact to top up the
+   test set toward the budget, hardest units (most points beyond rest-of-data p95)
+   first, so the residual budget is spent deliberately.
 
-The train proportion is a **soft target** — test comes first from the splittable
-fractions, then whole atomics are added greedily until the achieved proportion
-lands in `train_target`; nothing is forced across the line point-by-point.
+The train proportion is a **soft target**. Test fills from (1) and (2), then
+whole atomics are added greedily until the achieved proportion lands in
+`train_target`.
 
-Coverage is **measured against the training set's own structure, not an arbitrary
-radius** (the NNDM idea from the CAST vignette): compare each test point's nearest
-env distance to *train* against the distribution of train→train nearest-neighbour
-distances. Where the test NN distribution tracks the train NN distribution, those
-test points are representative — an interpolation task. We **report** rather than
-forbid the tail: the fraction of test beyond the train-NN 95th percentile and
-beyond its max. With `mode_sep_factor` set loosely (so fewer small env-isolated
-units are forced to train), some of those units are deliberately held into test
-as **flagged harder-than-interpolation points** — material the model is scored on
-even though train barely covers it. Note that *beyond-max* is typically ~0 here:
-forcing the most-isolated units into train keeps the train envelope env-
-comprehensive, so the realized extrapolation signal lives in the **beyond-p95
-tail**, not beyond-max. That tail fraction is the extrapolation budget made
-explicit; downstream it can be scored separately from the interpolation bulk. A true `geodist`-style comparison against
-*sample-to-prediction* distances still needs the prediction grid and runs on the
-data machine.
+Coverage is **measured against the training set's own structure** (the NNDM idea
+from the CAST vignette): compare each test point's nearest env distance to *train*
+(geodist's `test-to-sample`) against the train-to-train `sample-to-sample`
+distribution. Where the two track, the
+test is representative — interpolation. We **report** the tail (fraction beyond
+the train-NN p95 and max) rather than forbid it; because extrap points are in
+test, that tail is real and deliberate. A true `geodist`-style sample-to-
+prediction comparison still needs the prediction grid and runs on the data
+machine.
 
 ```{r step4-split, eval=env_ok}
 partition_split <- function(x, spl, pcs, train_target, seed = 1) {
   set.seed(seed)
-  xd <- st_drop_geometry(x) |> left_join(select(spl, component, role), by = "component")
+  xd <- st_drop_geometry(x) |>
+    left_join(select(spl, component, role, extrap, n_beyond), by = "component")
   N  <- nrow(xd)
   test_frac   <- 1 - mean(train_target)
   target_test <- round(N * test_frac)
@@ -555,35 +512,42 @@ partition_split <- function(x, spl, pcs, train_target, seed = 1) {
 
   test_id <- integer(0)
 
-  # 2. splittable: within-component representative test subset
-  for (cmp in spl$component[spl$role == "splittable"]) {
+  # 1. extrapolation segments: SPREAD their points — a representative test_frac slice to the
+  #    stringent test, the rest stay in TRAIN so Step 5's inner folds have extrapolation to
+  #    spread too. Env-distinct points are never dumped wholesale to either side.
+  ex_ids <- xd$.id[xd$extrap]
+  if (length(ex_ids)) {
+    M <- as.matrix(xd[match(ex_ids, xd$.id), pcs])
+    test_id <- c(test_id, ex_ids[kmed_pick(M, round(length(ex_ids) * test_frac))])
+  }
+
+  # 2. interpolation splittable: within-component representative test subset
+  for (cmp in spl$component[spl$role == "splittable (interpolation)"]) {
     idx  <- xd$.id[xd$component == cmp]
     M    <- as.matrix(xd[match(idx, xd$.id), pcs])
     pick <- idx[kmed_pick(M, round(length(idx) * test_frac))]
     test_id <- c(test_id, pick)
   }
 
-  # 3. atomic: add whole units until the budget is met, MOST env-isolated first, so
-  #    the extrapolation budget is spent deliberately on the genuinely novel units
-  #    (flagged by NNDM coverage below) rather than by luck of a random draw.
+  # 3. interpolation atomic: add whole units until the budget is met, HARDEST first (most
+  #    points beyond rest-of-data p95), so the residual budget is spent deliberately rather
+  #    than by luck of a random draw.
   atomic_order <- spl |>
-    filter(role == "atomic (env-redundant)") |>
-    arrange(desc(mode_sep)) |>
+    filter(role == "atomic (interpolation)") |>
+    arrange(desc(n_beyond)) |>
     pull(component)
   for (cmp in atomic_order) {
     if (length(test_id) >= target_test) break
     test_id <- c(test_id, xd$.id[xd$component == cmp])
   }
 
-  train_id <- setdiff(xd$.id, test_id)           # singletons + the rest
+  train_id <- setdiff(xd$.id, test_id)
 
   # NNDM-style coverage: test->train NN env distances vs train->train NN distances
   Ptr <- as.matrix(xd[match(train_id, xd$.id), pcs])
   Pte <- as.matrix(xd[match(test_id,  xd$.id), pcs])
-  test_nn  <- apply(Pte, 1, function(p) sqrt(min(colSums((t(Ptr) - p)^2))))
-  train_nn <- vapply(seq_len(nrow(Ptr)),
-                     function(i) sqrt(min(colSums((t(Ptr[-i, , drop = FALSE]) - Ptr[i, ])^2))),
-                     numeric(1))
+  test_nn  <- c(FNN::knnx.dist(data = Ptr, query = Pte, k = 1))   # test-to-sample NN
+  train_nn <- c(FNN::knn.dist(Ptr, k = 1))                        # sample-to-sample LOO NN
 
   by_unit <- xd |>
     mutate(set = if_else(.id %in% test_id, "test", "train")) |>
@@ -626,92 +590,139 @@ ggplot(sp_pts, aes(PC1, PC2, colour = set)) +
   scale_colour_manual(values = c(train = "grey70", test = "firebrick")) +
   labs(title = "Step 4 — split in env space (test inside train envelope)") + theme_minimal()
 
-# NNDM-style coverage: test->train NN distances should track train->train NN (geodist idea)
+# NNDM-style coverage (geodist $what vocabulary): test-to-sample should track sample-to-sample
 bind_rows(
-  tibble(d = split$nn$train, which = "train->train"),
-  tibble(d = split$nn$test,  which = "test->train")) |>
+  tibble(d = split$nn$train, which = "sample-to-sample"),
+  tibble(d = split$nn$test,  which = "test-to-sample")) |>
   ggplot(aes(d, colour = which)) +
   stat_ecdf(linewidth = .8) +
-  scale_colour_manual(values = c("train->train" = "grey50", "test->train" = "firebrick")) +
-  labs(title = "Step 4 — NNDM coverage: test NN tracks train NN (in-distribution)",
+  scale_colour_manual(values = c("sample-to-sample" = "grey50", "test-to-sample" = "firebrick")) +
+  labs(title = "Step 4 — NNDM coverage: test-to-sample tracks sample-to-sample (in-distribution)",
        x = "nearest-neighbour env distance", y = "ECDF", colour = NULL) +
   theme_minimal()
 ```
 
 ## Step 5 — CV folds (same logic, every unit out ≥ 1)
 
-Folds are built over the **training set** (Step 4's `train_id`) — the inner
-tuning CV nested inside the outer test holdout — and are *not* leave-one-graph-out.
-`k = n_folds` (10 by default, matching `modeller`'s `knndm(..., k = 10)`), so each
-fold validates ~1/k of training — independent of the outer `train_target` holdout.
-The Step-3 roles drive assignment, with the same philosophy as Step 4:
+Folds are built over the **training set** (Step 4's `train_id`) — the inner CV
+nested inside the outer test holdout. `k` folds, so each fold validates ~1/k
+of training. The Step-3 roles drive assignment:
 
-- **`splittable` → spread across folds**: k-means the component's training points
-  into k groups, one per fold, so each fold validates ~1/k of the component and
-  trains on the rest — the component is always re-represented in training.
-- **`atomic` / `singleton` → whole unit to one fold**, load-balanced so fold sizes
-  stay even. Every such unit is therefore **held out in exactly one fold** —
-  satisfying "every unit out ≥ 1", including the env-isolated singletons.
+- **splittable -> re-represented**: k-means the component into k groups, one per
+  fold, so each fold validates ~1/k of it and trains on the rest.
+- **atomic -> whole unit to one fold**, load-balanced for even fold sizes.
+- **extrapolation -> spread, validation-only**: flagged points are dealt
+  round-robin across folds but **excluded from every fold's training**. Each
+  fold gets a comparable slice of genuinely-unseen points, instead of one fold
+  absorbing a whole env-distinct segment.
 
-Per fold we record the NNDM-style **beyond-p95 tail** and how many **singleton**
-(extrapolation) points it validates, so folds heavy in extrapolation content can
-be scored *separately* from the interpolation bulk rather than averaged in.
 Output mirrors `CAST::knndm()` (`indx_train` / `indx_test`, positional row indices
-into the training frame) so `modeller()`'s `trainControl(index = ...)` consumes it
-unchanged.
+into the training frame), so `modeller()`'s `trainControl(index = ...)` consumes
+it unchanged.
 
 ```{r step5-folds, eval=env_ok}
-partition_folds <- function(x, spl, pcs, train_id, n_folds = 10, seed = 1) {
+# Gj / Gjstar / Gij / W via the same FNN + twosamples::wass_stat calls knndm uses internally
+# (so these are the canonical knndm quantities, not a parallel computation). Gij is proxied by
+# Gj off the data machine (no prediction grid); W = twosamples::wass_stat(Gjstar, Gij).
+partition_knndm_dists <- function(P, clusters, extrap) {
+  Gj     <- c(FNN::knn.dist(P, k = 1))                 # sample-to-sample LOO NN
+  Gjstar <- numeric(nrow(P))                           # CV NN: point -> its fold's training set
+  for (f in sort(unique(clusters))) {
+    te <- which(clusters == f); tr <- which(clusters != f & !extrap)
+    Gjstar[te] <- c(FNN::knnx.dist(data = P[tr, , drop = FALSE], query = P[te, , drop = FALSE], k = 1))
+  }
+  Gij <- Gj
+  list(Gj = Gj, Gjstar = Gjstar, Gij = Gij, W = twosamples::wass_stat(Gjstar, Gij))
+}
+
+partition_folds <- function(x, spl, pcs, train_id, k = 10, seed = 1) {
   set.seed(seed)
   xt <- st_drop_geometry(x) |> filter(.id %in% train_id) |>
-    left_join(select(spl, component, role, mode_sep), by = "component")
+    left_join(select(spl, component, role, extrap), by = "component")
   xt$row <- seq_len(nrow(xt))                       # positional index into the training frame
-  k <- as.integer(n_folds)
+  k <- as.integer(k)
   fold <- integer(nrow(xt))
 
-  # splittable: spread each component's training points across the k folds
-  for (cmp in unique(xt$component[xt$role == "splittable"])) {
-    idx <- which(xt$component == cmp)
+  # interpolation splittable: spread each component's points across the k folds (re-represent)
+  for (cmp in unique(xt$component[!xt$extrap & xt$role == "splittable (interpolation)"])) {
+    idx <- which(xt$component == cmp & !xt$extrap)
     M   <- as.matrix(xt[idx, pcs])
     kk  <- min(k, nrow(unique(M)))            # cap at distinct env points
-    cl  <- if (kk <= 1)          rep(1L, nrow(M))
+    cl  <- if (kk <= 1)          rep(1L, length(idx))
            else if (kk >= nrow(M)) seq_len(nrow(M))   # each point its own cluster (avoids kmeans centers==nrow edge)
            else suppressWarnings(stats::kmeans(M, centers = kk, nstart = 5, iter.max = 50)$cluster)
     fold[idx] <- ((cl - 1) %% k) + 1
   }
 
-  # atomic + singleton: whole unit -> one fold, greedily load-balanced
-  whole <- xt |> filter(role != "splittable") |> count(component, name = "n") |> arrange(desc(n))
+  # interpolation atomic: whole unit -> one fold, greedily load-balanced
+  whole <- xt |> filter(!extrap, role != "splittable (interpolation)") |>
+    count(component, name = "n") |> arrange(desc(n))
   load  <- tabulate(fold[fold > 0], nbins = k)
   for (cmp in whole$component) {
-    f <- which.min(load); idx <- which(xt$component == cmp)
+    f <- which.min(load); idx <- which(xt$component == cmp & !xt$extrap)
     fold[idx] <- f; load[f] <- load[f] + length(idx)
   }
 
-  indx_test  <- lapply(seq_len(k), function(f) xt$row[fold == f])
-  indx_train <- lapply(seq_len(k), function(f) xt$row[fold != f])
+  # extrapolation points: round-robin across folds as VALIDATION-ONLY. They are given a
+  # validation fold but are excluded from every fold's training (below), so each fold gets a
+  # comparable slice of genuinely-unseen points instead of one fold absorbing a whole segment.
+  eload <- integer(k)
+  for (i in which(xt$extrap)) { f <- which.min(eload); fold[i] <- f; eload[f] <- eload[f] + 1 }
+
+  # CAST triple: indx_train / indx_test / indx_exclude (the nndm vocabulary). Training EXCLUDES
+  # all extrap rows; validation = fold members (incl the extrap dealt there); indx_exclude[[f]]
+  # = extrap rows assigned to OTHER folds — neither trained nor validated in fold f.
+  indx_test    <- lapply(seq_len(k), function(f) xt$row[fold == f])
+  indx_train   <- lapply(seq_len(k), function(f) xt$row[fold != f & !xt$extrap])
+  indx_exclude <- lapply(seq_len(k), function(f) xt$row[fold != f &  xt$extrap])
 
   fold_meta <- purrr::map_dfr(seq_len(k), function(f) {
     in_val <- fold == f                      # bind before tibble() (a `fold` column would shadow it)
-    tr <- as.matrix(xt[!in_val, pcs]); te <- as.matrix(xt[in_val, pcs])
-    tnn <- vapply(seq_len(nrow(tr)),
-                  function(i) sqrt(min(colSums((t(tr[-i, , drop = FALSE]) - tr[i, ])^2))), numeric(1))
-    enn <- apply(te, 1, function(p) sqrt(min(colSums((t(tr) - p)^2))))
-    n_sing <- sum(grepl("singleton", xt$role[in_val]))
+    tr <- as.matrix(xt[fold != f & !xt$extrap, pcs]); te <- as.matrix(xt[in_val, pcs])
+    tnn <- c(FNN::knn.dist(tr, k = 1))                          # fold-train sample-to-sample NN
+    enn <- c(FNN::knnx.dist(data = tr, query = te, k = 1))      # CV-distances (validation -> fold-train)
     tibble(fold = f, n_val = nrow(te), val_prop = nrow(te) / nrow(xt),
+           n_extrap_val = sum(xt$extrap[in_val]),
            beyond_p95 = mean(enn > stats::quantile(tnn, 0.95)),
-           n_singleton_val = n_sing)
+           beyond_max = mean(enn > max(tnn)))
   })
 
-  list(indx_train = indx_train, indx_test = indx_test, k = k,
-       fold = setNames(fold, xt$.id), fold_meta = fold_meta)
+  # knndm-canonical, classed object: same field names as CAST::knndm, so CAST::print.knndm and
+  # CAST::plot.knndm work on it directly (we maintain no print/plot code). Extra fields (clusters
+  # is id-keyed via `fold`, plus indx_exclude/extrap_id/fold_meta/role) ride alongside harmlessly.
+  d <- partition_knndm_dists(as.matrix(xt[pcs]), fold, xt$extrap)
+  res <- list(
+    clusters   = fold,                                  # per-training-row fold id (knndm$clusters)
+    indx_train = indx_train, indx_test = indx_test, indx_exclude = indx_exclude,
+    Gij = d$Gij, Gj = d$Gj, Gjstar = d$Gjstar, W = d$W,
+    method = "single-linkage graph", q = "role-based (cut/re-represent/spread)",
+    space = "feature", dist_space = "feature",
+    k = k, fold = setNames(fold, xt$.id), extrap_id = xt$.id[xt$extrap], fold_meta = fold_meta)
+  class(res) <- c("knndm", "list")
+  res
 }
 
-folds <- partition_folds(pts, spl, pcs, split$train_id, params_part$n_folds,
+folds <- partition_folds(pts, spl, pcs, split$train_id, params_part$k,
                          seed = params_part$seed)
 cat(sprintf("k = %d folds over %d training points; every unit held out >= 1.\n",
             folds$k, length(split$train_id)))
 folds$fold_meta
+```
+
+`knndm()` picks folds by minimising **`W`**, the Wasserstein distance between the
+CV nearest-neighbour distances (`Gjstar`) and the prediction NN distances
+(`Gij`). We don't run `knndm()`'s fold search, but `partition_folds()` now carries
+the same `Gj`/`Gjstar`/`Gij`/`W` fields and is classed `c("knndm", "list")`, so
+`W` is the single number that answers the "coverage objective" open question and
+lets Step 5 and Step 5b be compared — and **CAST's own `print.knndm`/`plot.knndm`
+render it**, so we maintain no reporting code. `Gjstar` is each training point's
+env-NN to its fold's *training* set; `Gij` is proxied by the sample-to-sample LOO
+env-NN (`Gj`) until the data-machine prediction grid is available. Lower `W` ⇒
+folds reproduce the reference NN-distance structure better.
+
+```{r step5-W, eval=env_ok}
+print(folds)                                 # CAST::print.knndm, dispatched on our object
+plot(folds, stat = "ecdf", type = "simple")  # CAST::plot.knndm (Gij curve == Gj until the grid)
 ```
 
 ```{r step5-plot, eval=env_ok}
@@ -726,47 +737,198 @@ ggplot(fold_pts) +
   theme_minimal()
 
 folds$fold_meta |>
-  ggplot(aes(factor(fold), beyond_p95, fill = n_singleton_val)) +
+  ggplot(aes(factor(fold), beyond_p95, fill = n_extrap_val)) +
   geom_col() +
+  geom_point(aes(y = beyond_max), colour = "black", size = 2) +
   scale_fill_viridis_c() +
-  labs(title = "Step 5 — per-fold extrapolation content",
-       x = "fold", y = "fraction of validation beyond train-NN p95", fill = "singleton pts") +
+  labs(title = "Step 5 — per-fold extrapolation content (spread evenly)",
+       subtitle = "bar = beyond train-NN p95; black point = beyond train-NN max",
+       x = "fold", y = "fraction of validation beyond train-NN", fill = "extrap pts") +
   theme_minimal()
+```
+
+## Step 5b (dev) — Segment-LOPO folds (knock out whole segments)
+
+A **leave-whole-segment-out** alternative to Step 5, for mapping suitable habitat
+in the current domain — the Pili "LOPO sense" on our graph. Interpolation
+segments are held out **whole** (not re-represented): each component goes intact
+into one fold, grouped by greedy **size-balancing** so fold sizes stay even.
+Extrapolation points are spread across folds validation-only, exactly as in Step
+5. Drop-in with Step 5: same output shape, run over the Step-4 training set.
+
+The point is the **env coverage per fold** (same NNDM lens). Within the massif
+env ⊥ geo, so pulling a whole local segment still leaves its *environment*
+bracketed by the segments that remain — most folds stay interpolation
+(beyond-max ≈ 0), a legitimate mapping evaluation. The folds with a high
+`beyond_p95` are the honest whole-segment gaps, flagged so they can be read
+apart from the interpolation bulk.
+
+```{r step5b-lopo, eval=env_ok}
+partition_folds_lopo <- function(x, spl, pcs, train_id, k = 10, seed = 1) {
+  set.seed(seed)
+  xt <- st_drop_geometry(x) |> filter(.id %in% train_id) |>
+    left_join(select(spl, component, role, extrap), by = "component")
+  xt$row <- seq_len(nrow(xt))                    # positional index into the training frame
+  k <- as.integer(k)
+  fold <- integer(nrow(xt))
+
+  # interpolation segments: whole segment -> one fold, greedy size-balance (true leave-segment-out)
+  csz  <- xt |> filter(!extrap) |> count(component, name = "n") |> arrange(desc(n))
+  load <- integer(k)
+  for (i in seq_len(nrow(csz))) {
+    f <- which.min(load); idx <- which(xt$component == csz$component[i] & !xt$extrap)
+    fold[idx] <- f; load[f] <- load[f] + csz$n[i]
+  }
+
+  # extrapolation points: round-robin across folds as VALIDATION-ONLY (excluded from training
+  # below), so every fold gets a comparable slice of genuinely-unseen points.
+  eload <- integer(k)
+  for (i in which(xt$extrap)) { f <- which.min(eload); fold[i] <- f; eload[f] <- eload[f] + 1 }
+
+  # CAST triple (nndm vocabulary): training EXCLUDES all extrap rows; validation = fold members
+  # (whole interp segment + extrap dealt there); indx_exclude[[f]] = extrap rows of OTHER folds.
+  indx_test    <- lapply(seq_len(k), function(f) xt$row[fold == f])
+  indx_train   <- lapply(seq_len(k), function(f) xt$row[fold != f & !xt$extrap])
+  indx_exclude <- lapply(seq_len(k), function(f) xt$row[fold != f &  xt$extrap])
+
+  fold_meta <- purrr::map_dfr(seq_len(k), function(f) {
+    in_val <- fold == f                          # bind before tibble() (a `fold` column would shadow it)
+    tr <- as.matrix(xt[fold != f & !xt$extrap, pcs]); te <- as.matrix(xt[in_val, pcs])
+    tnn <- c(FNN::knn.dist(tr, k = 1))                          # fold-train sample-to-sample NN
+    enn <- c(FNN::knnx.dist(data = tr, query = te, k = 1))      # CV-distances (validation -> fold-train)
+    tibble(fold = f, n_val = nrow(te), val_prop = nrow(te) / nrow(xt),
+           n_comp = dplyr::n_distinct(xt$component[in_val & !xt$extrap]),
+           n_superc = dplyr::n_distinct(xt$supercluster[in_val]),
+           n_extrap_val = sum(xt$extrap[in_val]),
+           beyond_p95 = mean(enn > stats::quantile(tnn, 0.95)),
+           beyond_max = mean(enn > max(tnn)))
+  })
+
+  # knndm-canonical classed object (same as partition_folds), so CAST's print/plot dispatch here too
+  d <- partition_knndm_dists(as.matrix(xt[pcs]), fold, xt$extrap)
+  res <- list(
+    clusters   = fold,
+    indx_train = indx_train, indx_test = indx_test, indx_exclude = indx_exclude,
+    Gij = d$Gij, Gj = d$Gj, Gjstar = d$Gjstar, W = d$W,
+    method = "segment-LOPO (whole segment)", q = "leave-segment-out",
+    space = "feature", dist_space = "feature",
+    k = k, fold = setNames(fold, xt$.id), extrap_id = xt$.id[xt$extrap], fold_meta = fold_meta)
+  class(res) <- c("knndm", "list")
+  res
+}
+
+folds_lopo <- partition_folds_lopo(pts, spl, pcs, split$train_id, params_part$k,
+                                   seed = params_part$seed)
+cat(sprintf("segment-LOPO: k = %d folds over %d training points; %d whole segments, each out once.\n",
+            folds_lopo$k, length(split$train_id), length(unique(folds_lopo$clusters))))
+cat(sprintf("mean beyond-p95 = %.1f%%, mean beyond-max = %.1f%% (env cost of leaving whole segments out)\n",
+            100 * mean(folds_lopo$fold_meta$beyond_p95),
+            100 * mean(folds_lopo$fold_meta$beyond_max)))
+
+# W now rides inside each fold object, so the two schemes compare on one number
+cat(sprintf("W: Step 5b segment-LOPO = %.3f vs Step 5 CV folds = %.3f (lower reproduces NN structure better)\n",
+            folds_lopo$W, folds$W))
+folds_lopo$fold_meta
+```
+
+```{r step5b-plot, eval=env_ok}
+fold_pts <- pts |>
+  filter(.id %in% split$train_id) |>
+  mutate(fold = factor(folds_lopo$fold[as.character(.id)]))
+
+# (1) fold map — whole interp segments coloured by fold; extrap points (spread, validation-only)
+#     ringed as open triangles; Step-4 test holdout overlaid as blue crosses
+test_pts   <- pts |> filter(.id %in% split$test_id)
+extrap_pts <- pts |> filter(.id %in% folds_lopo$extrap_id)
+ggplot(fold_pts) +
+  geom_sf(aes(colour = fold), size = 1.3, alpha = .85) +
+  geom_sf(data = extrap_pts, shape = 2, colour = "black", size = 2.2, stroke = .6) +
+  geom_sf(data = test_pts, shape = 4, colour = "blue", size = 1.7, stroke = .7) +
+  scale_colour_brewer(palette = "Paired") +
+  labs(title = sprintf("Step 5b — %d folds: whole interp segments + spread extrapolation", folds_lopo$k),
+       subtitle = "△ = extrapolation point (spread across folds, never trained); blue × = Step-4 test holdout") +
+  theme_minimal()
+
+# (2) per-fold extrapolation content — beyond-p95 (bar) with beyond-max overlaid
+folds_lopo$fold_meta |>
+  ggplot(aes(factor(fold), beyond_p95, fill = n_extrap_val)) +
+  geom_col() +
+  geom_point(aes(y = beyond_max), colour = "black", size = 2) +
+  scale_fill_viridis_c() +
+  labs(title = "Step 5b — per-fold extrapolation content (spread evenly)",
+       subtitle = "bar = beyond train-NN p95; black point = beyond train-NN max",
+       x = "fold", y = "fraction of validation beyond train-NN", fill = "extrap pts") +
+  theme_minimal()
+
+# (3) CB + Cochetopa per fold — rows: region (Cochetopa second), columns: fold;
+#     held-out segment red; Step-4 test holdout as blue crosses in every panel.
+assign_region <- function(sfobj) {                       # region from lon/lat (data is UTM 13N)
+  ll <- sf::st_coordinates(sf::st_transform(sfobj, 4326))
+  sfobj |> st_drop_geometry() |>
+    mutate(lon = ll[, 1], lat = ll[, 2],
+           region = dplyr::case_when(
+             lat < 38.5                 ~ "Cochetopa",
+             lat > 38.85 & lon < -106.9 ~ "CB",
+             TRUE                       ~ "other")) |>
+    filter(region %in% c("CB", "Cochetopa")) |>
+    mutate(region = factor(region, levels = c("CB", "Cochetopa")))   # CB top, Cochetopa second
+}
+reg      <- assign_region(fold_pts) |> select(.id, lon, lat, region, fold) |>
+  mutate(is_extrap = .id %in% folds_lopo$extrap_id)
+test_reg <- assign_region(test_pts) |> select(.id, lon, lat, region)
+folds_seq <- factor(seq_len(folds_lopo$k))
+
+grid      <- tidyr::crossing(reg, panel_fold = folds_seq) |>
+  mutate(held = as.integer(fold) == as.integer(panel_fold),
+         status = dplyr::case_when(held & is_extrap ~ "extrap (held out)",
+                                   held             ~ "segment held out",
+                                   TRUE             ~ "in train"))
+test_grid <- tidyr::crossing(test_reg, panel_fold = folds_seq)   # test shown in every fold column
+
+ggplot(grid, aes(lon, lat)) +
+  geom_point(aes(colour = status), size = .8, alpha = .85) +
+  geom_point(data = dplyr::filter(grid, status == "extrap (held out)"),
+             shape = 2, colour = "black", size = 1.4, stroke = .5) +
+  geom_point(data = test_grid, shape = 4, colour = "blue", size = .2, stroke = .5) +
+  scale_colour_manual(values = c("segment held out" = "firebrick",
+                                 "extrap (held out)" = "darkorange", "in train" = "grey80")) +
+  facet_grid(region ~ panel_fold, switch = "y", scales = "free", space = "free_y") +
+  labs(title = "Step 5b — CB and Cochetopa by fold (red = segment; △ = spread extrap; blue × = test)",
+       x = NULL, y = NULL, colour = NULL) +
+  theme_minimal() +
+  theme(axis.text = element_blank(), axis.ticks = element_blank(),
+        panel.grid.minor = element_blank(), legend.position = "top")
 ```
 
 ## Step 6 — Class-aware assembly (presences + absences → one caret-ready frame)
 
-Presences carry the spatial structure, so they keep the structured partition from
-Steps 4–5. **Absences do not form populations to hold out and (as real
-observations, or as env-distance PAs that key off the whole presence cloud) carry
-no leakage worth protecting against here**, so they get the *nice-and-easy* path: a
-random outer train/test split at the same proportion, and balanced random
-assignment to the 10 folds. Random still keeps ~`(k-1)/k` of absences in every
-fold's training and preserves the presence:absence ratio in each set.
+Presences keep the structured partition from Steps 4–5. **Absences do not form
+populations to hold out, so they are randomly sampled** — a random outer split at
+the same proportion, then balanced random folds. Random still keeps ~`(k-1)/k` of
+absences in every fold's training and preserves the presence:absence ratio in
+each set.
 
-The output is one fixed frame tagged `set` (train/test) and `fold`, plus
-`caret`-shaped `indx_train` / `indx_test` (positional into the *training* rows), so
-`caret::train(trainControl(index = …, indexOut = …))` consumes it unchanged.
-
-> **On the data machine:** the proper Option-A flow regenerates the env-distance PA
-> pool *against the outer-train presences only* right after the presence split, then
-> feeds that pool here. Running without rasters, we assign the existing absence pool
-> (`bg`, `iter1-pa.gpkg`) instead — the assignment logic is identical (random), only
-> the PA provenance differs. Absences need no env here; predictors are attached at
-> fit time.
+> **On the data machine:** the proper Option-A flow regenerates the env-distance
+> PA pool *against the outer-train presences only* after the presence split, then
+> feeds it here. Without rasters, we use the existing pool (`bg`,
+> `iter1-pa.gpkg`); the assignment logic is identical (random), only the PA
+> provenance differs. Absences need no env here — predictors are attached at fit
+> time.
 
 ```{r step6-classes, eval=env_ok}
-partition_classes <- function(pts, bg, split, folds, train_target, n_folds, seed = 1) {
+partition_classes <- function(pts, bg, split, folds, train_target, k, seed = 1) {
   set.seed(seed)
-  k <- n_folds
   test_prop <- 1 - mean(train_target)
 
-  # presences: structured assignment from Steps 4-5 (test presences get fold = NA)
+  # presences: structured assignment from Steps 4-5 (test presences get fold = NA).
+  # extrap presences carry their validation fold but are flagged so they are NEVER put in
+  # any fold's training (they are validation-only, matching the Step 5 spread).
   pres <- tibble(
-    id    = paste0("pres_", pts$.id),
-    class = 1L,
-    set   = if_else(pts$.id %in% split$test_id, "test", "train"),
-    fold  = unname(folds$fold[as.character(pts$.id)]))
+    id     = paste0("pres_", pts$.id),
+    class  = 1L,
+    set    = if_else(pts$.id %in% split$test_id, "test", "train"),
+    fold   = unname(folds$fold[as.character(pts$.id)]),
+    extrap = pts$.id %in% folds$extrap_id)
 
   # absences: random outer split, then balanced random folds within the train side
   nb  <- nrow(bg)
@@ -775,20 +937,22 @@ partition_classes <- function(pts, bg, split, folds, train_target, n_folds, seed
   a_fold <- rep(NA_integer_, nb)
   tr <- which(a_set == "train")
   a_fold[tr] <- sample(rep_len(seq_len(k), length(tr)))      # balanced across folds
-  abs <- tibble(id = aid, class = 0L, set = a_set, fold = a_fold)
+  abs <- tibble(id = aid, class = 0L, set = a_set, fold = a_fold, extrap = FALSE)
 
   combined <- bind_rows(pres, abs)
   tf <- combined[combined$set == "train", ]; tf$row <- seq_len(nrow(tf))
-  indx_test  <- lapply(seq_len(k), function(f) tf$row[which(tf$fold == f)])
-  indx_train <- lapply(seq_len(k), function(f) tf$row[which(tf$fold != f)])
+  # CAST triple (nndm vocabulary) carried through to the caret-ready frame.
+  indx_test    <- lapply(seq_len(k), function(f) tf$row[which(tf$fold == f)])
+  indx_train   <- lapply(seq_len(k), function(f) tf$row[which(tf$fold != f & !tf$extrap)])
+  indx_exclude <- lapply(seq_len(k), function(f) tf$row[which(tf$fold != f &  tf$extrap)])
 
   list(combined = combined, train_frame = tf,
-       indx_train = indx_train, indx_test = indx_test,
+       indx_train = indx_train, indx_test = indx_test, indx_exclude = indx_exclude,
        test_ids = combined$id[combined$set == "test"])
 }
 
 classes <- partition_classes(pts, bg, split, folds, params_part$train_target,
-                             params_part$n_folds, seed = params_part$seed)
+                             params_part$k, seed = params_part$seed)
 
 # class balance per set, and presence:absence ratio
 classes$combined |>
@@ -808,14 +972,16 @@ classes$train_frame |>
   mutate(n_val = absence + presence, pres_frac = round(presence / n_val, 2))
 ```
 
-The single artifact every downstream consumer reads. Shape deliberately
-mirrors `spatial_class_split()` + `knndm()` so `modeller(split = ...)` and
-`trainControl(index = ...)` both work, and it subsumes LOPO (populations =
-components), edist folds (split within env-homogeneous components), and the
-whole-population-leakage audit (the two-sided coverage rule) in one object.
+## Assemble — `build_partition()`
 
-`x` already carries the PCA env columns (Step 0) and `pcs` names them; `bg` is the
-absence/background set.
+One function composes Steps 1–6 into the single artifact downstream code reads.
+Its shape mirrors `spatial_class_split()` + `knndm()`, so `modeller(split = ...)`
+and `trainControl(index = ...)` both work. It subsumes LOPO (populations =
+components), edist folds (cut within env-homogeneous components), and the
+extrapolation audit in one object.
+
+`x` already carries the PCA columns (Step 0) and `pcs` names them; `bg` is the
+absence set.
 
 ```{r build-partition, eval=env_ok}
 build_partition <- function(x, bg, pcs, p) {   # p = params_part
@@ -824,10 +990,10 @@ build_partition <- function(x, bg, pcs, p) {   # p = params_part
   x$supercluster <- factor(
     cutree(hclust(as.dist(geo_d), method = "single"), h = p$superclust_m)[as.character(x$component)])
   env_d   <- partition_env_dist(x, pcs)
-  spl     <- partition_splittable(x, geo_d, env_d, pcs, p$purpose, p$min_split_n, p$mode_sep_factor)
+  spl     <- partition_splittable(x, pcs, p$purpose, p$min_split_n, p$extrap_frac)
   split   <- partition_split(x, spl, pcs, p$train_target, p$seed)
-  folds   <- partition_folds(x, spl, pcs, split$train_id, p$n_folds, p$seed)
-  classes <- partition_classes(x, bg, split, folds, p$train_target, p$n_folds, p$seed)
+  folds   <- partition_folds(x, spl, pcs, split$train_id, p$k, p$seed)
+  classes <- partition_classes(x, bg, split, folds, p$train_target, p$k, p$seed)
 
   list(
     # presence-level structure
@@ -835,28 +1001,40 @@ build_partition <- function(x, bg, pcs, p) {   # p = params_part
     test_id    = split$test_id,
     components = select(st_drop_geometry(x), .id, component, supercluster),
     geo_d = geo_d, env_d = env_d, splittable = spl,
-    split_coverage = split$coverage, fold_meta = folds$fold_meta,
+    split_coverage = split$coverage, fold_meta = folds$fold_meta, W = folds$W,
+    folds = folds,                        # the classed knndm object (CAST print/plot dispatch)
     # class-aware frame for fitting (caret-ready)
     combined   = classes$combined,        # every point: id, class, set, fold
     train_frame = classes$train_frame,
-    indx_train = classes$indx_train,      # positional into train_frame, for caret::trainControl(index=)
-    indx_test  = classes$indx_test,       # ...and indexOut=
-    test_ids   = classes$test_ids,
-    meta = p[c("connect_m", "superclust_m", "train_target", "n_folds", "purpose",
-               "pca_var_target", "min_split_n", "mode_sep_factor", "seed")]
+    indx_train   = classes$indx_train,    # positional into train_frame, for caret::trainControl(index=)
+    indx_test    = classes$indx_test,     # ...and indexOut=
+    indx_exclude = classes$indx_exclude,  # nndm-style: held from training, not validated (extrap)
+    test_ids     = classes$test_ids,
+    meta = p[c("connect_m", "superclust_m", "train_target", "k", "purpose",
+               "pca_var_target", "min_split_n", "extrap_frac", "seed")]
   )
 }
 
-# single-call check: reproduces the inline Steps 1-6 and returns the caret-ready object
+# single-call check: reproduces the inline Steps 1-6 and returns the caret-ready object.
+# extrap rows are validation-only: each is validated once but NEVER trained, so it lands in
+# indx_test once, indx_exclude k-1 times, and indx_train zero times; everyone else trains k-1
+# times and validates once. This is exactly the nndm indx_train/indx_test/indx_exclude split.
 part <- build_partition(pts, bg, pcs, params_part)
-ntr <- nrow(part$train_frame)
+ntr  <- nrow(part$train_frame)
+is_ex <- part$train_frame$extrap
+tr_count <- tabulate(unlist(part$indx_train),   nbins = ntr)
+ex_count <- tabulate(unlist(part$indx_exclude), nbins = ntr)
 stopifnot(
   identical(sort(part$train_id), sort(split$train_id)),            # same presence split
-  all(tabulate(unlist(part$indx_test),  nbins = ntr) == 1),        # each train row validated once
-  all(tabulate(unlist(part$indx_train), nbins = ntr) == params_part$n_folds - 1)
+  all(tabulate(unlist(part$indx_test), nbins = ntr) == 1),         # each train row validated once
+  all(tr_count[!is_ex] == params_part$k - 1),                      # non-extrap trained k-1 times
+  all(tr_count[is_ex]  == 0),                                      # extrap never trained
+  all(ex_count[is_ex]  == params_part$k - 1),                      # extrap excluded from the k-1 other folds
+  all(ex_count[!is_ex] == 0)                                       # non-extrap never excluded
 )
-cat(sprintf("build_partition() OK: %d train / %d test presences; %d-row class-aware frame; %d folds; %d test ids.\n",
-            length(part$train_id), length(part$test_id), ntr, length(part$indx_train), length(part$test_ids)))
+cat(sprintf("build_partition() OK: %d train / %d test presences (%d extrap held from training); %d-row frame; %d folds; %d test ids.\n",
+            length(part$train_id), length(part$test_id), sum(is_ex), ntr,
+            length(part$indx_train), length(part$test_ids)))
 part$combined |> count(set, class) |>
   pivot_wider(names_from = class, values_from = n, values_fill = 0) |>
   rename(absence = `0`, presence = `1`)
@@ -865,11 +1043,14 @@ part$combined |> count(set, class) |>
 ## Open questions carried forward
 
 - **`connect_m` derivation** — formalise the variogram-range / geodist-knee
-  choice instead of the default; sensitivity-test across resolutions.
-- **Separation metric** (Step 3) — Mahalanobis space, covariance estimator,
-  and the "alone" radii in geo and env.
-- **The objective** (Steps 4–5) — the exact W/coverage score that balances
-  "test looks like prediction" against "train covers test".
-- **Out-of-AOA folds** — the coverage test that routes a fold to the separate,
-  discovery-style score rather than the mapping average.
+  choice; sensitivity-test across resolutions.
+- **`extrap_frac` sensitivity** — how many segments the flag catches, and the
+  train/test extrap split, across thresholds.
+- **The objective** (Steps 4–5) — now reported as `knndm()`'s `W` (Wasserstein
+  `Gjstar` vs `Gij`); on the data machine swap the `Gj` proxy for the true
+  prediction-grid `Gij` so `W` balances "test looks like prediction" against
+  "train covers test" exactly as `knndm()` does.
+- **Wire into `modeller()`** — feed `indx_train`/`indx_test` to `trainControl()`
+  (`indx_exclude` is already dropped from `indx_train`); decide whether mapping
+  uses Step 5 or the Step 5b folds — compare them on `W`.
 ```
