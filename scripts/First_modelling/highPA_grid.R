@@ -46,17 +46,24 @@ suppressPackageStartupMessages({
   library(ranger)
 })
 source('functions.R')
+source('final_sdm/Partitioner.R')
+source('final_sdm/partition_entrypoints.R')
 
 args <- commandArgs(trailingOnly = TRUE)
 resolution <- as.numeric(args[1])
 stopifnot('first argument must be a resolution: 90, 30 or 10' = resolution %in% c(90, 30, 10))
 mode <- if(length(args) >= 2) args[2] else 'spatial'
-stopifnot('second argument must be spatial, classic or lopo' = mode %in% c('spatial', 'classic', 'lopo'))
+valid_modes <- c('spatial', 'classic', 'lopo', 'spatial_mapping', 'LMPO')
+stopifnot('second argument must be one of spatial, classic, lopo, spatial_mapping, LMPO' =
+            mode %in% valid_modes)
 # default 1: repeated knndm draws came out near-identical (split 2's test set shared 85%
-# of split 1's at 3 arc-second), so extra spatial splits add cost, not independent draws
+# of split 1's at 3 arc-second), so extra spatial splits add cost, not independent draws.
+# spatial_mapping/LMPO are seeded via split_seed_of(k); they're also structured enough to
+# tolerate multiple splits meaningfully if asked.
 n_splits <- if(length(args) >= 3) as.integer(args[3]) else 1
 n_seeds <- if(length(args) >= 4) as.integer(args[4]) else 3
-if(mode != 'spatial') n_splits <- 1 # classic redraws its split every fit; lopo has its own folds
+# classic redraws its split every fit; lopo has its own folds; spatial*/LMPO respect n_splits
+if(mode %in% c('classic', 'lopo')) n_splits <- 1
 
 ratios <- c(1:4, 5:10, seq(12, 20, by = 2), seq(25, 50, by = 5))
 lopo_ratios <- c(4, 20) # current production ratio vs. well past it
@@ -77,9 +84,13 @@ seeds_of <- function(k) 5000 + 100 * (k - 1) + seq_len(n_seeds)
 # un-suffixed results_highPA* trees for comparison.
 keep_field_absences <- TRUE
 root_sfx <- if(keep_field_absences) '_fieldabs' else ''
-results_root <- file.path(PROJ_ROOT, paste0(c(spatial = 'results_highPA',
-                                              classic = 'results_highPA_classicsplit',
-                                              lopo    = 'results_highPA_populationsplit')[[mode]], root_sfx))
+results_root <- file.path(PROJ_ROOT, paste0(c(
+  spatial         = 'results_highPA',
+  classic         = 'results_highPA_classicsplit',
+  lopo            = 'results_highPA_populationsplit',
+  spatial_mapping = 'results_highPA_spatial_mapping',
+  LMPO            = 'results_highPA_LMPO'
+)[[mode]], root_sfx))
 p2proc <- file.path('..', 'data', 'spatial', 'processed')
 p2dat  <- file.path('..', 'data', 'Data4modelling')
 iteration <- 1
@@ -117,6 +128,12 @@ x <- bind_rows(x, mutate(abs, field_abs = FALSE))
 x <- filter(x, st_is(x, 'POINT')) |>
   select(Occurrence, field_abs) |>
   mutate(.id = seq_len(n()))
+# abs_k is the stable position of each absence in the full pool at partition-build time
+# (NA on presences); Partitioner-based modes use it to remap fold indices after per-ratio
+# absence subsampling. Harmless under the other modes.
+abs_idx <- which(x$Occurrence == 0)
+x$abs_k <- NA_integer_
+x$abs_k[abs_idx] <- seq_along(abs_idx)
 fixed_col <- if(keep_field_absences) 'field_abs' else NULL
 message(sprintf('%d field absences%s.', sum(x$field_abs),
                 if(keep_field_absences) ' kept in every fit' else ' subsampled with the background'))
@@ -175,6 +192,43 @@ get_spatial_split <- function(k){
   split
 }
 
+## 3b. Partitioner-based splits (spatial_mapping, LMPO): build once per split-seed on
+## the FULL absence pool, cache like get_spatial_split(). Per-ratio absence subsampling
+## then happens inside distOrder_PAratio_simulator()/modeller(), which remaps the
+## fold triple against the surviving abs_k.
+get_partition <- function(k, flavor){
+  sfx <- if(k == 1) '' else k
+  part_path <- file.path(results_root, 'tables',
+                         paste0(res_string(resolution), '-partition', sfx, '.rds'))
+  if(file.exists(part_path)){
+    part <- readRDS(part_path)
+    stopifnot('cached partition built on different presences - delete it to rebuild' =
+                nrow(part$components) == sum(x$Occurrence == 1))
+    return(part)
+  }
+  rast_dat <- rastReader(paste0('dem_', res_string(resolution)), p2proc)
+  pres <- x[x$Occurrence == 1, ]
+  bg   <- x[x$Occurrence == 0, ]
+  pp <- partition_params(seed = split_seed_of(k))
+  part <- if(flavor == 'spatial_mapping') build_partition_mapping(pres, bg, rast_dat, pp)
+          else                            build_partition_lmpo   (pres, bg, rast_dat, pp)
+  saveRDS(part, part_path)
+
+  # same by-site diagnostic the spatial split gets, so the Partitioner's outer split is
+  # inspectable alongside the knndm one.
+  prs <- x[x$Occurrence == 1, ]
+  prs$Site <- areas$Site[st_nearest_feature(prs, areas)]
+  prs$set <- factor(ifelse(prs$.id %in% part$test_id, 'test', 'train'), levels = c('test', 'train'))
+  part_by_site <- as.data.frame.matrix(table(prs$Site, prs$set))
+  part_by_site$pct_test <- round(100 * part_by_site$test /
+                                 rowSums(part_by_site[, c('test', 'train')]))
+  write.csv(part_by_site, file.path(results_root, 'tables',
+                                    paste0(res_string(resolution), '-partition', sfx, '-by-site.csv')))
+  message('Partition ', k, ' (', flavor, ') - presences in train/test by population:')
+  print(part_by_site)
+  part
+}
+
 ## 4. Fit ---------------------------------------------------------------------------------
 log_path <- file.path(results_root, 'tables', paste0(res_string(resolution), '-highPA-', mode, '-log.csv'))
 log_row <- function(row){
@@ -182,12 +236,16 @@ log_row <- function(row){
               col.names = !file.exists(log_path), append = file.exists(log_path))
 }
 
-if(mode %in% c('spatial', 'classic')){
+if(mode %in% c('spatial', 'classic', 'spatial_mapping', 'LMPO')){
   # split-major order: each split's whole ratio grid finishes before the next split
-  # starts, so partial results are always complete grids on some number of splits
+  # starts, so partial results are always complete grids on some number of splits.
   for(k in seq_len(n_splits)){
-    # classic: NULL -> modeller() draws its own random split per fit
-    split <- if(mode == 'spatial') get_spatial_split(k) else NULL
+    # per-mode outer-split / partition selection. Only one of split/part is non-NULL
+    # at a time; modeller() enforces mutual exclusion.
+    split <- NULL; part <- NULL
+    if(mode == 'spatial')              split <- get_spatial_split(k)
+    else if(mode %in% c('spatial_mapping', 'LMPO')) part <- get_partition(k, mode)
+    # classic: both NULL -> modeller() draws its own random split per fit.
     for(r in ratios){
       for(s in seeds_of(k)){
         t0 <- Sys.time()
@@ -206,7 +264,8 @@ if(mode %in% c('spatial', 'classic')){
           },
           args = list(args = list(
             x = x, distOrder = 0, PAratio = r, resolution = resolution, seed = s,
-            predict_surface = FALSE, se_prediction = FALSE, split = split, fixed_col = fixed_col,
+            predict_surface = FALSE, se_prediction = FALSE,
+            split = split, part = part, fixed_col = fixed_col,
             results_root = results_root, iteration = iteration, train_split = 0.8, p2proc = p2proc),
             wd = getwd()),
           stdout = '', stderr = '2>&1'),
@@ -214,7 +273,8 @@ if(mode %in% c('spatial', 'classic')){
         mins <- as.numeric(difftime(Sys.time(), t0, units = 'mins'))
         row <- data.frame(
           resolution = res_string(resolution), mode = mode,
-          split = if(mode == 'spatial') k else NA, requested_ratio = r, seed = s,
+          split = if(mode %in% c('spatial', 'spatial_mapping', 'LMPO')) k else NA,
+          requested_ratio = r, seed = s,
           fitted_ratio = if(is.null(fit)) NA else fit$PAratio,
           pr_auc = if(is.null(fit)) NA else fit$metrics$estimate[fit$metrics$metric == 'pr_auc'],
           minutes = round(mins, 1), finished = format(Sys.time()))
