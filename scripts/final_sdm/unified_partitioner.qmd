@@ -217,15 +217,12 @@ quantile(nn_m, c(.5, .75, .9, .95, .99)) |> round(1)
 
 ```{r step1-graph}
 partition_components <- function(x, connect_m) {
-  # Connected components of the within-connect_m graph are identical to single-linkage clusters
-  # cut at height connect_m (single-linkage = transitive closure of <=connect_m edges; verified
-  # bit-for-bit on these data). Use stats::hclust so the clustering matches CAST's idiom and
-  # carries no igraph dependency; the super-cluster step (Step 2a) already uses the same call.
+  # Connected components of the within-connect_m graph
   within <- sf::st_is_within_distance(x, dist = connect_m)  # sparse list kept for the edge plot
   d      <- sf::st_distance(x); units(d) <- NULL
   memb   <- stats::cutree(stats::hclust(stats::as.dist(d), method = "single"), h = connect_m)
   x$component <- factor(memb)
-  attr(x, "adj") <- within   # keep for edge plotting / hull distances
+  attr(x, "adj") <- within  
   x
 }
 
@@ -263,13 +260,14 @@ vertices can carry the minimum).
 
 ```{r step2-geo}
 partition_geo_dist <- function(x, hull = FALSE) {
-  parts <- x |>
-    group_by(component) |>
-    summarise(do_union = TRUE, .groups = "drop")        # one (MULTI)geometry per component
-  if (hull) parts <- st_convex_hull(parts)
-  d <- sf::st_distance(parts)                            # min distance between geometries
-  units::drop_units(d) -> d
-  dimnames(d) <- list(levels(x$component), levels(x$component))
+  lev   <- levels(x$component)
+  geoms <- do.call(c, lapply(lev, function(l)                      # one (MULTI)geometry per component
+             sf::st_union(sf::st_geometry(x)[x$component == l])))
+  parts <- sf::st_sf(component = lev, geometry = geoms)
+  if (hull) parts <- sf::st_convex_hull(parts)
+  d <- sf::st_distance(parts)                                      # min distance between geometries
+  units(d) <- NULL                                                 # strip units (CAST idiom)
+  dimnames(d) <- list(lev, lev)
   d
 }
 
@@ -301,12 +299,13 @@ is the `purpose` hierarchy — super-cluster = discovery unit, within-super-clus
 
 ```{r step2a-env, eval=env_ok}
 partition_env_dist <- function(x, pcs) {
-  sc <- x |> st_drop_geometry() |> select(component, all_of(pcs))
-  medoids <- sc |>
-    group_by(component) |>
-    summarise(across(all_of(pcs), ~ median(.x, na.rm = TRUE)), .groups = "drop")
-  m <- as.matrix(medoids[, pcs]); rownames(m) <- medoids$component
-  as.matrix(dist(m))
+  sc  <- sf::st_drop_geometry(x)
+  lev <- levels(x$component)
+  m   <- t(vapply(lev, function(l)                                 # per-component PCA medoid (column medians)
+            apply(sc[sc$component == l, pcs, drop = FALSE], 2, stats::median, na.rm = TRUE),
+            numeric(length(pcs))))
+  rownames(m) <- lev; colnames(m) <- pcs
+  as.matrix(stats::dist(m))
 }
 
 pcs   <- grep("^PC", names(pts), value = TRUE)
@@ -394,7 +393,6 @@ partition_splittable <- function(x, pcs, purpose, min_split_n = 12, extrap_frac 
   xd    <- sf::st_drop_geometry(x)
   comps <- levels(x$component)
   P     <- as.matrix(xd[pcs])
-  sizes <- count(xd, component, name = "n")
 
   # REALIZED extrapolation flag (shared by Steps 4-5): CAST's DI/AOA per component. Hold each
   # component out WHOLE; the env-NN p95 of the rest-of-data is the AOA threshold (`thr`), each
@@ -403,27 +401,37 @@ partition_splittable <- function(x, pcs, purpose, min_split_n = 12, extrap_frac 
   # resolved mode); a fraction only means a self-exclusion gap. Direct and tuning-light, and it
   # drives allocation in Steps 4-5: extrap segments are kept out of training and spread across
   # the holdouts. (trainDI()/aoa() give the same DI/threshold for a global cross-check.)
-  seg_extrap <- purrr::map_dfr(comps, function(cmp) {
+  seg_extrap <- do.call(rbind, lapply(comps, function(cmp) {
     te <- P[xd$component == cmp, , drop = FALSE]
     tr <- P[xd$component != cmp, , drop = FALSE]
-    tnn <- c(FNN::knn.dist(tr, k = 1))                             # rest-of-data sample-to-sample NN
-    thr <- stats::quantile(tnn, 0.95)                             # AOA threshold
+    tnn <- c(FNN::knn.dist(tr, k = 1)) # rest-of-data sample-to-sample NN
+    thr <- stats::quantile(tnn, 0.95) # AOA threshold
     enn <- c(FNN::knnx.dist(data = tr, query = te, k = 1))         # held-out component's DI
-    tibble(component = cmp, n_beyond = sum(enn > thr), frac_beyond = mean(enn > thr))
-  })
+    data.frame(component = cmp, n_beyond = sum(enn > thr), frac_beyond = mean(enn > thr),
+               stringsAsFactors = FALSE)
+  }))
 
-  distinct(xd, component, supercluster) |>
-    left_join(sizes,      by = "component") |>
-    left_join(seg_extrap, by = "component") |>
-    mutate(
-      extrap     = purpose == "mapping" & frac_beyond >= extrap_frac,
-      splittable = purpose == "mapping" & !extrap & n >= min_split_n,
-      role = dplyr::case_when(
-        purpose == "discovery"  ~ "atomic (supercluster = unit)",
-        purpose == "projection" ~ "defer to env thinning",
-        extrap                  ~ "extrapolation (spread, held from training)",
-        splittable              ~ "splittable (interpolation)",
-        TRUE                    ~ "atomic (interpolation)"))
+  # one row per component, in factor-level order
+  out <- data.frame(
+    component    = comps,
+    supercluster = xd$supercluster[match(comps, as.character(xd$component))],
+    n            = as.integer(table(xd$component)[comps]),
+    stringsAsFactors = FALSE)
+  out <- out[, c("component", "supercluster", "n")]
+  mi  <- match(out$component, seg_extrap$component)
+  out$n_beyond    <- seg_extrap$n_beyond[mi]
+  out$frac_beyond <- seg_extrap$frac_beyond[mi]
+  out$extrap     <- purpose == "mapping" & out$frac_beyond >= extrap_frac
+  out$splittable <- purpose == "mapping" & !out$extrap & out$n >= min_split_n
+  # `purpose` is scalar, so branch it with if/else (a scalar test in ifelse() would collapse the
+  # result to length 1 and recycle); only the per-component flags go through vectorized ifelse().
+  out$role <-
+    if (purpose == "discovery")  rep("atomic (supercluster = unit)", nrow(out))
+    else if (purpose == "projection") rep("defer to env thinning", nrow(out))
+    else ifelse(out$extrap,     "extrapolation (spread, held from training)",
+         ifelse(out$splittable, "splittable (interpolation)",
+                                "atomic (interpolation)"))
+  out
 }
 
 spl <- partition_splittable(pts, pcs, params_part$purpose,
@@ -490,8 +498,9 @@ machine.
 ```{r step4-split, eval=env_ok}
 partition_split <- function(x, spl, pcs, train_target, seed = 1) {
   set.seed(seed)
-  xd <- st_drop_geometry(x) |>
-    left_join(select(spl, component, role, extrap, n_beyond), by = "component")
+  xd <- sf::st_drop_geometry(x)
+  mi <- match(as.character(xd$component), spl$component)
+  xd$role <- spl$role[mi]; xd$extrap <- spl$extrap[mi]; xd$n_beyond <- spl$n_beyond[mi]
   N  <- nrow(xd)
   test_frac   <- 1 - mean(train_target)
   target_test <- round(N * test_frac)
@@ -532,10 +541,8 @@ partition_split <- function(x, spl, pcs, train_target, seed = 1) {
   # 3. interpolation atomic: add whole units until the budget is met, HARDEST first (most
   #    points beyond rest-of-data p95), so the residual budget is spent deliberately rather
   #    than by luck of a random draw.
-  atomic_order <- spl |>
-    filter(role == "atomic (interpolation)") |>
-    arrange(desc(n_beyond)) |>
-    pull(component)
+  atomic <- spl[spl$role == "atomic (interpolation)", , drop = FALSE]
+  atomic_order <- atomic$component[order(-atomic$n_beyond)]      # hardest (most beyond p95) first
   for (cmp in atomic_order) {
     if (length(test_id) >= target_test) break
     test_id <- c(test_id, xd$.id[xd$component == cmp])
@@ -549,11 +556,17 @@ partition_split <- function(x, spl, pcs, train_target, seed = 1) {
   test_nn  <- c(FNN::knnx.dist(data = Ptr, query = Pte, k = 1))   # test-to-sample NN
   train_nn <- c(FNN::knn.dist(Ptr, k = 1))                        # sample-to-sample LOO NN
 
-  by_unit <- xd |>
-    mutate(set = if_else(.id %in% test_id, "test", "train")) |>
-    count(component, role, set) |>
-    pivot_wider(names_from = set, values_from = n, values_fill = 0) |>
-    mutate(across(any_of(c("train", "test")), as.integer))
+  set     <- ifelse(xd$.id %in% test_id, "test", "train")
+  comps_u <- levels(xd$component)
+  tr_n    <- table(xd$component[set == "train"]); te_n <- table(xd$component[set == "test"])
+  by_unit <- data.frame(
+    component = comps_u,
+    role      = xd$role[match(comps_u, as.character(xd$component))],
+    train     = as.integer(tr_n[comps_u]),
+    test      = as.integer(te_n[comps_u]),
+    stringsAsFactors = FALSE)
+  by_unit$train[is.na(by_unit$train)] <- 0L
+  by_unit$test[is.na(by_unit$test)]   <- 0L
 
   list(
     train_id = train_id, test_id = test_id, by_unit = by_unit,
@@ -616,13 +629,8 @@ of training. The Step-3 roles drive assignment:
   fold gets a comparable slice of genuinely-unseen points, instead of one fold
   absorbing a whole env-distinct segment.
 
-Output mirrors `CAST::knndm()` (`indx_train` / `indx_test`, positional row indices
-into the training frame), so `modeller()`'s `trainControl(index = ...)` consumes
-it unchanged.
-
 ```{r step5-folds, eval=env_ok}
-# Gj / Gjstar / Gij / W via the same FNN + twosamples::wass_stat calls knndm uses internally
-# (so these are the canonical knndm quantities, not a parallel computation). Gij is proxied by
+
 # Gj off the data machine (no prediction grid); W = twosamples::wass_stat(Gjstar, Gij).
 partition_knndm_dists <- function(P, clusters, extrap) {
   Gj     <- c(FNN::knn.dist(P, k = 1))                 # sample-to-sample LOO NN
@@ -637,8 +645,10 @@ partition_knndm_dists <- function(P, clusters, extrap) {
 
 partition_folds <- function(x, spl, pcs, train_id, k = 10, seed = 1) {
   set.seed(seed)
-  xt <- st_drop_geometry(x) |> filter(.id %in% train_id) |>
-    left_join(select(spl, component, role, extrap), by = "component")
+  xt <- sf::st_drop_geometry(x)
+  xt <- xt[xt$.id %in% train_id, , drop = FALSE]
+  mi <- match(as.character(xt$component), spl$component)
+  xt$role <- spl$role[mi]; xt$extrap <- spl$extrap[mi]
   xt$row <- seq_len(nrow(xt))                       # positional index into the training frame
   k <- as.integer(k)
   fold <- integer(nrow(xt))
@@ -654,11 +664,12 @@ partition_folds <- function(x, spl, pcs, train_id, k = 10, seed = 1) {
     fold[idx] <- ((cl - 1) %% k) + 1
   }
 
-  # interpolation atomic: whole unit -> one fold, greedily load-balanced
-  whole <- xt |> filter(!extrap, role != "splittable (interpolation)") |>
-    count(component, name = "n") |> arrange(desc(n))
+  # interpolation atomic: whole unit -> one fold, greedily load-balanced, largest unit first
+  sel   <- !xt$extrap & xt$role != "splittable (interpolation)"
+  wcnt  <- table(droplevels(xt$component[sel]))
+  whole <- names(wcnt)[order(-as.integer(wcnt))]
   load  <- tabulate(fold[fold > 0], nbins = k)
-  for (cmp in whole$component) {
+  for (cmp in whole) {
     f <- which.min(load); idx <- which(xt$component == cmp & !xt$extrap)
     fold[idx] <- f; load[f] <- load[f] + length(idx)
   }
@@ -669,27 +680,22 @@ partition_folds <- function(x, spl, pcs, train_id, k = 10, seed = 1) {
   eload <- integer(k)
   for (i in which(xt$extrap)) { f <- which.min(eload); fold[i] <- f; eload[f] <- eload[f] + 1 }
 
-  # CAST triple: indx_train / indx_test / indx_exclude (the nndm vocabulary). Training EXCLUDES
-  # all extrap rows; validation = fold members (incl the extrap dealt there); indx_exclude[[f]]
   # = extrap rows assigned to OTHER folds — neither trained nor validated in fold f.
   indx_test    <- lapply(seq_len(k), function(f) xt$row[fold == f])
   indx_train   <- lapply(seq_len(k), function(f) xt$row[fold != f & !xt$extrap])
   indx_exclude <- lapply(seq_len(k), function(f) xt$row[fold != f &  xt$extrap])
 
-  fold_meta <- purrr::map_dfr(seq_len(k), function(f) {
-    in_val <- fold == f                      # bind before tibble() (a `fold` column would shadow it)
+  fold_meta <- do.call(rbind, lapply(seq_len(k), function(f) {
+    in_val <- fold == f
     tr <- as.matrix(xt[fold != f & !xt$extrap, pcs]); te <- as.matrix(xt[in_val, pcs])
     tnn <- c(FNN::knn.dist(tr, k = 1))                          # fold-train sample-to-sample NN
     enn <- c(FNN::knnx.dist(data = tr, query = te, k = 1))      # CV-distances (validation -> fold-train)
-    tibble(fold = f, n_val = nrow(te), val_prop = nrow(te) / nrow(xt),
-           n_extrap_val = sum(xt$extrap[in_val]),
-           beyond_p95 = mean(enn > stats::quantile(tnn, 0.95)),
-           beyond_max = mean(enn > max(tnn)))
-  })
+    data.frame(fold = f, n_val = nrow(te), val_prop = nrow(te) / nrow(xt),
+               n_extrap_val = sum(xt$extrap[in_val]),
+               beyond_p95 = mean(enn > stats::quantile(tnn, 0.95)),
+               beyond_max = mean(enn > max(tnn)))
+  }))
 
-  # knndm-canonical, classed object: same field names as CAST::knndm, so CAST::print.knndm and
-  # CAST::plot.knndm work on it directly (we maintain no print/plot code). Extra fields (clusters
-  # is id-keyed via `fold`, plus indx_exclude/extrap_id/fold_meta/role) ride alongside harmlessly.
   d <- partition_knndm_dists(as.matrix(xt[pcs]), fold, xt$extrap)
   res <- list(
     clusters   = fold,                                  # per-training-row fold id (knndm$clusters)
@@ -766,14 +772,18 @@ apart from the interpolation bulk.
 ```{r step5b-lopo, eval=env_ok}
 partition_folds_lopo <- function(x, spl, pcs, train_id, k = 10, seed = 1) {
   set.seed(seed)
-  xt <- st_drop_geometry(x) |> filter(.id %in% train_id) |>
-    left_join(select(spl, component, role, extrap), by = "component")
+  xt <- sf::st_drop_geometry(x)
+  xt <- xt[xt$.id %in% train_id, , drop = FALSE]
+  mi <- match(as.character(xt$component), spl$component)
+  xt$role <- spl$role[mi]; xt$extrap <- spl$extrap[mi]
   xt$row <- seq_len(nrow(xt))                    # positional index into the training frame
   k <- as.integer(k)
   fold <- integer(nrow(xt))
 
   # interpolation segments: whole segment -> one fold, greedy size-balance (true leave-segment-out)
-  csz  <- xt |> filter(!extrap) |> count(component, name = "n") |> arrange(desc(n))
+  cnt  <- table(droplevels(xt$component[!xt$extrap]))
+  csz  <- data.frame(component = names(cnt), n = as.integer(cnt), stringsAsFactors = FALSE)
+  csz  <- csz[order(-csz$n), , drop = FALSE]                     # largest segment first
   load <- integer(k)
   for (i in seq_len(nrow(csz))) {
     f <- which.min(load); idx <- which(xt$component == csz$component[i] & !xt$extrap)
@@ -791,18 +801,18 @@ partition_folds_lopo <- function(x, spl, pcs, train_id, k = 10, seed = 1) {
   indx_train   <- lapply(seq_len(k), function(f) xt$row[fold != f & !xt$extrap])
   indx_exclude <- lapply(seq_len(k), function(f) xt$row[fold != f &  xt$extrap])
 
-  fold_meta <- purrr::map_dfr(seq_len(k), function(f) {
-    in_val <- fold == f                          # bind before tibble() (a `fold` column would shadow it)
+  fold_meta <- do.call(rbind, lapply(seq_len(k), function(f) {
+    in_val <- fold == f
     tr <- as.matrix(xt[fold != f & !xt$extrap, pcs]); te <- as.matrix(xt[in_val, pcs])
     tnn <- c(FNN::knn.dist(tr, k = 1))                          # fold-train sample-to-sample NN
     enn <- c(FNN::knnx.dist(data = tr, query = te, k = 1))      # CV-distances (validation -> fold-train)
-    tibble(fold = f, n_val = nrow(te), val_prop = nrow(te) / nrow(xt),
-           n_comp = dplyr::n_distinct(xt$component[in_val & !xt$extrap]),
-           n_superc = dplyr::n_distinct(xt$supercluster[in_val]),
+    data.frame(fold = f, n_val = nrow(te), val_prop = nrow(te) / nrow(xt),
+           n_comp = length(unique(xt$component[in_val & !xt$extrap])),
+           n_superc = length(unique(xt$supercluster[in_val])),
            n_extrap_val = sum(xt$extrap[in_val]),
            beyond_p95 = mean(enn > stats::quantile(tnn, 0.95)),
            beyond_max = mean(enn > max(tnn)))
-  })
+  }))
 
   # knndm-canonical classed object (same as partition_folds), so CAST's print/plot dispatch here too
   d <- partition_knndm_dists(as.matrix(xt[pcs]), fold, xt$extrap)
@@ -923,12 +933,13 @@ partition_classes <- function(pts, bg, split, folds, train_target, k, seed = 1) 
   # presences: structured assignment from Steps 4-5 (test presences get fold = NA).
   # extrap presences carry their validation fold but are flagged so they are NEVER put in
   # any fold's training (they are validation-only, matching the Step 5 spread).
-  pres <- tibble(
+  pres <- data.frame(
     id     = paste0("pres_", pts$.id),
     class  = 1L,
-    set    = if_else(pts$.id %in% split$test_id, "test", "train"),
+    set    = ifelse(pts$.id %in% split$test_id, "test", "train"),
     fold   = unname(folds$fold[as.character(pts$.id)]),
-    extrap = pts$.id %in% folds$extrap_id)
+    extrap = pts$.id %in% folds$extrap_id,
+    stringsAsFactors = FALSE)
 
   # absences: random outer split, then balanced random folds within the train side
   nb  <- nrow(bg)
@@ -937,9 +948,10 @@ partition_classes <- function(pts, bg, split, folds, train_target, k, seed = 1) 
   a_fold <- rep(NA_integer_, nb)
   tr <- which(a_set == "train")
   a_fold[tr] <- sample(rep_len(seq_len(k), length(tr)))      # balanced across folds
-  abs <- tibble(id = aid, class = 0L, set = a_set, fold = a_fold, extrap = FALSE)
+  abs <- data.frame(id = aid, class = 0L, set = a_set, fold = a_fold, extrap = FALSE,
+                    stringsAsFactors = FALSE)
 
-  combined <- bind_rows(pres, abs)
+  combined <- rbind(pres, abs)
   tf <- combined[combined$set == "train", ]; tf$row <- seq_len(nrow(tf))
   # CAST triple (nndm vocabulary) carried through to the caret-ready frame.
   indx_test    <- lapply(seq_len(k), function(f) tf$row[which(tf$fold == f)])
@@ -999,7 +1011,7 @@ build_partition <- function(x, bg, pcs, p) {   # p = params_part
     # presence-level structure
     train_id   = split$train_id,
     test_id    = split$test_id,
-    components = select(st_drop_geometry(x), .id, component, supercluster),
+    components = sf::st_drop_geometry(x)[, c(".id", "component", "supercluster")],
     geo_d = geo_d, env_d = env_d, splittable = spl,
     split_coverage = split$coverage, fold_meta = folds$fold_meta, W = folds$W,
     folds = folds,                        # the classed knndm object (CAST print/plot dispatch)
@@ -1046,11 +1058,3 @@ part$combined |> count(set, class) |>
   choice; sensitivity-test across resolutions.
 - **`extrap_frac` sensitivity** — how many segments the flag catches, and the
   train/test extrap split, across thresholds.
-- **The objective** (Steps 4–5) — now reported as `knndm()`'s `W` (Wasserstein
-  `Gjstar` vs `Gij`); on the data machine swap the `Gj` proxy for the true
-  prediction-grid `Gij` so `W` balances "test looks like prediction" against
-  "train covers test" exactly as `knndm()` does.
-- **Wire into `modeller()`** — feed `indx_train`/`indx_test` to `trainControl()`
-  (`indx_exclude` is already dropped from `indx_train`); decide whether mapping
-  uses Step 5 or the Step 5b folds — compare them on `W`.
-```
