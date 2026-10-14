@@ -314,18 +314,32 @@ aoaSurfaces <- function(model, rast_dat, fname, results_root, LPD = TRUE, overwr
 #' overwriting anything under the default results.
 modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_split,
                      PAratio, distOrder, seed = 1, predict_surface = TRUE,
-                     split = NULL, results_root = file.path(PROJ_ROOT, 'results')){
+                     split = NULL, part = NULL,
+                     results_root = file.path(PROJ_ROOT, 'results')){
 
   if(missing(se_prediction)){se_prediction <- FALSE}
   set.seed(seed)
   rast_dat <- rastReader(paste0('dem_', resolution), p2proc)
   cores <- parallel::detectCores()
 
+  # When `part` is supplied, it is authoritative for BOTH the outer train/test split and
+  # the inner CV folds; any `split` argument is ignored. The caller must have attached
+  # `abs_k` (stable row id in the absence pool at partition-build time) to absence rows of
+  # `x` and left `.id` on both classes - the join keys for mapping partition rows (pid =
+  # pres_<.id> / abs_<abs_k>) onto Train rows.
+  if(!is.null(part) && !is.null(split))
+    stop('modeller(): pass `part` or `split`, not both.')
+  use_part <- !is.null(part)
+  if(use_part && !'abs_k' %in% names(x))
+    stop("modeller(): `part` supplied but `x` has no `abs_k` column on absences.")
+
   df <- dplyr::bind_cols(
-    dplyr::select(x, Occurrence, dplyr::any_of('.id')),
+    dplyr::select(x, Occurrence, dplyr::any_of(c('.id', 'abs_k'))),
     dplyr::select(terra::extract(rast_dat, x), -ID),
   ) |>
-    tidyr::drop_na() %>%
+    # drop rows with NA predictors - .id/abs_k are id columns and must not trigger the drop
+    # (abs_k is NA on presences by construction)
+    tidyr::drop_na(-dplyr::any_of(c('.id', 'abs_k'))) %>%
     dplyr::mutate(
       Occurrence = as.factor(Occurrence)) |>
     sf::st_drop_geometry()
@@ -348,11 +362,32 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
       reloading it now for prediction')
   } else {
   
-  # split the input data into both an explicit train and test data set. If a
-  # pre-computed spatial split is supplied (see spatial_class_split()), every ratio/seed
-  # fit in a resolution's grid search shares the same class-balanced, prediction-domain-
-  # matched partition; otherwise fall back to a random stratified split.
-  if(is.null(split)){
+  # split the input data into both an explicit train and test data set. Three paths:
+  # (a) `part` from Partitioner.R  - authoritative for outer split AND inner CV folds;
+  # (b) pre-computed spatial split (spatial_class_split()) - every ratio/seed in a
+  #     resolution's grid search shares the same class-balanced, prediction-domain-
+  #     matched partition and modeller() derives its own inner knndm folds;
+  # (c) null - fall back to a random stratified split, inner knndm folds as (b).
+  partition_cv <- NULL                       # populated under (a); drives trainControl
+  if(use_part){
+    df$pid <- ifelse(df$Occurrence == '1',
+                     paste0('pres_', df$.id),
+                     paste0('abs_',  df$abs_k))
+    train_pid <- part$combined$id[part$combined$set == 'train']
+    test_pid  <- part$combined$id[part$combined$set == 'test']
+    Train <- df[df$pid %in% train_pid, , drop = FALSE]
+    Test  <- df[df$pid %in% test_pid,  , drop = FALSE]
+    # remap partition fold indices (positional into part$train_frame) onto Train rows,
+    # dropping any train_frame rows that aren't in this ratio's absence subsample
+    tf <- part$combined[part$combined$set == 'train', , drop = FALSE]
+    train_row <- setNames(seq_len(nrow(Train)), Train$pid)
+    remap <- function(idx_list) lapply(idx_list, function(i){
+      r <- train_row[tf$id[i]]; unname(r[!is.na(r)])
+    })
+    partition_cv <- list(indx_train   = remap(part$indx_train),
+                         indx_test    = remap(part$indx_test),
+                         indx_exclude = remap(part$indx_exclude))
+  } else if(is.null(split)){
     TrainIndex <- caret::createDataPartition(
       df$Occurrence, p = train_split, list = FALSE, times = 1)
     Train <- df[TrainIndex,]; Test <- df[-TrainIndex,]
@@ -360,8 +395,8 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
     Train <- df[df$.id %in% split$train_id, ]
     Test  <- df[df$.id %in% split$test_id, ]
   }
-  Train <- dplyr::select(Train, -dplyr::any_of('.id'))
-  Test  <- dplyr::select(Test, -dplyr::any_of('.id'))
+  Train <- dplyr::select(Train, -dplyr::any_of(c('.id', 'abs_k', 'pid')))
+  Test  <- dplyr::select(Test,  -dplyr::any_of(c('.id', 'abs_k', 'pid')))
 
   Train.sf <- sf::st_as_sf(Train, coords = c('Longitude', 'Latitude'), crs = 32613)
   
@@ -376,10 +411,18 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   keep <- unique(c('Occurrence', important_vars))
   Train <- Train[ , names(Train) %in% keep]
   
-  # develop a cross validation structure which is explicitly spatial  
-  indices_knndm <- CAST::knndm(Train.sf, rast_dat, k=10)
-  
-  # Now we will tune the hyperparameters for this model. 
+  # develop a cross validation structure which is explicitly spatial. Under `part` we
+  # inherit the folds from Partitioner.R (spatial_mapping or LMPO); otherwise, fall back
+  # to a fresh in-training CAST::knndm() draw.
+  if(!is.null(partition_cv)){
+    indices_knndm <- partition_cv
+  } else {
+    indices_knndm <- CAST::knndm(Train.sf, rast_dat, k=10)
+    indices_knndm$indx_test    <- NULL  # fallback uses caret's default indexOut
+    indices_knndm$indx_exclude <- NULL
+  }
+
+  # Now we will tune the hyperparameters for this model.
   
   tgrid <- expand.grid(
     mtry = 
@@ -406,8 +449,9 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
     importance = 'permutation',
     trControl = caret::trainControl(
       method="cv",
-      index = indices_knndm$indx_train,
-      savePredictions = "final", 
+      index    = indices_knndm$indx_train,
+      indexOut = indices_knndm$indx_test,   # NULL under the knndm fallback - caret defaults
+      savePredictions = "final",
       allowParallel = TRUE)
   )
   
@@ -1283,7 +1327,13 @@ summarize_lopo <- function(x){
 #' every available absence and this reports what was actually achieved, so callers label
 #' and record the fit by what it really is rather than what was asked for.
 distOrder_PAratio_simulator <- function(x, distOrder, PAratio, resolution, seed = 1, split = NULL,
+                                        part = NULL,
                                         ratio_train_only = FALSE, fixed_col = NULL, ...){
+  # When `part` is supplied the inner-CV folds and outer train/test split come from it;
+  # the absence subsampling below is unchanged (random to the requested ratio), and
+  # modeller() reindexes the fold triple to the surviving absences via `abs_k`.
+  if(!is.null(part) && !is.null(split))
+    stop('distOrder_PAratio_simulator(): pass `part` or `split`, not both.')
 
   set.seed(seed)
 
@@ -1350,7 +1400,8 @@ distOrder_PAratio_simulator <- function(x, distOrder, PAratio, resolution, seed 
   x <- dplyr::bind_rows(prs, fixed_abs, abs, test_abs)
 
   out <- modeller(x, PAratio = paste0("1:", PAratio),
-           resolution = res_str, distOrder = paste0('DO:', distOrder), seed = seed, split = split, ...)
+           resolution = res_str, distOrder = paste0('DO:', distOrder), seed = seed,
+           split = split, part = part, ...)
   out$PAratio <- PAratio
   out
 }

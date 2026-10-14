@@ -406,7 +406,11 @@ partition_classes <- function(pts, bg, split, folds, train_target, k, seed = 1) 
 # ----------------------------------------------------------------------------
 # Assemble - one call composing Steps 1-6 into the shippable artifact
 # ----------------------------------------------------------------------------
-build_partition <- function(x, bg, pcs, p) {   # p = params_part
+# `folds_fn` picks the inner CV strategy: partition_folds (spatial_mapping; cut &
+# re-represent within component) or partition_folds_lopo (LMPO; whole segment ->
+# one fold). Both return a classed knndm object with the same indx_train/
+# indx_test/indx_exclude triple, so everything downstream is identical.
+build_partition <- function(x, bg, pcs, p, folds_fn = partition_folds) {   # p = params_part
   x     <- partition_components(x, p$connect_m)
   geo_d <- partition_geo_dist(x)
   x$supercluster <- factor(
@@ -414,7 +418,7 @@ build_partition <- function(x, bg, pcs, p) {   # p = params_part
   env_d   <- partition_env_dist(x, pcs)
   spl     <- partition_splittable(x, pcs, p$purpose, p$min_split_n, p$extrap_frac)
   split   <- partition_split(x, spl, pcs, p$train_target, p$seed)
-  folds   <- partition_folds(x, spl, pcs, split$train_id, p$k, p$seed)
+  folds   <- folds_fn(x, spl, pcs, split$train_id, p$k, p$seed)
   classes <- partition_classes(x, bg, split, folds, p$train_target, p$k, p$seed)
 
   list(
