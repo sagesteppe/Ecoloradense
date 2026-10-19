@@ -201,7 +201,8 @@ ml_candidates <- c(
   'poisson'           = 'XGB Poisson',
   'tweedie_spat'      = 'XGB Tweedie Spat.',
   'tweedie'           = 'XGB Tweedie',
-  'lgbm-poisson_spat' = 'LGBM Poisson Spat.'
+  'lgbm-poisson_spat' = 'LGBM Poisson Spat.',
+  'lgbm-poisson'      = 'LGBM Poisson'
 )
 ml_results <- dplyr::bind_rows(
   purrr::imap_dfr(ml_candidates, ~ score_ml(.y, .x)),
@@ -567,7 +568,8 @@ conformal_results <- dplyr::bind_rows(
   score_conformal('poisson', 'XGB Poisson'),
   score_conformal('tweedie_spat', 'XGB Tweedie Spat.'),
   score_conformal('tweedie', 'XGB Tweedie'),
-  score_conformal('lgbm-poisson_spat', 'LGBM Poisson Spat.')
+  score_conformal('lgbm-poisson_spat', 'LGBM Poisson Spat.'),
+  score_conformal('lgbm-poisson', 'LGBM Poisson')
 )
 
 if(!is.null(conformal_results) && nrow(conformal_results) > 0){

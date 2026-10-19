@@ -287,6 +287,112 @@ aoaSurfaces <- function(model, rast_dat, fname, results_root, LPD = TRUE, overwr
 }
 
 
+#' Inverse env-density case weights for presences
+#'
+#' @description Reweights presences so clusters in environmental space do not dominate
+#' the fit. PCA on the full numeric predictor stack of the training frame, 1-NN KDE on
+#' the first \code{n_pcs} PCs (ks::Hpi bandwidth, Scott's rule fallback), weight =
+#' \code{(1 / density)^alpha}, capped at the \code{cap_q} quantile, rescaled so
+#' mean(weight) = 1 across presences. Absences keep weight 1. The alpha exponent softens
+#' the raw inverse density (alpha = 1) toward uniform (alpha = 0); the capped quantile
+#' limits a single sparse-env presence from eating the fit. Lower \code{n_pcs} reduces
+#' the dimensionality the KDE has to cover - with a few hundred presences, 5-D is sparse
+#' enough that Hpi lands on a very spiky density and the cap does not bite. Compute on
+#' the training frame only; call per fold, after any Boruta pruning.
+#' @param Train data.frame with factor \code{Occurrence} (levels '0','1') + numeric predictors.
+#' @param n_pcs Integer, number of principal-component axes for the density estimate.
+#' @param alpha Numeric in [0, 1], softening exponent on the inverse density.
+#' @param cap_q Numeric in (0, 1), upper-quantile cap on the inverse-density weight.
+#' @return Numeric vector of length nrow(Train), aligned to Train row order.
+envPCWeights <- function(Train, n_pcs = 3, alpha = 0.5, cap_q = 0.80){
+  stopifnot('Occurrence' %in% names(Train))
+  X <- Train[, setdiff(names(Train), 'Occurrence'), drop = FALSE]
+  X <- X[, vapply(X, is.numeric, logical(1)), drop = FALSE]
+  pres <- as.character(Train$Occurrence) == '1'
+  if(sum(pres) < max(n_pcs + 2, 10) || ncol(X) < 2){
+    warning('envPCWeights(): too few presences or predictors; equal weights.', immediate. = TRUE)
+    return(rep(1, nrow(Train)))
+  }
+  pc <- stats::prcomp(X[pres, , drop = FALSE], center = TRUE, scale. = TRUE)
+  k  <- min(n_pcs, ncol(pc$x))
+  Z  <- pc$x[, seq_len(k), drop = FALSE]
+  H  <- tryCatch(ks::Hpi(Z, nstage = 2), error = function(e) NULL)
+  if(is.null(H)) H <- diag(apply(Z, 2, stats::bw.nrd0)^2, nrow = k, ncol = k)
+  fhat <- ks::kde(Z, H = H, eval.points = Z)$estimate
+  fhat <- pmax(fhat, max(fhat) * 1e-6)
+  w_pres <- (1 / fhat)^alpha
+  w_pres <- pmin(w_pres, stats::quantile(w_pres, cap_q))
+  w_pres <- w_pres / mean(w_pres)
+  message(sprintf('envPCWeights: k=%d alpha=%.2f cap_q=%.2f  w summary: min=%.2f median=%.2f mean=%.2f max=%.2f',
+                  k, alpha, cap_q, min(w_pres), stats::median(w_pres), mean(w_pres), max(w_pres)))
+  w <- rep(1, nrow(Train))
+  w[pres] <- w_pres
+  w
+}
+
+#' Mahalanobis env-distance case weights for presences
+#'
+#' @description Weights each presence by its (regularized) Mahalanobis distance to the
+#' training-presence centroid in the raw covariate space - presences far from the
+#' centroid in env space get up-weighted. Different hypothesis than
+#' \code{envPCWeights()}: "weight env-marginal relative to the centroid" rather than
+#' "weight sparse neighborhoods", and uses every covariate rather than the top k PCs.
+#' Weight = Mahalanobis_dist^(2 * alpha), capped at the \code{cap_q} quantile and
+#' rescaled so mean(weight) = 1 across presences. Absences keep weight 1.
+#' @param Train data.frame with factor \code{Occurrence} (levels '0','1') + numeric predictors.
+#' @param alpha Numeric in [0, 1], softening exponent on the raw squared distance.
+#' @param cap_q Numeric in (0, 1), upper-quantile cap on the weight.
+#' @return Numeric vector of length nrow(Train), aligned to Train row order.
+envMahalanobisWeights <- function(Train, alpha = 0.5, cap_q = 0.80){
+  stopifnot('Occurrence' %in% names(Train))
+  pres <- as.character(Train$Occurrence) == '1'
+  X <- Train[, setdiff(names(Train), 'Occurrence'), drop = FALSE]
+  X <- X[, vapply(X, is.numeric, logical(1)), drop = FALSE]
+  if(sum(pres) < max(ncol(X) + 2, 10) || ncol(X) < 2){
+    warning('envMahalanobisWeights(): too few presences or predictors; equal weights.',
+            immediate. = TRUE)
+    return(rep(1, nrow(Train)))
+  }
+  Xp <- as.matrix(X[pres, , drop = FALSE])
+  mu <- colMeans(Xp)
+  S  <- stats::cov(Xp)
+  # ridge-regularize if the presence covariance is singular (near-collinear covariates)
+  if(any(is.na(S)) || qr(S)$rank < ncol(Xp)){
+    S <- S + diag(1e-6 * mean(diag(S)) + 1e-9, ncol(Xp))
+  }
+  d2 <- stats::mahalanobis(Xp, center = mu, cov = S)
+  w_pres <- pmax(d2, 1e-9)^alpha  # d2 is already squared distance; alpha = 0.5 -> raw dist
+  w_pres <- pmin(w_pres, stats::quantile(w_pres, cap_q))
+  w_pres <- w_pres / mean(w_pres)
+  message(sprintf('envMahalanobisWeights: p=%d alpha=%.2f cap_q=%.2f  w summary: min=%.2f median=%.2f mean=%.2f max=%.2f',
+                  ncol(Xp), alpha, cap_q, min(w_pres), stats::median(w_pres), mean(w_pres), max(w_pres)))
+  w <- rep(1, nrow(Train))
+  w[pres] <- w_pres
+  w
+}
+
+#' Platt recalibration: logistic fit of truth on logit(prob)
+#'
+#' @description Learns a two-parameter sigmoid \code{sigmoid(a + b * logit(p))} that
+#' maps model probabilities to the empirical presence rate on an unweighted holdout.
+#' Use after a case-weighted fit, where the raw predicted P scale no longer reflects
+#' the landscape presence base rate.
+#' @param truth Numeric or factor coding 0/1 on the calibration fold.
+#' @param prob Numeric, raw model probability of presence for the same rows.
+#' @return List with \code{coef} (intercept, slope) and \code{apply}, function(p) -> p_cal.
+plattCalibrate <- function(truth, prob){
+  y <- as.integer(as.character(truth))
+  p <- pmin(pmax(prob, 1e-6), 1 - 1e-6)
+  fit <- stats::glm(y ~ stats::qlogis(p), family = stats::binomial())
+  cf  <- stats::setNames(stats::coef(fit), c('intercept', 'slope'))
+  apply_fn <- function(p){
+    p <- pmin(pmax(p, 1e-6), 1 - 1e-6)
+    stats::plogis(cf['intercept'] + cf['slope'] * stats::qlogis(p))
+  }
+  list(coef = cf, apply = apply_fn)
+}
+
+
 #' @param x input occurrence data
 #' @param resolution list of paths to geodata at different resolutions.
 #' @param iteration numeric, which iteration of modelling is being performed?
@@ -314,8 +420,9 @@ aoaSurfaces <- function(model, rast_dat, fname, results_root, LPD = TRUE, overwr
 #' overwriting anything under the default results.
 modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_split,
                      PAratio, distOrder, seed = 1, predict_surface = TRUE,
-                     split = NULL, part = NULL,
+                     split = NULL, part = NULL, weight_scheme = 'W0',
                      results_root = file.path(PROJ_ROOT, 'results')){
+  weight_scheme <- match.arg(weight_scheme, c('W0', 'WKDE', 'WMAH'))
 
   if(missing(se_prediction)){se_prediction <- FALSE}
   set.seed(seed)
@@ -344,7 +451,8 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
       Occurrence = as.factor(Occurrence)) |>
     sf::st_drop_geometry()
 
-  fname <- paste0(resolution, '-Iteration', iteration, '-PA', PAratio, distOrder, '-Seed', seed)
+  fname <- paste0(resolution, '-Iteration', iteration, '-PA', PAratio, distOrder, '-Seed', seed,
+                  if(weight_scheme == 'W0') '' else paste0('-', weight_scheme))
   #######################         MODELLING           ##########################
   # this is the fastest portion of this process. It will take at most a few minutes
   # at any resolution, the goal of this paper wasn't really focused on comparing
@@ -357,6 +465,9 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   if(file.exists(paste0(results_root, '/models/', fname, '.rds'))){
     rf_model <- readRDS(paste0(results_root, '/models/', fname, '.rds'))
     model <- readRDS(paste0(results_root, '/modelsTune/', fname, '.rds'))
+    platt_path <- paste0(results_root, '/modelsTune/', fname, '-platt.rds')
+    platt <- if(file.exists(platt_path)) readRDS(platt_path) else NULL
+    platt_apply <- if(is.null(platt)) function(p) p else platt$apply
     message(
       'An existing model for this resolution and iteration already exists;
       reloading it now for prediction')
@@ -398,6 +509,27 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   Train <- dplyr::select(Train, -dplyr::any_of(c('.id', 'abs_k', 'pid')))
   Test  <- dplyr::select(Test,  -dplyr::any_of(c('.id', 'abs_k', 'pid')))
 
+  # WKDE: carve a stratified 15% unweighted calibration fold out of Train for the Platt
+  # fit. The final model is trained on the remaining 85% (with weights). W0 skips this.
+  Cal <- NULL
+  if(weight_scheme %in% c('WKDE', 'WMAH')){
+    cal_idx <- as.integer(caret::createDataPartition(Train$Occurrence, p = 0.15,
+                                                     list = FALSE, times = 1))
+    Cal   <- Train[cal_idx, , drop = FALSE]
+    Train <- Train[-cal_idx, , drop = FALSE]
+    if(!is.null(partition_cv)){
+      # drop Cal rows from the inherited knndm folds so caret only sees surviving rows
+      keep_mask <- !(seq_len(nrow(Train) + nrow(Cal)) %in% cal_idx)
+      new_pos <- cumsum(keep_mask)
+      remap_fold <- function(idx_list) lapply(idx_list, function(i){
+        i <- i[keep_mask[i]]; unname(new_pos[i])
+      })
+      partition_cv$indx_train   <- remap_fold(partition_cv$indx_train)
+      partition_cv$indx_test    <- remap_fold(partition_cv$indx_test)
+      partition_cv$indx_exclude <- remap_fold(partition_cv$indx_exclude)
+    }
+  }
+
   Train.sf <- sf::st_as_sf(Train, coords = c('Longitude', 'Latitude'), crs = 32613)
   
   ## remove totally uninformative features using Boruta analysis, these features
@@ -407,7 +539,18 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   importance <- Boruta::attStats(BorutaRes)
   rn <- rownames(importance)
   important_vars <- Boruta::getSelectedAttributes(BorutaRes, withTentative = TRUE)
-  
+
+  # Guard against the rare run where Boruta rejects every attribute (seen e.g. on the
+  # final-stage replicate of a 1:1 adaptive search). Without it, Train collapses to a
+  # single column (Occurrence), ncol(Train) = 1, mtry grid is floor(1/2.4):floor(1/1.6)
+  # = 0:0, and ranger errors out. Fall back to the full predictor set so caret can at
+  # least tune on something.
+  if(length(important_vars) == 0){
+    warning('Boruta rejected all attributes for ', fname,
+            '; keeping all predictors (no feature pruning) for this fit.', immediate. = TRUE)
+    important_vars <- setdiff(names(Train), 'Occurrence')
+  }
+
   keep <- unique(c('Occurrence', important_vars))
   Train <- Train[ , names(Train) %in% keep]
   
@@ -431,21 +574,29 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
     min.node.size = c(1:9, seq(10, 30, by = 5))
   )
 
-  # calculate class weights for the factor levels. 
+  # calculate class weights for the factor levels.
   wts = c(
     1 - sum(Train$Occurrence==0)/nrow(Train),
     1 - sum(Train$Occurrence==1)/nrow(Train)
   )
-  
+
+  # WKDE: inverse env-density case weights on Train (presences only; absences = 1).
+  # Computed after Boruta pruning so KDE uses the predictor set the model will see.
+  cw <- switch(weight_scheme,
+               W0   = rep(1, nrow(Train)),
+               WKDE = envPCWeights(Train),
+               WMAH = envMahalanobisWeights(Train))
+
   message('Tuning hyperparameters.')
   model <- caret::train(
     x = Train[,-grep('Occurrence', colnames(Train))],
     y = Train$Occurrence,
     method = "ranger",
     num.trees = 750,
-    metric = 'Accuracy', 
-    keep.inbag = TRUE, 
+    metric = 'Accuracy',
+    keep.inbag = TRUE,
     class.weights = wts,
+    weights = cw,
     importance = 'permutation',
     trControl = caret::trainControl(
       method="cv",
@@ -454,28 +605,46 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
       savePredictions = "final",
       allowParallel = TRUE)
   )
-  
+
   rf_model <- ranger::ranger(
-    Occurrence ~ ., data = Train, probability = T, keep.inbag = TRUE, 
-    mtry = model[['finalModel']][['mtry']], 
+    Occurrence ~ ., data = Train, probability = T, keep.inbag = TRUE,
+    mtry = model[['finalModel']][['mtry']],
     min.node.size = model[['finalModel']][['min.node.size']],
     importance = 'permutation',
-    class.weights = wts
+    class.weights = wts,
+    case.weights = cw
     )
   
   # save the cv fold fit model for AOA preds
-  saveRDS(model, 
+  saveRDS(model,
           file = paste0(results_root, '/modelsTune/', fname, '.rds'))
   # save the model
   saveRDS(rf_model,
           file = paste0(results_root, '/models/', fname, '.rds'))
-  
-  # save the test data. 
+
+  # WKDE: fit Platt on the unweighted calibration fold and save the mapping. Downstream
+  # scoring and the raster surface apply platt$apply() to the presence-class probability
+  # (column 2 of the ranger prediction matrix); W0 uses the identity.
+  platt <- NULL
+  if(weight_scheme %in% c('WKDE', 'WMAH') && !is.null(Cal)){
+    p_cal <- predict(rf_model, Cal, type = 'response', num.threads = 1)$predictions[, '1']
+    platt <- plattCalibrate(Cal$Occurrence, p_cal)
+    saveRDS(platt, file = paste0(results_root, '/modelsTune/', fname, '-platt.rds'))
+    message(sprintf('Platt coefs: intercept = %.3f, slope = %.3f',
+                    platt$coef['intercept'], platt$coef['slope']))
+  }
+  platt_apply <- if(is.null(platt)) function(p) p else platt$apply
+
+  # save the test data.
   write.csv(Test, paste0(results_root, '/test_data/', fname, '.csv'))
-  
-  
+
+
   # threshold the model and use these values for binary classification estimates
   predictions <- predict(rf_model, Test, type = 'se', se.method = 'infjack', probability=TRUE)
+  # apply Platt to the presence-class column; raw SE columns are left untouched (WKDE
+  # recalibration breaks the infjack SE scale; those surfaces are left as a known limit).
+  predictions$predictions[, 2] <- platt_apply(predictions$predictions[, 2])
+  predictions$predictions[, 1] <- 1 - predictions$predictions[, 2]
   e <- dismo::evaluate(
     p = predictions$predictions[Test$Occurrence==1,2],
     a = predictions$predictions[Test$Occurrence==0,2]
@@ -487,6 +656,8 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   
   # save the confusion matrix
   predictions <- predict(rf_model, Test, type = 'se', se.method = 'infjack', probability=TRUE)
+  predictions$predictions[, 2] <- platt_apply(predictions$predictions[, 2])
+  predictions$predictions[, 1] <- 1 - predictions$predictions[, 2]
   predictions$binary <- as.factor(if_else(predictions$predictions[,2] <= th$spec_sens, 0, 1))
   
   cmRestrat <- caret::confusionMatrix(predictions$binary, Test$Occurrence, 
@@ -513,12 +684,25 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   # a real std_error, so the yardstick-derived rows above get NA for that column.
   cox_val <- coxCalibration(truth = Test$Occurrence, prob = predictions$predictions[,2])
 
+  # Continuous Boyce index (ecospat): Spearman between predicted-suitability bins and
+  # presence-vs-expected ratio. Background = test absences (consistent across every
+  # fit on disk, no raster re-read needed; a defensible proxy for the full landscape).
+  boyce_cor <- tryCatch(
+    ecospat::ecospat.boyce(
+      fit = predictions$predictions[Test$Occurrence == 0, 2],
+      obs = predictions$predictions[Test$Occurrence == 1, 2],
+      PEplot = FALSE, rm.duplicate = TRUE)$cor,
+    error = function(e){ message('boyce failed: ', conditionMessage(e)); NA_real_ })
+  boyce_val <- data.frame(.metric = 'boyce', .estimator = 'continuous',
+    .estimate = if(length(boyce_cor) == 1 && is.numeric(boyce_cor)) as.numeric(boyce_cor) else NA_real_)
+
   setNames(
     data.frame(
       rbind(
         pr_auc_val,
         roc_auc_val,
-        brier_val
+        brier_val,
+        boyce_val
       )
     ), nm = c('metric', 'estimator', 'estimate')
   ) |>
@@ -553,7 +737,12 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   
   if(!file.exists(file.path(pout, paste0(fname, '-Pr.tif')))){
   
-    pr <- function(...) predict(..., type = 'response', num.threads = 1)$predictions 
+    pr <- function(...){
+      pp <- predict(..., type = 'response', num.threads = 1)$predictions
+      pp[, 2] <- platt_apply(pp[, 2])
+      pp[, 1] <- 1 - pp[, 2]
+      pp
+    }
   
     if(resolution %in% c('3arc', '1arc')){ntile = 1} else 
       if(resolution == '1-3arc'){ntile = 2} else {ntile = 4}  
@@ -1529,12 +1718,22 @@ adaptive_PAratio_search <- function(x, resolution, distOrder, p2proc, train_spli
   results <- data.frame(ratio = numeric(0), seed = numeric(0), metric = numeric(0))
 
   fit_one <- function(ratio, seed){
-    out <- distOrder_PAratio_simulator(
-      x = x, distOrder = distOrder, PAratio = ratio, resolution = resolution,
-      seed = seed, predict_surface = FALSE, split = split, part = part,
-      results_root = results_root,
-      iteration = iteration, se_prediction = FALSE, train_split = train_split, p2proc = p2proc
-    )
+    # Wrap the fit so a rare pathological draw (e.g. Boruta rejecting every attribute,
+    # a CV fold winding up with one class absent) logs NA and the search continues
+    # instead of killing the whole adaptive run. Pattern mirrors highPA_grid.R's
+    # per-fit callr tryCatch.
+    out <- tryCatch(
+      distOrder_PAratio_simulator(
+        x = x, distOrder = distOrder, PAratio = ratio, resolution = resolution,
+        seed = seed, predict_surface = FALSE, split = split, part = part,
+        results_root = results_root,
+        iteration = iteration, se_prediction = FALSE, train_split = train_split, p2proc = p2proc
+      ),
+      error = function(e){
+        message(sprintf('fit FAILED at 1:%s seed %d: %s', ratio, seed, conditionMessage(e)))
+        NULL
+      })
+    if(is.null(out)) return(list(ratio = ratio, metric = NA_real_))
     # out$PAratio is the ratio actually achieved, not necessarily the one requested - it's
     # capped if the resolution's absence pool can't supply the request (see
     # distOrder_PAratio_simulator()). Record what was really fit, not the label asked for.
@@ -1553,7 +1752,9 @@ adaptive_PAratio_search <- function(x, resolution, distOrder, p2proc, train_spli
 
   # midpoints between adjacent tested ratios that both fall within the current good band
   next_candidates <- function(){
-    agg <- aggregate(metric ~ ratio, results, mean)
+    agg <- aggregate(metric ~ ratio, results, mean, na.rm = TRUE)
+    agg <- agg[is.finite(agg$metric), , drop = FALSE]
+    if(nrow(agg) == 0) return(numeric(0))
     best <- max(agg$metric)
     good <- sort(agg$ratio[agg$metric >= good_frac * best])
     if(length(good) < 2) return(numeric(0))
@@ -1577,7 +1778,8 @@ adaptive_PAratio_search <- function(x, resolution, distOrder, p2proc, train_spli
 
   # final stage: replicate the single best-performing ratio to characterize
   # seed-to-seed uncertainty at the winner.
-  agg <- aggregate(metric ~ ratio, results, mean)
+  agg <- aggregate(metric ~ ratio, results, mean, na.rm = TRUE)
+  agg <- agg[is.finite(agg$metric), , drop = FALSE]
   best_ratio <- agg$ratio[which.max(agg$metric)]
   run_stage(best_ratio, final_replicates)
 
@@ -1587,7 +1789,7 @@ adaptive_PAratio_search <- function(x, resolution, distOrder, p2proc, train_spli
   # ensembling across replicates. distOrder_PAratio_simulator() re-derives the same
   # fname for this (ratio, seed) pair, so modeller() finds the cached fit and skips
   # straight to prediction rather than refitting.
-  winners <- results[results$ratio == best_ratio, ]
+  winners <- results[results$ratio == best_ratio & is.finite(results$metric), ]
   best_seed <- winners$seed[which.min(abs(winners$metric - median(winners$metric)))]
 
   # persist the full search history (every ratio/seed/metric tried) - this is the
@@ -2542,6 +2744,21 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
     saveRDS(lgbm_conformal, f)
   } else {lgbm_conformal <- readRDS(f)}
 
+  t0 <- Sys.time()
+  f <- file.path(fp, 'models', paste0(bn, metric_suffix, '-lgbm-poisson.rds'))
+  if(!file.exists(f)){
+    lgbm_nonspat_cv <- gbs(rec, rs, train, test, tune_gr, mode = 'regression', tune_metric = tune_metric,
+                     engine = 'lightgbm', objective = 'poisson', resp = 'Prsnc_All')
+    saveRDS(lgbm_nonspat_cv, f)
+  } else {lgbm_nonspat_cv <- readRDS(f)}
+  message(sprintf('[timing] LGBM Poisson: %.1fs', as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
+
+  f <- file.path(fp, 'models', paste0(bn, metric_suffix, '-lgbm-poisson-conformal.rds'))
+  if(!file.exists(f)){
+    lgbm_nonspat_conformal <- conformal_calibrate_candidate(lgbm_nonspat_cv$Model, train, test, indx_nndm_rs)
+    saveRDS(lgbm_nonspat_conformal, f)
+  } else {lgbm_nonspat_conformal <- readRDS(f)}
+
   # Bayesian candidates (census_uncertainty_roadmap.md Phase 1, scripts/Census_uncertainty/density_bayes.R).
   # RFE (above) may have dropped Longitude/Latitude from `train` since they're
   # coordinates, not predictive features - reattach them here, they're required by the
@@ -2580,11 +2797,13 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
   # what is now the IDW row.
   namev <- c('Arithmetic Mean', 'IDW (idp=2)', 'Ordinary Kriging',
              'kNN (within pop)', 'kNN (across pop)',
-             'XGB Poisson Spat.', 'XGB Poisson', 'XBG Tweedie Spat.',  'XGB Tweedie', 'LGBM Poisson Spat.')
+             'XGB Poisson Spat.', 'XGB Poisson', 'XBG Tweedie Spat.',  'XGB Tweedie',
+             'LGBM Poisson Spat.', 'LGBM Poisson')
   mods <- list(mean_preds, idw_preds, krig_preds,
                knn_preds$within_population, knn_preds$across_population,
                poiss_spat_cv$Predictions, poiss_cv$Predictions,
-               tweedie_spat_cv$Predictions, tweedie_cv$Predictions, lgbm_cv$Predictions)
+               tweedie_spat_cv$Predictions, tweedie_cv$Predictions,
+               lgbm_cv$Predictions, lgbm_nonspat_cv$Predictions)
 
   metrrs <- lapply(mods, mets) |>
     dplyr::bind_rows() |>
@@ -2603,7 +2822,8 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
     'XGB Poisson'        = poiss_conformal,
     'XBG Tweedie Spat.'  = tweedie_spat_conformal,
     'XGB Tweedie'        = tweedie_conformal,
-    'LGBM Poisson Spat.' = lgbm_conformal
+    'LGBM Poisson Spat.' = lgbm_conformal,
+    'LGBM Poisson'       = lgbm_nonspat_conformal
   )
 
   conformal_widths <- dplyr::bind_rows(lapply(names(conformal_ml), function(nm){

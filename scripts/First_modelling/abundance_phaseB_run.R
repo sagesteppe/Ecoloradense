@@ -42,6 +42,11 @@ suppressPackageStartupMessages({
 })
 
 setwd('/media/steppe/hdd/EriogonumColoradenseTaxonomy/scripts')
+## LGBM non-spatial fit ships a ~2.5 GiB workflow (data embedded) to each
+## future worker; the default 953.67 MiB cap trips tune_race_anova and the
+## tune_grid fallback. XGB non-spat and LGBM spat stay under; only the new
+## LGBM non-spat rung needs this.
+options(future.globals.maxSize = 8 * 1024^3)
 source('functions.R')
 source('Census_uncertainty/density_bayes.R')
 source('Census_uncertainty/density_conformal.R')
