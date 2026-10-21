@@ -15,8 +15,7 @@
 #' `elevation` in the thousands, `NDVI` near 0, raw UTM coordinates in the
 #' millions - that blows up the initial linear predictor enough to send the
 #' count-family log-likelihood to `log(0)`, and Stan can't start sampling at
-#' all ("Initialization between (-2, 2) failed after 100 attempts", confirmed
-#' via `Census_uncertainty/diagnose_brms_failure.R`). Same numerical failure
+#' all ("Initialization between (-2, 2) failed after 100 attempts"). Same numerical failure
 #' mode `sagesteppe/safeHavens`'s `bayesianSDM()` already hit and fixed -
 #' matches its approach here: environmental covariates are z-scored, and the
 #' `gp()` coordinates are centred and rescaled to **kilometres** rather than
@@ -175,8 +174,7 @@ brms_count_model <- function(train, test, family,
 #'
 #' @description brms's own default is a flat (improper) prior on `class = 'b'`
 #' (the environmental-covariate slopes) - the actual gap that mattered for the
-#' initialization failure (../Census_uncertainty/diagnose_brms_failure.R),
-#' since a flat prior does nothing to keep slope draws away from extreme
+#' initialization failure, since a flat prior does nothing to keep slope draws away from extreme
 #' values. Combined with standardized covariates (`standardize_covariates()`),
 #' `normal(0, 1)` here is weakly-informative on the (standardized) predictor
 #' scale - same family of choice as `sagesteppe/safeHavens::bayesianSDM()`'s

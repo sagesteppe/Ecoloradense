@@ -2322,7 +2322,7 @@ knn_density_null <- function(train.sf, test, k = 5){
 #' which then can't be found by `select_best(metric = "huber_loss")` and (for
 #' `tune_race_anova()` specifically) breaks its internal ANOVA step outright
 #' - confirmed by testing (real held-out failure under `tune_metric =
-#' 'huber'`, `Census_uncertainty/test_tune_metrics.R`).
+#' 'huber'`).
 resolve_tune_metric <- function(tune_metric = c('mae', 'huber', 'poisson')){
   tune_metric <- match.arg(tune_metric)
   switch(tune_metric,

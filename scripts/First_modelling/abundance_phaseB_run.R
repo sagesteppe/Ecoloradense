@@ -32,7 +32,7 @@
 ##   Rscript First_modelling/abundance_phaseB_run.R
 
 ## Package set mirrors the other densityModeller() drivers
-## (test_phase1_density_scoped.R, compare_split_strategies.R). functions.R's
+## (compare_split_strategies.R). functions.R's
 ## gbs() call bare `multisession` (not future::multisession),
 ## so `library(future)` must be attached before densityModeller() runs.
 suppressPackageStartupMessages({
