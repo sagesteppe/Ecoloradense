@@ -20,7 +20,15 @@ suppressPackageStartupMessages({
 )
 set.seed(27)
 
-tr_path<- file.path('..','..',  'results', 'threshold_masks', '1-3arc-Iteration1-PA1:2.7DO:0-thresholds.tif')
+# Pick which fitted model this run targets. Positional CLI arg or SEED env var;
+# defaults to the original production seed. Pair this with the matching
+# threshold_masks/*-thresholds.tif output of make_threshold_raster_masks.R.
+.cli_args <- commandArgs(trailingOnly = TRUE)
+SEED <- as.integer(if(length(.cli_args) >= 1) .cli_args[1] else Sys.getenv('SEED', unset = '1021'))
+ver <- sprintf('1-3arc-Iteration1-PA1:1DO:0-Seed%d', SEED)
+SITE_CROP_BUFFER_M <- 300   # shared: polygonize step below and the boundaries() step further down
+
+tr_path<- file.path('..','..',  'results', 'threshold_masks', paste0(ver, '-thresholds.tif'))
 test_rast <- terra::rast(tr_path)
 
 ## from thresholds 
@@ -48,33 +56,64 @@ pres <- st_read(
 ## source layer, then stack. as.polygons() on both layers at once would dissolve by the
 ## unique COMBINATION of the two layers' values - we need each layer's patches kept
 ## distinct so identical patches across layers can be deduped below.
-patches_by_layer <- lapply(names(test_rast), function(nm) {
-  sf_p <- mask(test_rast[[nm]], sample_areas) |>
-    as.polygons() |>
-    sf::st_as_sf() |>
-    st_cast('POLYGON')
-  st_sf(layer = nm, geometry = st_geometry(sf_p))
-})
+##
+## Cached to disk: mask()+as.polygons() on the full 1-3arc domain (~330M cells,
+## the union of just the 27 Sites' extents is still ~177M) is the actual slow
+## part of this script (tens of minutes) - the boundaries()-crash fix further
+## down was a different bottleneck. Cropped per-Site here, same reasoning as
+## the boundaries() loop, and the result is cached so re-running this script
+## while iterating on the transect-placement rules below doesn't repeat it.
+patches_cache_path <- file.path('..', '..', 'results', 'GroundTruthSampling',
+                                 paste0(ver, '-patches_by_layer_cache.rds'))
 
-patches_by_layer <- setNames(patches_by_layer, names(test_rast))  # lookup used below
+if (file.exists(patches_cache_path)) {
 
-test_v <- do.call(rbind, patches_by_layer) |>
-  mutate(ID = row_number())
+  message('Loading cached polygonized patches: ', patches_cache_path)
+  test_v <- readRDS(patches_cache_path)
 
-## remove patches that are identical across the two layers: if spec_sens and sensitivity
-## agree exactly on a patch's footprint, it's the same ground - test it once.
-nrow(test_v)
-test_v <- test_v[!duplicated(st_equals(test_v)), ]
-nrow(test_v)
+} else {
 
-## subset to polygons >= 2 pixels of THIS raster. A flat m^2 number is meaningless once
-## sites get pooled across products at different resolutions (1arc vs 3arc) - deriving
-## it from res() keeps "2 pixels" the same concept regardless of source grid.
-min_area <- 2 * prod(terra::res(test_rast))
-###  13339.58 = 2 pixels of 3arc DEM resolution. 
-test_v <- test_v |>
-  mutate(area = as.numeric(st_area(geometry))) |>
-  filter(area >= min_area)
+  patches_by_layer <- list()
+  for (s in seq_len(nrow(sample_areas))) {
+    site_ext <- terra::ext(terra::buffer(sample_areas[s, ], SITE_CROP_BUFFER_M))
+    for (nm in names(test_rast)) {
+      lyr_site <- try(terra::crop(test_rast[[nm]], site_ext), silent = TRUE)
+      if (inherits(lyr_site, "try-error") || all(is.na(terra::values(lyr_site)))) next
+      ## mask against THIS Site only (sample_areas[s,]), not all 27 - nearby
+      ## Sites' buffered crop windows can overlap, and masking against the
+      ## full sample_areas would let a patch straddling two such windows get
+      ## polygonized twice (clipped differently each time by each Site's own
+      ## crop extent), breaking the 1:1 patch <-> diff join further down.
+      sf_p <- mask(lyr_site, sample_areas[s, ]) |>
+        as.polygons() |>
+        sf::st_as_sf() |>
+        st_cast('POLYGON')
+      if (nrow(sf_p) == 0) next
+      patches_by_layer[[length(patches_by_layer) + 1]] <- st_sf(layer = nm, geometry = st_geometry(sf_p))
+    }
+  }
+
+  test_v <- do.call(rbind, patches_by_layer) |>
+    mutate(ID = row_number())
+
+  ## remove patches that are identical across the two layers: if spec_sens and sensitivity
+  ## agree exactly on a patch's footprint, it's the same ground - test it once.
+  nrow(test_v)
+  test_v <- test_v[!duplicated(st_equals(test_v)), ]
+  nrow(test_v)
+
+  ## subset to polygons >= 2 pixels of THIS raster. A flat m^2 number is meaningless once
+  ## sites get pooled across products at different resolutions (1arc vs 3arc) - deriving
+  ## it from res() keeps "2 pixels" the same concept regardless of source grid.
+  min_area <- 2 * prod(terra::res(test_rast))
+  ###  13339.58 = 2 pixels of 3arc DEM resolution.
+  test_v <- test_v |>
+    mutate(area = as.numeric(st_area(geometry))) |>
+    filter(area >= min_area)
+
+  saveRDS(test_v, patches_cache_path)
+  message('Cached polygonized patches to: ', patches_cache_path)
+}
 nrow(test_v) 
 
 
@@ -94,19 +133,23 @@ spec_sens = test_v |>
 
 
 ## write both threshold layers out for GUI GIS inspection, one gpkg two layers
-threshold_layers_path <- file.path('..', '..', 'results', 'GroundTruthSampling', 'threshold_layers.gpkg')
-st_write(sensitivity, 
-  threshold_layers_path, 
-  layer = 'sensitivity', 
-  delete_dsn = TRUE, 
-  quiet = TRUE
+threshold_layers_path <- file.path('..', '..', 'results', 'GroundTruthSampling', paste0(ver, '-threshold_layers.gpkg'))
+### The ':' characters in ver (e.g. "PA1:1DO:0") make GDAL's driver-guessing
+### misread the path as a "driver:connection" string - name the driver explicitly.
+st_write(sensitivity,
+  threshold_layers_path,
+  layer = 'sensitivity',
+  delete_dsn = TRUE,
+  quiet = TRUE,
+  driver = 'GPKG'
 )
 
-st_write(spec_sens, 
-  threshold_layers_path, 
-  layer = 'spec_sens', 
-  append = TRUE, 
-  quiet = TRUE
+st_write(spec_sens,
+  threshold_layers_path,
+  layer = 'spec_sens',
+  append = TRUE,
+  quiet = TRUE,
+  driver = 'GPKG'
 )
 
 ## obtain only areas where the two methods diverge in 
@@ -123,16 +166,24 @@ diff = mutate(diff, diff_ID = row_number())
 ## tag sites with known occurrences within 100m. 
 test_v$populated = lengths(st_intersects(test_v, st_buffer(pres, 100)))>0
 
-## align the diffs back to their source... this captures diffs from the same patch 
-diff = bind_cols(
-  diff, 
-  test_v[
-  unlist(st_covered_by(diff, test_v)),c('ID', 'populated')
-] |>
-  rename(src_ID = ID) |>
-  st_drop_geometry()
-
-)
+## align the diffs back to their source... this captures diffs from the same patch.
+## st_join(), not bind_cols(unlist(st_covered_by(...))): the latter assumes every
+## diff polygon covers exactly one test_v patch, which per-Site cropping can
+## occasionally violate at a crop seam (a diff sliver touching two adjacent
+## patches, or briefly touching none) - st_join() handles 0-or-many matches
+## without erroring; ties are broken by keeping the first match. (diagnostic
+## only - `diff` isn't consumed by anything past this point.)
+diff = sf::st_join(diff, test_v[, c('ID', 'populated')], join = st_covered_by, left = TRUE) |>
+  dplyr::rename(src_ID = ID)
+n_before <- nrow(diff)
+diff = diff |> dplyr::group_by(diff_ID) |> dplyr::slice(1) |> dplyr::ungroup()
+if (nrow(diff) < n_before) {
+  message(sprintf('%d diff polygon(s) covered by >1 patch (crop-seam artifact); kept first match.',
+                   n_before - nrow(diff)))
+}
+if (any(is.na(diff$src_ID))) {
+  message(sprintf('%d diff polygon(s) covered by no patch; src_ID left NA.', sum(is.na(diff$src_ID))))
+}
 
 
 ## identify the first
@@ -182,20 +233,20 @@ transect_headings <- function(tr, utm_crs, decl = DECLINATION) {
 ## no curve fitting, and every transect walks a pure compass direction.
 
 core_layer <- if (st_area(spec_sens) > st_area(sensitivity)) "sensitivity" else "spec_sens"
-core_rast  <- test_rast[[core_layer]]
+core_full  <- test_rast[[core_layer]]
 
-#core_rast <- terra::fillHoles(core_rast, nearest = FALSE)
+#core_full <- terra::fillHoles(core_full, nearest = FALSE)
 
-## raster-native from here down: values()/as.vector() forces the WHOLE grid into
-## one R vector, which is fine at 1arc but OOMs at 1-3arc (~330M cells, almost
-## all NA outside the ground-truth areas). core_bool stays a SpatRaster and is
-## indexed by cell number on demand below; edge cells come from as.points(),
-## which terra streams block-by-block instead of materializing the full array.
-core_bool <- !is.na(core_rast)
-
-core_edge  <- terra::boundaries(core_rast, inner = TRUE, directions = 4)
-edge_pts_v <- terra::as.points(terra::ifel(core_edge == 1, core_edge, NA))
-edge_cells <- terra::cellFromXY(core_edge, terra::crds(edge_pts_v))
+## raster-native from here down, but per-Site: terra::boundaries() on the full
+## 1-3arc domain (~330M cells, almost all NA outside the ground-truth areas)
+## segfaults - see git history (b0a39fc/840c7cd), where this ran scoped to a
+## single Site ('Cochetopa') and, even unscoped, only ever ran at 3arc
+## resolution (~90m, ~81x fewer cells than 1-3arc), never the full 1-3arc
+## domain. Instead of dropping the other 26 Sites, crop to each Site in turn
+## (small +300m buffer so a patch near a Site's edge doesn't get a false
+## boundary cell from the crop window itself) and combine the edge points.
+## core_bool/core_edge stay small per-Site SpatRasters; nothing here ever
+## materializes the full domain.
 
 ## direction per edge cell: 4-connected (N/S/E/W) neighbours only, so every
 ## candidate transect direction is a pure cardinal - no diagonal/tilted rays.
@@ -207,15 +258,35 @@ cardinal <- data.frame(
   dy = c( 1, -1,  0, 0)    # -row = north (+y)
 )
 
-edge_rows <- lapply(edge_cells, function(cel) {
-  rc      <- terra::rowColFromCell(core_rast, cel)
-  nb_cell <- terra::cellFromRowCol(core_rast, rc[1] + cardinal$dr, rc[2] + cardinal$dc)
-  outside <- !core_bool[nb_cell][[1]]     # core_bool[cells] -> 1-col data.frame; unwrap to vector
-  outside[is.na(outside)] <- FALSE        # off-grid neighbour: not an outward edge
-  if (!any(outside)) return(NULL)         # interior cell, or exposed only diagonally
-  xy <- terra::xyFromCell(core_rast, cel)
-  data.frame(x = xy[1], y = xy[2], dx = cardinal$dx[outside], dy = cardinal$dy[outside], cell = cel)
-})
+edge_rows <- list()
+cell_offset <- 0   # keeps `cell` distinguishable across Sites - informational only
+
+for (s in seq_len(nrow(sample_areas))) {
+
+  site_ext  <- terra::ext(terra::buffer(sample_areas[s, ], SITE_CROP_BUFFER_M))
+  core_rast <- try(terra::crop(core_full, site_ext), silent = TRUE)
+  if (inherits(core_rast, "try-error") || all(is.na(terra::values(core_rast)))) next
+
+  core_bool <- !is.na(core_rast)
+  core_edge <- terra::boundaries(core_rast, inner = TRUE, directions = 4)
+  edge_pts_v <- terra::as.points(terra::ifel(core_edge == 1, core_edge, NA))
+  if (length(edge_pts_v) == 0) next
+  edge_cells <- terra::cellFromXY(core_edge, terra::crds(edge_pts_v))
+
+  edge_rows_site <- lapply(edge_cells, function(cel) {
+    rc      <- terra::rowColFromCell(core_rast, cel)
+    nb_cell <- terra::cellFromRowCol(core_rast, rc[1] + cardinal$dr, rc[2] + cardinal$dc)
+    outside <- !core_bool[nb_cell][[1]]     # core_bool[cells] -> 1-col data.frame; unwrap to vector
+    outside[is.na(outside)] <- FALSE        # off-grid neighbour: not an outward edge
+    if (!any(outside)) return(NULL)         # interior cell, or exposed only diagonally
+    xy <- terra::xyFromCell(core_rast, cel)
+    data.frame(x = xy[1], y = xy[2], dx = cardinal$dx[outside], dy = cardinal$dy[outside],
+               cell = cel + cell_offset)
+  })
+
+  edge_rows <- c(edge_rows, edge_rows_site)
+  cell_offset <- cell_offset + terra::ncell(core_rast)
+}
 length(Filter(Negate(is.null), edge_rows))
 
 edge_pts_raw <- st_as_sf(
@@ -247,7 +318,11 @@ valid_transect <- function(x, y, dx, dy, length_m, step_m = 10) {
 ## rule, which is why transects were landing entirely inside threshold.
 outer_poly <- if (core_layer == "sensitivity") spec_sens else sensitivity
 
-INWARD_MARGIN    <- 50    # start this far inside the core edge, on confirmed ground
+INWARD_MARGIN    <- 10    # start this far inside the core edge, on confirmed ground -
+## dropped from 50m: median spec_sens patch width at 1-3arc is ~6m (99.9% of
+## patches under 50m wide), so a 50m inward step almost always overshot clean
+## through the patch. 10m still exceeds the median but is far more of these
+## patches' actual footprint than 50m ever was.
 CLEAR_MARGIN     <- 15    # walk this far past the outer threshold once it's cleared
 MAX_TRANSECT_LEN <- 150   # hard cap on total transect length (field logistics)
 MAX_OUTWARD <- MAX_TRANSECT_LEN - INWARD_MARGIN - CLEAR_MARGIN  # cap on the disagreement-
@@ -469,15 +544,16 @@ stns <- do.call(rbind, lapply(seq_len(nrow(tr)), function(k)
 #  "field_sheet.csv"
 #)
 
-transects_path <- file.path('..', '..', 'results', 'GroundTruthSampling', "transects.gpkg")
+transects_path <- file.path('..', '..', 'results', 'GroundTruthSampling', paste0(ver, "-transects.gpkg"))
+### driver named explicitly - see note above on ver's ':' characters.
 st_write(
   st_as_sf(filter(stns, stage == "core"), coords = c("x","y"), crs = 32613),
-  transects_path, layer = "core", delete_dsn = TRUE, quiet = TRUE
+  transects_path, layer = "core", delete_dsn = TRUE, quiet = TRUE, driver = 'GPKG'
 )
 if (any(stns$stage == "exploratory")) {
   st_write(
     st_as_sf(filter(stns, stage == "exploratory"), coords = c("x","y"), crs = 32613),
-    transects_path, layer = "exploratory", append = TRUE, quiet = TRUE
+    transects_path, layer = "exploratory", append = TRUE, quiet = TRUE, driver = 'GPKG'
   )
 } else {
   message("No flagged (unpopulated) patches produced exploratory transects.")

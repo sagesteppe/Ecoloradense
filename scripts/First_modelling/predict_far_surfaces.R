@@ -20,7 +20,7 @@ far <- read.csv(file.path(PROJ_ROOT, 'results_highPA_fieldabs', 'tables', 'far-r
 far <- far[far$target_prevalence %in% c(0.01, 0.05), ]
 far$root <- ifelse(far$design == 'spatial', 'results_highPA_fieldabs', 'results_highPA_classicsplit_fieldabs')
 far <- far[order(match(far$resolution, c('3arc', '1arc', '1-3arc')), far$target_prevalence), ] # fastest first
-far$fname <- sprintf('%s-Iteration1-PA1:%sDO:0-Seed%d', far$resolution, far$chosen_ratio, far$median_replicate)
+far$fname <- mapply(fname_build, far$resolution, 1, far$chosen_ratio, 0, far$median_replicate, USE.NAMES = FALSE)
 far <- far[!duplicated(paste(far$root, far$fname)), ] # one ratio can be chosen at both targets
 
 p2proc <- file.path('..', 'data', 'spatial', 'processed')

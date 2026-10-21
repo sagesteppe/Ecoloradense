@@ -85,7 +85,7 @@ speck   <- aoa_speckle(aoa_r)
 ## Second_groundtruth/make_threshold_raster_masks.R for the pattern used at
 ## the search-iteration resolutions) exists alongside final-Pr.tif; no such
 ## raster exists yet for the final refit; needs the same care taken in
-## transect_placement.R (dedupe identical patches, drop patches < 2 pixels)
+## transect_placement_byseed.R (dedupe identical patches, drop patches < 2 pixels)
 ## before treating its outline as meaningful.
 ## thresh_r      <- terra::rast(file.path('..', '..', 'results', 'suitability_maps', 'final-thresholds.tif'))
 ## cut_outline   <- sf::st_as_sf(terra::as.polygons(thresh_r[['spec_sens']] == 1, dissolve = TRUE))

@@ -1,5 +1,63 @@
 PROJ_ROOT <- '/media/steppe/hdd/EriogonumColoradenseTaxonomy'
 
+#' Build the standard fit identifier string.
+#'
+#' Format: `{resolution}-Iteration{iteration}-PA1:{PAratio}DO:{distOrder}-Seed{seed}[-{weight_scheme}]`.
+#' This is the single source of truth for the pattern - every script that
+#' writes or reads a per-fit artifact (model, test data, metrics CSV,
+#' prediction raster, threshold mask) should build its filename via this,
+#' and parse one back via `fname_parse()`.
+#'
+#' @param resolution Character, e.g. '1-3arc', '1arc', '3arc'.
+#' @param iteration Integer or character, 0 or 1.
+#' @param PAratio Numeric or character - the "X" in "1:X" (e.g. 1, 2.5, 1.079).
+#'   Also accepts a leading "1:" and strips it, so callers can pass either form.
+#' @param distOrder Numeric or character - the "Y" in "DO:Y". Accepts a leading
+#'   "DO:" and strips it.
+#' @param seed Integer or character.
+#' @param weight_scheme Character. Empty, 'W0', or 'W...'; appended as
+#'   `-{weight_scheme}` only when non-empty and not 'W0'.
+fname_build <- function(resolution, iteration, PAratio, distOrder, seed, weight_scheme = ''){
+  pa <- sub('^1:', '', as.character(PAratio))
+  do <- sub('^DO:', '', as.character(distOrder))
+  w  <- if(nzchar(weight_scheme) && weight_scheme != 'W0') paste0('-', weight_scheme) else ''
+  sprintf('%s-Iteration%s-PA1:%sDO:%s-Seed%s%s', resolution, iteration, pa, do, seed, w)
+}
+
+#' Regex matching the standard fit identifier.
+#'
+#' Capture groups: 1 resolution, 2 iteration, 3 PAratio, 4 distOrder, 5 seed,
+#' 6 weight_scheme (optional, includes the leading hyphen). Not anchored to
+#' `.csv`/`.rds`/`.tif` so it can match a bare id or a file basename alike.
+FNAME_RE <- '^(.+)-Iteration([0-9]+)-PA1:([0-9.]+)DO:([0-9.]+)-Seed([0-9]+)(-[A-Za-z0-9_]+)?$'
+
+#' Parse a fit identifier (or a filename holding one) into its parts.
+#'
+#' Returns a one-row data.frame; unparseable input returns a row of NAs.
+#' Any extension and trailing suffix after the id (e.g. `-Pr.tif`,
+#' `-thresholds.tif`, `-dca.csv`) is stripped before matching.
+fname_parse <- function(x){
+  # Strip only KNOWN extensions - PAratio contains a dot (e.g. 1.079), so a
+  # greedy `\.[^.]+$` would eat part of the id instead of the extension.
+  bn <- sub('-(Pr|AOA|thresholds|dca)$', '',
+            sub('\\.(csv|rds|tif|gpkg|txt|rda|rdata|RData)$', '', basename(x), ignore.case = TRUE))
+  m <- regmatches(bn, regexec(FNAME_RE, bn))[[1]]
+  if(length(m) < 6){
+    return(data.frame(resolution = NA_character_, iteration = NA_integer_,
+                       PAratio = NA_real_, distOrder = NA_real_, seed = NA_integer_,
+                       weight_scheme = NA_character_, stringsAsFactors = FALSE))
+  }
+  data.frame(
+    resolution    = m[2],
+    iteration     = as.integer(m[3]),
+    PAratio       = as.numeric(m[4]),
+    distOrder     = as.numeric(m[5]),
+    seed          = as.integer(m[6]),
+    weight_scheme = if(length(m) >= 7 && nzchar(m[7])) sub('^-', '', m[7]) else NA_character_,
+    stringsAsFactors = FALSE
+  )
+}
+
 rastReader <- function(x, p2proc){
 
   # create paths for the first level of files. 
@@ -451,8 +509,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
       Occurrence = as.factor(Occurrence)) |>
     sf::st_drop_geometry()
 
-  fname <- paste0(resolution, '-Iteration', iteration, '-PA', PAratio, distOrder, '-Seed', seed,
-                  if(weight_scheme == 'W0') '' else paste0('-', weight_scheme))
+  fname <- fname_build(resolution, iteration, PAratio, distOrder, seed, weight_scheme)
   #######################         MODELLING           ##########################
   # this is the fastest portion of this process. It will take at most a few minutes
   # at any resolution, the goal of this paper wasn't really focused on comparing

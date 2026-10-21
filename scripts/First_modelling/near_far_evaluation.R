@@ -71,8 +71,8 @@ covs_by_res <- map(set_names(unique(pairs$resolution)), function(res)
 
 results <- pmap(pairs, function(design, resolution, near_root, near_seed, far_ratio, far_seed, far_root){
   message(sprintf('%s %s: near seed %d, far 1:%s seed %d', design, resolution, near_seed, far_ratio, far_seed))
-  near_f <- sprintf('%s-Iteration1-PA1:1DO:0-Seed%d', resolution, near_seed)
-  far_f  <- sprintf('%s-Iteration1-PA1:%sDO:0-Seed%d', resolution, far_ratio, far_seed)
+  near_f <- fname_build(resolution, 1, 1,         0, near_seed)
+  far_f  <- fname_build(resolution, 1, far_ratio, 0, far_seed)
   covs <- covs_by_res[[resolution]]
   ok <- complete.cases(covs)
   d <- tibble(truth = gt$Presence[ok], dist = gt$dist_known_occ[ok])

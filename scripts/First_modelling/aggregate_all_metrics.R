@@ -15,18 +15,6 @@ source('functions.R')
 roots <- list.dirs(PROJ_ROOT, recursive = FALSE)
 roots <- roots[grepl('^results(_|$)', basename(roots))]
 
-# {res}-Iteration{it}-PA1:{ratio}DO:{distOrder}-Seed{seed}
-# PAratio is stored as "1:X" in the filename (X may be fractional, e.g. 1.079).
-re_fname <- '^(.+)-Iteration([0-9]+)-PA1:([0-9.]+)DO:([0-9]+)-Seed([0-9]+)$'
-
-parse_fname <- function(f){
-  m <- regmatches(f, regexec(re_fname, f))[[1]]
-  if(length(m) != 6) return(NULL)
-  list(resolution = m[2], iteration = as.integer(m[3]),
-       PAratio = as.numeric(m[4]), distOrder = as.integer(m[5]),
-       seed = as.integer(m[6]))
-}
-
 pull_metric <- function(met, name, col = 'estimate'){
   v <- met[[col]][met$metric == name]
   if(length(v) == 0) NA else v[1]
@@ -39,7 +27,7 @@ for(root in roots){
   csvs <- list.files(tables_dir, pattern = '-Seed[0-9]+\\.csv$', full.names = TRUE)
   for(csv in csvs){
     fname <- sub('\\.csv$', '', basename(csv))
-    pf <- parse_fname(fname); if(is.null(pf)) next
+    pf <- fname_parse(fname); if(is.na(pf$resolution)) next
     met <- tryCatch(read.csv(csv, stringsAsFactors = FALSE), error = function(e) NULL)
     if(is.null(met) || !'metric' %in% names(met)) next
     rows[[length(rows) + 1]] <- data.frame(

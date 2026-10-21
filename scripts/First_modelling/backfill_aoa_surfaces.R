@@ -23,7 +23,7 @@ p2proc <- file.path('..', 'data', 'spatial', 'processed')
 
 for(i in seq_len(nrow(near_models))){
   m <- near_models[i, ]
-  fname <- sprintf('%s-Iteration1-PA1:1DO:0-Seed%d', m$res, m$seed)
+  fname <- fname_build(m$res, 1, 1, 0, m$seed)
   root <- file.path(PROJ_ROOT, m$root)
   if(file.exists(file.path(root, 'suitability_maps', paste0(fname, '-AOA-surfaces.tif')))){
     message('Already done: ', m$root, '/', fname); next

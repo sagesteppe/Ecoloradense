@@ -35,8 +35,14 @@ set.seed(42)
 # -----------------------------------------------------------------------------
 # 0.  CONFIG
 # -----------------------------------------------------------------------------
+# Pick which fitted model this run targets. Positional CLI arg or SEED env var;
+# defaults to the original production seed.
+.cli_args <- commandArgs(trailingOnly = TRUE)
+SEED <- as.integer(if(length(.cli_args) >= 1) .cli_args[1] else Sys.getenv('SEED', unset = '1021'))
+source('../functions.R')  # fname_build()
+
 cfg <- list(
-  ver           = '1-3arc-Iteration1-PA1:1DO:0-Seed1021',  # model version
+  ver           = fname_build('1-3arc', 1, 1, 0, SEED),  # model version
   cost_thresh   = 'spec_sens',                  # threshold used for cost-distance sources
 
   n_total_base   = 360,    # total base sites across ALL regions (budget, not per-region)

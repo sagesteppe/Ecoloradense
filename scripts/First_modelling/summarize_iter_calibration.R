@@ -40,27 +40,18 @@ results_dir <- file.path(results_root, 'tables')
 mode_label <- if(reweight) 'reweighted' else 'dca'
 out_stem <- paste0('iter0_iter1_calibration_', mode_label)
 
-# fname format (see functions.R's modeller()): {resolution}-Iteration{0,1}-PA{PAratio}DO:{distOrder}-Seed{seed}.csv
-fname_re <- '^(1-3arc|1arc|3arc)-Iteration([01])-PA(1:[0-9.]+)DO:([0-9.]+)-Seed([0-9]+)\\.csv$'
-
-files <- list.files(results_dir, pattern = fname_re, full.names = TRUE)
+# fname format: see fname_build()/fname_parse() in functions.R.
+files <- list.files(results_dir, pattern = paste0(sub('\\$$', '', FNAME_RE), '\\.csv$'), full.names = TRUE)
 message(sprintf('Found %d finished iteration-0/1 production eval files%s.',
                 length(files),
                 if(reweight) sprintf('; scoring each at %d target prevalences', length(target_prevalences)) else ''))
 
 parse_fname <- function(f){
-  bn <- basename(f)
-  m <- regmatches(bn, regexec(fname_re, bn))[[1]]
-  seed <- as.numeric(m[6])
-  data.frame(
-    resolution = m[2],
-    iteration  = m[3],
-    PAratio    = as.numeric(sub('^1:', '', m[4])),
-    distOrder  = as.numeric(m[5]),
-    seed       = seed,
-    # highPA_grid.R's spatial splits: seeds 5000 + 100 * (split - 1) + 1..n
-    split      = if(grepl('results_highPA(_fieldabs)?$', results_root) && seed > 5000) (seed - 5001) %/% 100 + 1 else NA
-  )
+  pf <- fname_parse(f)
+  # highPA_grid.R's spatial splits: seeds 5000 + 100 * (split - 1) + 1..n
+  pf$split <- if(grepl('results_highPA(_fieldabs)?$', results_root) && !is.na(pf$seed) && pf$seed > 5000)
+    (pf$seed - 5001) %/% 100 + 1 else NA
+  pf
 }
 
 eval_one <- function(f){

@@ -90,7 +90,7 @@ stk <- c(S_mean, E, Cost, region)
 names(stk) <- c('S', 'E', 'Cost', 'region')
 
 ## Region-aware cost orthogonalization: R = within-region residual of Cost on E - same
-## logic/guardrails as sdm_groundtruth_design_1-3arc_Seed1021.R.
+## logic/guardrails as sdm_groundtruth_design_1-3arc_byseed.R.
 df <- as.data.frame(stk, cells = TRUE, na.rm = TRUE) |>
   dplyr::mutate(region = factor(region, labels = levels(factor(region_v$region_id)))) |>
   dplyr::filter(!is.na(region)) |>
@@ -119,7 +119,7 @@ pts <- gt |>
   sf::st_drop_geometry()
 
 ## Points outside every named GroundTruth Site region have no region-relative R (masked
-## to NA above, by design - see sdm_groundtruth_design_1-3arc_Seed1021.R's Details) and
+## to NA above, by design - see sdm_groundtruth_design_1-3arc_byseed.R's Details) and
 ## are dropped from the glm() below along with any other NA covariate.
 message(sprintf('%d of %d ground-truth points fall inside a named region and have E/R.',
                 sum(!is.na(pts$R)), nrow(pts)))
