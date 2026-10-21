@@ -84,13 +84,15 @@ seeds_of <- function(k) 5000 + 100 * (k - 1) + seq_len(n_seeds)
 # un-suffixed results_highPA* trees for comparison.
 keep_field_absences <- TRUE
 root_sfx <- if(keep_field_absences) '_fieldabs' else ''
-results_root <- file.path(PROJ_ROOT, paste0(c(
-  spatial         = 'results_highPA',
-  classic         = 'results_highPA_classicsplit',
-  lopo            = 'results_highPA_populationsplit',
-  spatial_mapping = 'results_highPA_spatial_mapping',
-  LMPO            = 'results_highPA_LMPO'
-)[[mode]], root_sfx))
+# Partitioner modes use the tidy Results_<cvtag>_iter1a_high_pa scheme; the pre-existing
+# non-partitioner modes keep their legacy names so nothing downstream has to be rewired.
+results_root <- file.path(PROJ_ROOT, switch(mode,
+  spatial         = paste0('results_highPA',               root_sfx),
+  classic         = paste0('results_highPA_classicsplit',  root_sfx),
+  lopo            = paste0('results_highPA_populationsplit', root_sfx),
+  spatial_mapping = 'Results_spatialmapping_iter1a_high_pa',
+  LMPO            = 'Results_LMPO_iter1a_high_pa'
+))
 p2proc <- file.path('..', 'data', 'spatial', 'processed')
 p2dat  <- file.path('..', 'data', 'Data4modelling')
 iteration <- 1

@@ -99,7 +99,7 @@ Cost <- if (file.exists(aniso_path)) {
   message('Anisotropic cost distance not available; using isotropic.')
   terra::rast(iso_path)
 }
-# CostDistances.R now reapplies CRS itself (leastCostDist()/leastCostDistAniso()
+# CostDistances.R now reapplies CRS itself (leastCostDist()
 # take a crs= arg, since gdistance::transition() drops it internally) before
 # writing, so freshly-generated tifs already carry it. This line is now just a
 # defensive fallback for tifs written before that fix (extent/res/dims already

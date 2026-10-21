@@ -49,8 +49,8 @@ df$Latitude  <- coords[, 2]
 #' Compare the leading and runner-up Models' held-out MAE across completed replicates.
 #'
 #' @description A racing-style stop rule in the spirit of the ML candidates'
-#' own `finetune::tune_race_anova()` (../functions.R's `poiss()`/`tweed()`/
-#' `gbs()`), simplified to a transparent gap-vs-spread heuristic rather than a
+#' own `finetune::tune_race_anova()` (../functions.R's `gbs()`), simplified
+#' to a transparent gap-vs-spread heuristic rather than a
 #' formal ANOVA, appropriate at n=5-10 replicates: the leader/runner-up gap is
 #' "resolved" once it exceeds the sum of their own standard deviations - i.e.
 #' the two candidates' MAE distributions across replicates are not

@@ -594,6 +594,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
     method = "ranger",
     num.trees = 750,
     metric = 'Accuracy',
+    tuneGrid = tgrid,
     keep.inbag = TRUE,
     class.weights = wts,
     weights = cw,
@@ -2218,103 +2219,6 @@ splitData <- function(df, fp, bn, method = 'twinning', replicate = 1, k = 10){
   )
 }
 
-#' fit poisson xgboost models to the data
-#' 
-#' @param rec a tidymodels recipe 
-#' @param cv a cross validation structure, such as from `rsample` or `CAST`.  
-#' @param train data split
-#' @param test data split
-#' @param tune_gr tuning grid. 
-poiss <- function(rec, cv, train, test, tune_gr, tune_metric = 'mae'){
-
-  m <- resolve_tune_metric(tune_metric)
-
-  xgb_poisson <- tune_gr |>
-    parsnip::set_engine("xgboost", objective = "count:poisson")
-
-  xgb_poisson_gr <- xgb_poisson |>
-    tune::extract_parameter_set_dials() |>
-    dials::grid_regular(levels = 3)
-
-  future::plan(multisession, workers = parallel::detectCores())
-  params_xg_poisson <- xgb_poisson |>
-    tune_race_anova_safe(
-      rec,
-      metrics = m$metrics,
-      resamples = cv,
-      grid = xgb_poisson_gr
-    )
-
-  best_xg_pois <- tune::select_best(params_xg_poisson, metric = m$name)
-  xg_poisson <- xgb_poisson |>
-    tune::finalize_model(best_xg_pois) |>
-    fit(Prsnc_All ~ ., data = train)
-  
-  preds <- data.frame(
-    'Observed' = test$Prsnc_All, 
-    'Predicted' = stats::predict(xg_poisson, new_data = test),
-    'Pr.suit' = test$Pr.SuitHab
-  )
-  preds <- setNames(preds, c('Observed', 'Predicted', 'Pr.suit'))
-  
-  return(
-    list(
-      Model = xg_poisson, 
-      Predictions = preds
-    )
-  )
-}
-
-#' fit tweedie models to the data
-#' 
-#' @param rec a tidymodels recipe 
-#' @param cv a cross validation structure, such as from `rsample` or `CAST`.  
-#' @param train data split
-#' @param test data split
-#' @param tune_gr tuning grid. 
-tweed <- function(rec, cv, train, test, tune_gr, tune_metric = 'mae'){
-
-  m <- resolve_tune_metric(tune_metric)
-
-  xgb_tweedie_model <- tune_gr |>
-    parsnip::set_engine("xgboost", objective = "reg:tweedie")
-
-  xgb_tweedie_gr <- xgb_tweedie_model |>
-    tune::extract_parameter_set_dials() |>
-    dials::grid_regular(levels = 3)
-
-  future::plan(multisession, workers = parallel::detectCores())
-  xbg_tweedie_params <- xgb_tweedie_model |>
-    tune_race_anova_safe(
-      rec,
-      resamples = cv,
-      metrics = m$metrics,
-      grid = xgb_tweedie_gr
-    )
-
-  best_param_tweedie <- tune::select_best(xbg_tweedie_params, metric = m$name)
-  
-  xgb_tweedie_mod <- xgb_tweedie_model |>
-    tune::finalize_model(best_param_tweedie)
-  
-  xgb_tweedie_fit <- xgb_tweedie_mod %>% 
-    fit(Prsnc_All ~ ., data = train)
-  
-  preds <- data.frame(
-    'Observed' = test$Prsnc_All, 
-    'Predicted' = stats::predict(xgb_tweedie_fit, new_data = test),
-    'Pr.suit' = test$Pr.SuitHab
-  )
-  preds <- setNames(preds, c('Observed', 'Predicted', 'Pr.suit'))
-  
-  return(
-    list(
-      Model = xgb_tweedie_fit, 
-      Predictions = preds
-    )
-  )
-}
-
 #' k-NN density null models (census_uncertainty_roadmap.md Phase 1b).
 #'
 #' @description Two variants, both predicting from *observed* training
@@ -2380,7 +2284,7 @@ knn_density_null <- function(train.sf, test, k = 5){
 #'
 #' @description Centralizes the choice of internal objective function used
 #' to a) rank XGBoost/LightGBM hyperparameter candidates during
-#' `finetune::tune_race_anova()` (`poiss()`/`tweed()`/`gbs()`) and b) promote
+#' `finetune::tune_race_anova()` (`gbs()`) and b) promote
 #' a winning brms family (`density_bayes.R::brms_cv_compare()`), so a given
 #' run uses the *same* metric consistently across every candidate rather than
 #' mixing MAE-tuned ML models against a MAE-promoted brms family by
@@ -2431,8 +2335,8 @@ resolve_tune_metric <- function(tune_metric = c('mae', 'huber', 'poisson')){
   )
 }
 
-#' Robustness wrapper for `finetune::tune_race_anova()` (`poiss()`/
-#' `tweed()`/`gbs()`) around a real, reproducible-given-the-same-inputs
+#' Robustness wrapper for `finetune::tune_race_anova()` (`gbs()`)
+#' around a real, reproducible-given-the-same-inputs
 #' failure: when a hyperparameter grid's racing elimination narrows down to
 #' a single surviving configuration before every resample has been used
 #' (which some metrics provoke more readily than others by separating
@@ -2665,7 +2569,8 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
   t0 <- Sys.time()
   f <- file.path(fp, 'models', paste0(bn, metric_suffix, '-poisson_spat.rds'))
   if(!file.exists(f)){
-    poiss_spat_cv <- poiss(rec, indx_nndm_rs, train, test, tune_gr, tune_metric = tune_metric)
+    poiss_spat_cv <- gbs(rec, indx_nndm_rs, train, test, tune_gr, mode = 'regression', tune_metric = tune_metric,
+                         engine = 'xgboost', objective = 'count:poisson', resp = 'Prsnc_All')
     saveRDS(poiss_spat_cv, f)
   } else {poiss_spat_cv <- readRDS(f)}
   message(sprintf('[timing] XGB Poisson Spat.: %.1fs', as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
@@ -2683,7 +2588,8 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
   t0 <- Sys.time()
   f <- file.path(fp, 'models', paste0(bn, metric_suffix, '-poisson.rds'))
   if(!file.exists(f)){
-    poiss_cv <- poiss(rec, rs, train, test, tune_gr, tune_metric = tune_metric)
+    poiss_cv <- gbs(rec, rs, train, test, tune_gr, mode = 'regression', tune_metric = tune_metric,
+                    engine = 'xgboost', objective = 'count:poisson', resp = 'Prsnc_All')
     saveRDS(poiss_cv, f)
   } else {poiss_cv <- readRDS(f)}
   message(sprintf('[timing] XGB Poisson: %.1fs', as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
@@ -2697,7 +2603,8 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
   t0 <- Sys.time()
   f <- file.path(fp, 'models', paste0(bn, metric_suffix, '-tweedie_spat.rds'))
   if(!file.exists(f)){
-    tweedie_spat_cv <- tweed(rec, indx_nndm_rs, train, test, tune_gr, tune_metric = tune_metric)
+    tweedie_spat_cv <- gbs(rec, indx_nndm_rs, train, test, tune_gr, mode = 'regression', tune_metric = tune_metric,
+                           engine = 'xgboost', objective = 'reg:tweedie', resp = 'Prsnc_All')
     saveRDS(tweedie_spat_cv, f)
   } else {tweedie_spat_cv <- readRDS(f)}
   message(sprintf('[timing] XGB Tweedie Spat.: %.1fs', as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
@@ -2711,7 +2618,8 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
   t0 <- Sys.time()
   f <- file.path(fp, 'models', paste0(bn, metric_suffix, '-tweedie.rds'))
   if(!file.exists(f)){
-    tweedie_cv <- tweed(rec, rs, train, test, tune_gr, tune_metric = tune_metric)
+    tweedie_cv <- gbs(rec, rs, train, test, tune_gr, mode = 'regression', tune_metric = tune_metric,
+                      engine = 'xgboost', objective = 'reg:tweedie', resp = 'Prsnc_All')
     saveRDS(tweedie_cv, f)
   } else {tweedie_cv <- readRDS(f)}
   message(sprintf('[timing] XGB Tweedie: %.1fs', as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
@@ -2866,33 +2774,36 @@ gbs <- function(rec, cv, train, test, resp, tune_gr, mode, engine, objective, le
   if(missing(levels)){levels <-3}
   m <- resolve_tune_metric(tune_metric)
 
-  # LightGBM's OpenMP backend, R's OpenBLAS, and data.table all default to
-  # claiming every core (num_threads=0, OMP_NUM_THREADS unset, and
-  # getDTthreads() ~ 8 respectively). future::multisession below fans this
-  # function's model-fitting out across several worker *processes*, and each
-  # worker independently re-triggers all three of those "use everything"
-  # defaults - severe oversubscription that took a single LGBM candidate from
-  # minutes to 6-10+ hours (confirmed: system load average hit ~138 on a
-  # 16-core box while this ran, and worker processes showed >200% sustained
-  # CPU each despite lightgbm's own num_threads being capped). Setting the
-  # env vars here, before `future::plan()` spawns the workers, is required
-  # because each multisession worker is a fresh Rscript process that inherits
-  # the parent's environment at spawn time but re-resolves its own BLAS/
-  # data.table thread defaults independently - pinning lightgbm's engine arg
-  # alone (which only bounds lightgbm's own threads) was insufficient.
-  Sys.setenv(OMP_NUM_THREADS = '1', OPENBLAS_NUM_THREADS = '1', R_DATATABLE_NUM_THREADS = '1')
+  is_lgbm <- identical(engine, 'lightgbm')
 
-  model <- if(identical(engine, 'lightgbm')){
-    parsnip::set_engine(tune_gr, engine = engine, objective = objective, num_threads = 1)
+  if(is_lgbm){
+    # LightGBM's OpenMP backend, R's OpenBLAS, and data.table all default to
+    # claiming every core (num_threads=0, OMP_NUM_THREADS unset, and
+    # getDTthreads() ~ 8 respectively). future::multisession below fans this
+    # function's model-fitting out across several worker *processes*, and each
+    # worker independently re-triggers all three of those "use everything"
+    # defaults - severe oversubscription that took a single LGBM candidate from
+    # minutes to 6-10+ hours (confirmed: system load average hit ~138 on a
+    # 16-core box while this ran, and worker processes showed >200% sustained
+    # CPU each despite lightgbm's own num_threads being capped). Setting the
+    # env vars here, before `future::plan()` spawns the workers, is required
+    # because each multisession worker is a fresh Rscript process that inherits
+    # the parent's environment at spawn time but re-resolves its own BLAS/
+    # data.table thread defaults independently - pinning lightgbm's engine arg
+    # alone (which only bounds lightgbm's own threads) was insufficient.
+    # XGBoost paths skip this throttling - it leaves full-core parallelism
+    # on the table and matches the pre-consolidation poiss()/tweed() behavior.
+    Sys.setenv(OMP_NUM_THREADS = '1', OPENBLAS_NUM_THREADS = '1', R_DATATABLE_NUM_THREADS = '1')
+    model <- parsnip::set_engine(tune_gr, engine = engine, objective = objective, num_threads = 1)
   } else {
-    parsnip::set_engine(tune_gr, engine = engine, objective = objective)
+    model <- parsnip::set_engine(tune_gr, engine = engine, objective = objective)
   }
 
   gr <- model |>
     tune::extract_parameter_set_dials() |>
     dials::grid_regular(levels = levels)
 
-  future::plan(multisession, workers = parallel::detectCores()/2)
+  future::plan(multisession, workers = if(is_lgbm) parallel::detectCores()/2 else parallel::detectCores())
   params <- model |>
     tune_race_anova_safe(
       rec,
@@ -3247,7 +3158,7 @@ patchDist <- function(x, patch_lkp, r_name, thresh_type){
 #'
 #' Refactored from the interior of \code{patchDist()} so that occupied-patch
 #' source points can be obtained independently — e.g. as inputs to
-#' \code{leastCostDist()} and \code{leastCostDistAniso()}.
+#' \code{leastCostDist()}.
 #'
 #' @param patches_lyr      Single-layer SpatRaster of patch IDs for one
 #'   threshold type (e.g. one layer from the output of \code{patchAttributes()}).
@@ -3466,9 +3377,9 @@ buildIsotropicTransition <- function(resistance, directions = 8) {
 
 #' Compute least-cost distances from occupied patch borders to all raster cells
 #'
-#' Wraps \code{gdistance::accCost()}, matching the interface of
-#' \code{leastCostDistAniso()} so both iso and aniso distances follow the
-#' same code path.
+#' Wraps \code{gdistance::accCost()}. Works for both isotropic and anisotropic
+#' transitions — the directionality (if any) lives in the TransitionLayer, not
+#' the caller, so the same code path serves both.
 #'
 #' Returns raw accumulated cost, NOT rescaled — when tiling by region
 #' (CostDistances.R), each region's cost range differs, so rescaling per-tile
@@ -3483,7 +3394,7 @@ buildIsotropicTransition <- function(resistance, directions = 8) {
 #' is not a resample).
 #'
 #' @param transition gdistance TransitionLayer from
-#'   \code{buildIsotropicTransition()}.
+#'   \code{buildIsotropicTransition()} or \code{buildAnisotropicTransition()}.
 #' @param sources    SpatVector, sf, or two-column matrix (x, y).
 #' @param crs        Character or crs object. CRS of the raster the
 #'   transition was built from (e.g. \code{terra::crs(resistance)}) —
@@ -3538,7 +3449,7 @@ leastCostDist <- function(transition, sources, crs) {
 #' @param directions Integer. Cell connectivity: 8 (default, includes
 #'   diagonals) or 4.
 #'
-#' @return gdistance TransitionLayer. Pass to \code{leastCostDistAniso()}.
+#' @return gdistance TransitionLayer. Pass to \code{leastCostDist()}.
 buildAnisotropicTransition <- function(
     dem,
     resistance,
@@ -3571,65 +3482,18 @@ buildAnisotropicTransition <- function(
   )
   slope_trans <- gdistance::geoCorrection(slope_trans, type = 'c', scl = FALSE)
 
-  # --- isotropic base conductance (all non-slope layers) ---
-  # mean resistance of the two adjacent cells → conductance for that edge.
-  base_trans <- gdistance::transition(
-    raster::raster(resistance),
-    transitionFunction = function(x) 1 / mean(x),
-    directions = directions,
-    symm = TRUE
-  )
-  base_trans <- gdistance::geoCorrection(base_trans, type = 'c', scl = FALSE)
+  # isotropic base conductance (all non-slope layers) — share the symmetric
+  # builder so the two paths can't drift apart.
+  base_trans <- buildIsotropicTransition(resistance, directions = directions)
 
   slope_trans * base_trans
 }
 
 
-#' Compute anisotropic least-cost distances from source points to all cells
-#'
-#' Wraps \code{gdistance::accCost()}, which returns the minimum accumulated
-#' cost from any source point to each raster cell — the directed analogue of
-#' \code{leastCostDist()}. Result is returned as a terra SpatRaster to stay
-#' consistent with the rest of the pipeline.
-#'
-#' Returns raw accumulated cost, NOT rescaled — see \code{leastCostDist()}
-#' for why (per-tile rescaling before mosaicking puts regions on different
-#' scales; rescale once after mosaicking instead).
-#'
-#' Also see \code{leastCostDist()} for why \code{crs} must be passed in
-#' explicitly: \code{gdistance::transition()} drops the CRS itself, so it
-#' cannot be recovered from \code{transition} downstream.
-#'
-#' @param transition gdistance TransitionLayer from
-#'   \code{buildAnisotropicTransition()}.
-#' @param sources    SpatVector, sf, or two-column matrix (x, y) in the same
-#'   CRS as the transition layer. Source points — typically border sample
-#'   points of known-occupied patches.
-#' @param crs        Character or crs object. CRS of the raster the
-#'   transition was built from (e.g. \code{terra::crs(dem)}) — reapplied to
-#'   the output since gdistance/raster round-trips lose it.
-#'
-#' @return SpatRaster. Raw accumulated anisotropic cost distance from the
-#'   nearest source, in the same units as the resistance surface; Inf cells
-#'   set to NA.
-leastCostDistAniso <- function(transition, sources, crs) {
-
-  if (inherits(sources, 'SpatVector')) {
-    sources <- sf::st_as_sf(sources) |> sf::as_Spatial()
-  } else if (inherits(sources, c('sf', 'sfc'))) {
-    sources <- sf::as_Spatial(sources)
-  }
-
-  r <- terra::rast(gdistance::accCost(transition, sources))
-  terra::crs(r) <- crs
-  terra::ifel(is.infinite(r), NA, r)
-}
-
-
 #' Mosaic per-region raw cost-distance tiles into one globally-rescaled surface
 #'
-#' Companion to \code{leastCostDist()}/\code{leastCostDistAniso()}, which now
-#' return raw (unscaled) accumulated cost precisely so this step can rescale
+#' Companion to \code{leastCostDist()}, which now
+#' returns raw (unscaled) accumulated cost precisely so this step can rescale
 #' once, globally, after mosaicking — not per-tile before it. Adjacent
 #' regions' buffered extents (see \code{clusterRegionExtents()}) can overlap;
 #' those cells are resolved by minimum cost (\code{fun = 'min'}), i.e. a cell
@@ -3640,7 +3504,7 @@ leastCostDistAniso <- function(transition, sources, crs) {
 #' is a pad with NA, not a resample.
 #'
 #' @param tiles    list of SpatRaster, raw accumulated cost, one per region,
-#'   from \code{leastCostDist()}/\code{leastCostDistAniso()}.
+#'   from \code{leastCostDist()}.
 #' @param template SpatRaster. Target grid to extend onto (e.g. the version's
 #'   \code{-Pr.tif} suitability raster).
 #'

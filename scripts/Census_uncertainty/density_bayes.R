@@ -120,7 +120,7 @@ brms_density_formula <- function(train, gp_coords = c('Longitude', 'Latitude'),
 #' Fit one brms count-model candidate and predict onto a held-out test set.
 #'
 #' @description Mirrors the `list(Model = , Predictions = )` return shape of
-#' `poiss()`/`tweed()`/`gbs()` (../functions.R) so a brms candidate slots into
+#' `gbs()` (../functions.R) so a brms candidate slots into
 #' `densityModeller()`'s `mods`/`namev`/`mets()` pipeline without changes to
 #' that pipeline.
 #'
@@ -139,7 +139,7 @@ brms_density_formula <- function(train, gp_coords = c('Longitude', 'Latitude'),
 #'
 #' @param train,test data.frames (not sf) with `Prsnc_All`, `Pr.SuitHab`,
 #' `Longitude`, `Latitude` and covariate columns - the same shape
-#' `densityModeller()` passes to `poiss()`/`tweed()`/`gbs()`, plus the two
+#' `densityModeller()` passes to `gbs()`, plus the two
 #' coordinate columns for the `gp()` term.
 #' @param family a brms family object: `poisson()`, `negbinomial()`,
 #' `brms::hurdle_poisson()`, or `brms::hurdle_negbinomial()`.
@@ -330,7 +330,7 @@ brms_cv_compare <- function(train, test,
     # standardized with `train`'s own center/scale, needed below to score this
     # candidate on the actual held-out set - not the in-sample `train` it was
     # fit on - matching the convention every ML candidate in this table
-    # (`poiss()`/`tweed()`/`gbs()`, ../functions.R) already uses.
+    # (`gbs()`, ../functions.R) already uses.
     std <- standardize_covariates(train, test)
     use_gp <- !(fam %in% no_gp)
 

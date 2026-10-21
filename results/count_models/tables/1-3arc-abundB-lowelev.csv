@@ -29,6 +29,9 @@
 "LGBM Poisson Spat.","MAE",28.057002586266
 "LGBM Poisson Spat.","MSE",2085.03058564629
 "LGBM Poisson Spat.","RMSE",45.6621351411242
+"LGBM Poisson","MAE",27.2132522695475
+"LGBM Poisson","MSE",1998.90337984021
+"LGBM Poisson","RMSE",44.7090972827703
 "Poisson","MAE",54.6180556688092
 "Poisson","MSE",12050.332046403
 "Poisson","RMSE",109.774004420004
@@ -51,3 +54,5 @@
 "XGB Tweedie","IntervalWidth90_cvplus",135.91669254303
 "LGBM Poisson Spat.","IntervalWidth90_split",105.457146165249
 "LGBM Poisson Spat.","IntervalWidth90_cvplus",116.173829376829
+"LGBM Poisson","IntervalWidth90_split",107.98294881834
+"LGBM Poisson","IntervalWidth90_cvplus",117.655054971319

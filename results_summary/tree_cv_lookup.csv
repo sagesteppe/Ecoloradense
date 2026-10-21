@@ -1,0 +1,15 @@
+tree,outer_split,inner_cv,producer
+results,knndm_class_stratified,CAST_knndm_k10,Modelling.Rmd -> adaptive_PAratio_search(cv_mode='spatial_split')
+results_classicsplit,random_stratified,CAST_knndm_k10,Modelling.Rmd -> adaptive_PAratio_search(cv_mode='random')
+results_populationsplit,LOPO,CAST_knndm_k10,population_lopo_search()
+results_populationgroupsplit,leave_2_3_pops_out,CAST_knndm_k10,compare_split_population_group.R
+results_spatial_mapping,partitioner_outer,partition_folds,Modelling_partitionerCV.R spatial_mapping
+results_LMPO,partitioner_outer,partition_folds_lopo,Modelling_partitionerCV.R LMPO
+results_highPA,knndm_class_stratified,CAST_knndm_k10,highPA_grid.R mode=spatial
+results_highPA_fieldabs,knndm_class_stratified,CAST_knndm_k10,highPA_grid.R mode=spatial (field_abs kept)
+results_highPA_classicsplit,random_stratified,CAST_knndm_k10,highPA_grid.R mode=classic
+results_highPA_classicsplit_fieldabs,random_stratified,CAST_knndm_k10,highPA_grid.R mode=classic (field_abs kept)
+results_highPA_populationsplit,LOPO,CAST_knndm_k10,highPA_grid.R mode=lopo
+results_highPA_populationsplit_fieldabs,LOPO,CAST_knndm_k10,highPA_grid.R mode=lopo (field_abs kept)
+results_highPA_spatial_mapping_fieldabs,partitioner_outer,partition_folds,highPA_grid.R mode=spatial_mapping (field_abs kept)
+results_highPA_LMPO_fieldabs,partitioner_outer,partition_folds_lopo,highPA_grid.R mode=LMPO (field_abs kept)

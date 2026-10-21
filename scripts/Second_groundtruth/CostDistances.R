@@ -88,7 +88,7 @@ for (v in versions) {
   occ_tbl   <- read.csv(file.path(p2res, 'patch_summaries', paste0(v, 'occupied.csv')))
 
   # Extract occupied-patch border points once per threshold — reused both
-  # for region clustering below and as leastCostDist/leastCostDistAniso
+  # for region clustering below and as leastCostDist
   # sources in the main loop.
   border_pts_by_thresh <- setNames(lapply(thresh_names, function(th) {
     occ_ids <- occ_tbl$patch[occ_tbl$threshold == th]
@@ -183,7 +183,7 @@ for (v in versions) {
       # so it's passed in from suit_full (shared CRS across the pipeline)
       # and reapplied to the output rather than recovered from the transition.
       iso_tiles[[length(iso_tiles) + 1]]     <- leastCostDist(region_iso[[i]], src_reg, crs = terra::crs(suit_full))
-      aniso_tiles[[length(aniso_tiles) + 1]] <- leastCostDistAniso(region_aniso[[i]], src_reg, crs = terra::crs(suit_full))
+      aniso_tiles[[length(aniso_tiles) + 1]] <- leastCostDist(region_aniso[[i]], src_reg, crs = terra::crs(suit_full))
     }
 
     if (!file.exists(out_iso) && length(iso_tiles) > 0) {

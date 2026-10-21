@@ -206,11 +206,23 @@ partition_split <- function(x, spl, pcs, train_target, seed = 1) {
     test_id <- c(test_id, ex_ids[kmed_pick(M, round(length(ex_ids) * test_frac))])
   }
 
-  # 2. interpolation splittable: within-component representative test subset
+  # 2. interpolation splittable: within-component test subset. Half the picks are env
+  #    medoids (k-means-medoid spread) and half are uniformly random — the medoid-only
+  #    heuristic pulled every env-central point out of train for dense populations like
+  #    Cochetopa Dome, starving the forest of the component's core signal; mixing in
+  #    random picks preserves env spread for coverage while keeping central train rows.
   for (cmp in spl$component[spl$role == "splittable (interpolation)"]) {
     idx  <- xd$.id[xd$component == cmp]
     M    <- as.matrix(xd[match(idx, xd$.id), pcs])
-    pick <- idx[kmed_pick(M, round(length(idx) * test_frac))]
+    n_test <- round(length(idx) * test_frac)
+    if (n_test == 0) next
+    n_med  <- ceiling(n_test / 2)                     # ceil so medoids get the odd one
+    n_rand <- n_test - n_med
+    med_rows  <- kmed_pick(M, min(n_med, length(idx)))
+    pool      <- setdiff(seq_along(idx), med_rows)
+    rand_rows <- if (n_rand > 0 && length(pool))
+                   sample(pool, min(n_rand, length(pool))) else integer(0)
+    pick <- idx[unique(c(med_rows, rand_rows))]
     test_id <- c(test_id, pick)
   }
 

@@ -5,7 +5,7 @@
 ## CAST::knndm() to Partitioner.R's build_partition_mapping() (spatial_mapping) or
 ## build_partition_lmpo() (LMPO). Results land in their own trees:
 ##
-##   results_spatial_mapping/   or   results_LMPO/
+##   Results_spatialmapping_iter1a_low_pa/   or   Results_LMPO_iter1a_low_pa/
 ##
 ## so the original results/ and results_classicsplit/ / results_populationsplit/
 ## stay intact for comparison.
@@ -37,7 +37,8 @@ resolutions <- if(length(args) >= 2) as.numeric(args[-1]) else c(90, 30, 10)
 stopifnot('resolutions must be one or more of 90/30/10' =
             all(resolutions %in% c(90, 30, 10)))
 
-results_root <- file.path(PROJ_ROOT, paste0('results_', cv_mode))
+cv_tag <- c(spatial_mapping = 'spatialmapping', LMPO = 'LMPO')[[cv_mode]]
+results_root <- file.path(PROJ_ROOT, paste0('Results_', cv_tag, '_iter1a_low_pa'))
 for(d in c('models', 'modelsTune', 'test_data', 'tables', 'evaluations', 'suitability_maps'))
   dir.create(file.path(results_root, d), showWarnings = FALSE, recursive = TRUE)
 

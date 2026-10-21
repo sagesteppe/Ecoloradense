@@ -1,5 +1,5 @@
 ## Quick correctness check of the new tune_metric plumbing (functions.R::
-## resolve_tune_metric(), threaded through poiss()/tweed()/gbs()/
+## resolve_tune_metric(), threaded through gbs()/
 ## brms_cv_compare()) before committing to a full split-strategy sweep under
 ## 'huber' and 'poisson' - one replicate each, twinning split, same pattern
 ## as every other new-capability smoke test this session
