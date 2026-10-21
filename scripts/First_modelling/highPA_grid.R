@@ -2,7 +2,7 @@
 ##
 ## The adaptive search (adaptive_PAratio_search(), Modelling.Rmd) only reached ~1:4, the
 ## cap of the original absence pool, and reweighted holdout scoring
-## (summarize_iter_calibration_reweighted.R) found the best-calibrated ratio at the top
+## (summarize_iter_calibration.R --prevalences=0.01,…,0.40) found the best-calibrated ratio at the top
 ## of that range at realistic landscape prevalences. This grid pushes past it:
 ##   1:1 - 1:4 (anchors, refit on the new pool so they're comparable),
 ##   1:5 - 1:10 by 1, 1:12 - 1:20 by 2, 1:25 - 1:50 by 5.
@@ -23,7 +23,7 @@
 ##
 ## Same modeller() pipeline as every other production fit (Boruta, knndm CV, caret
 ## tuning, class weights), predict_surface = FALSE - holdout evaluation only. Each tree is
-## laid out like results/, so summarize_iter_calibration_reweighted.R <tree> and
+## laid out like results/, so summarize_iter_calibration.R --prevalences=0.01,…,0.40 <tree> and
 ## predict_gridsearch_to_points.R can read it.
 ##
 ## Needs data/Data4modelling/iter1-pa-highPA-reviewed.gpkg - the output of
