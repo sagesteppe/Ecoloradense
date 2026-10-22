@@ -19,9 +19,10 @@ orcid: |
   Sophie Taddeo https://orcid.org/0000-0002-7789-1417  
 output: 
 #  word_document: default
-  pdf_document: 
+  bookdown::pdf_document2:
     latex_engine: xelatex
     toc: false
+    number_sections: false
     fig_caption: true
 csl: "../../citations/chicago-author-date.csl"
 bibliography: "../../citations/citations.bib"
@@ -68,7 +69,7 @@ library(bookdown)
 library(knitr)
 library(kableExtra)
 library(patchwork)
-
+library(sf)
 # packages for analysis
 library(caret) # general data partitioning
 library(pROC)
@@ -83,15 +84,15 @@ https://onlinelibrary.wiley.com/doi/full/10.1111/ddi.13795 # maybe
 https://www.cell.com/trends/ecology-evolution/fulltext/S0169-5347(18)30304-5
 https://www.nature.com/articles/s41559-026-03125-y # maybe
 
-The effects of anthropogenic stressors have led to a global extinction crisis, with estimates suggesting that 20-45% of plant species are facing extinction [@bachman2024extinct; @brummitt2015green; @pimm2015many; @nic2020extinction].
+The effects of anthropogenic stressors have led to a global biodiversity crisis, with estimates suggesting that 20-45% of plant species are facing extinction [@bachman2024extinct; @brummitt2015green; @pimm2015many; @nic2020extinction].
 Determining which plant species to focus our conservation efforts (e.g., active restoration, preserve creation, *ex situ* collections) on requires an array of natural history data seldom available to decision-makers [@heywood2017plant].
 The environmental niche of a species, its occupied geographic extent, the occupancy of sites within the range, and the census size of populations are all essential attributes for evaluating a species' continued existence against anthropogenic stressors [@natural2001iucn; @faber2012natureserve; @usfws2016ssa].
-Although these attributes are relatively simple to characterise, implementation is time-consuming, requiring extensive fieldwork -- hence requiring proxies for conservation assessments [@juffe2016assessing; @bland2015cost; @pelletier2018predicting].
-Environmental niche models (ENMs or Species Distribution Models, SDMs) have made enormous contributions to two of these attributes, describing the realised environmental niche of a species, and the species' geographic extent within it [@syfert2014using; @anderson2023integrating; @kass2021improving].
+Although these attributes are relatively simple to characterise, implementation is time-consuming, requiring extensive fieldwork - hence requiring proxies for conservation assessments [@juffe2016assessing; @bland2015cost; @pelletier2018predicting].
+Environmental niche models (ENMs or Species Distribution Models, SDMs) have made enormous contributions to two of these attributes; describing the realised environmental niche of a species, and the species' geographic extent within it [@syfert2014using; @anderson2023integrating; @kass2021improving].
 Further, this progress - paired with a growing volume of occurrence data from citizen science platforms and the digitisation of natural history museum records - offers promise for modelling the remaining two attributes, occupancy and census size [@markham2023review; @feldman2021trends].
 
 However, despite this progress, the utility of models is seldom field verified, especially at landscape scales [@chiffard2020anbs; @a2022species].
-Despite an awareness that ENMs generally suffer from having few, often spatially biased, occurrence records as dependent variables, which often fail to characterise the ecological breadth of the species niche [@stolar2015accounting; @feeley2011keep; @pili2025correcting].
+Even despite an awareness that ENMs generally suffer from having few, often spatially biased, occurrence records as dependent variables, which often fail to characterise the ecological breadth of the species niche [@stolar2015accounting; @feeley2011keep; @pili2025correcting].
 Accordingly, while many ENMs achieve high performance on hold-out test subsets, biases in the training data may be propagated into predictions [@a2022species].
 Increasingly adaptive-niche-based sampling (ANBS), which generates larger data sets of both presence and absence records for training -- leading to more robust models, while possibly obtaining more data from sparsely sampled niche space.
 However, most ANBS sampling has preferentially visited cells with high predicted occurrence probability [@guisan2006using]; because such cells are often close to already-known occurrences, this tests a model's easiest predictions rather than expanding its training data to better reflect the species niche.
@@ -104,7 +105,7 @@ Recent advances in remote sensing, statistics, and software have narrowed this r
 Recent papers have had mixed results regarding the effects of imprecisely mapped occurrence data on ENM predictions, with indications that models generated in more heterogeneous environments, and at finer resolutions (e.g. ca. 3 arc-second to 10 arc-minutes (~14.5km at 38$^\circ$)) suffer minor decreases in model performance [@graham2008influence; @smith2023including] with real species, while increasing error in mapping has drastic effects on model predictions with virtually simulated species [@gabor2022positional].
 
 An ENM predicts a single variable: the probability of suitable habitat for the taxon (taddeo2026diversitydistributions).
-However, in most conservation applications, the insight desired from an ENM is the species' realised distribution (cite).
+However, in most conservation applications, the insight desired from an ENM is actually the species' realised distribution (cite).
 Significant progress has been made integrating ENM predictions with models of dispersal, recognising that the bridge between an ENM and a plant population's presence is propagule dispersal and establishment, not the distribution of the fundamental niche alone [@guisan2005predicting; @franklin2010moving; @engler2009migclim].
 Previous innovations have largely focused on connecting currently suitable habitat to habitat predicted to be suitable under climate change [@engler2009migclim; @bocedi2014range], rather than on detecting populations that already exist but remain undiscovered.
 To assist practitioners in detecting new populations or extending the range of known populations, we propose modelling plant occupancy as a random variable that depends on distance from known occupied sites.
@@ -132,7 +133,7 @@ knitr::include_graphics('../../results/ConceptualFigure.png')
 
 Here we: 1) evaluate the results of the best-performing model with ground truthing (within 270m of existing occurrences).
 2) Compare the results of models from different resolutions to the best model, as based on hold-out test data.
-3) Determine whether model predictions are useful to find new sub-populations (270m - 450m from existing occurrences), or populations (> 450m from existing occurrences).
+3) Determine whether model predictions are useful to find new sub-populations (270m - 450m from existing occurrences), or populations (> 450m from existing occurrences). 
 4) Estimate population census size using 4a) estimates of plant density, and 4b) modelling of population boundaries.
 
 # 2 | Methods
@@ -142,11 +143,16 @@ Here we: 1) evaluate the results of the best-performing model with ground truthi
 Its known range spans five counties and encompasses 22 documented populations, occurring across a broad range of elevation (2700-3900m asl), slope, aspects, soil types, and habitats - from high-elevation sagebrush steppe, through subalpine grasslands, to alpine slopes.
 It is ranked S3/G3 by NatureServe and listed as a Tier 2 species in Colorado Parks and Wildlife's State Wildlife Action Plan [@anderson2004eriogonum; NATURESERVE].
 
-This taxon is largely pollinated by solitary bees, flies and butterflies, which are known to move pollen considerably shorter distances than bumble bees (i.e. 1km).
+This taxon is largely pollinated by solitary bees, flies and butterflies, which are known to generally forage under 1km[@gathmann2002foraging; @zurbuchen2010maximum].
+Further given the topographic roughness of this area, we tenatively define populations as being isolated by <500 meters, translated to 470m to match the 90m resolution grain. 
 
 ### 2.2 | Data Acquisition
+```{r}
+iter0n = sf::st_layers(file.path('..', '..', 'data', 'Data4modelling', '10m-presence-iter0.gpkg'))$features
+```
+
 Occurrence records were downloaded from iNaturalist (80 records) and the Consortium of Southern Rockies herbaria (131 records) [@inaturalist2024ecolo; @soro2024].
-These data were manually reviewed, and 16 herbarium records were removed due to low geolocation quality or a georeferenced locality inconsistent with the specimen label which we could not accurately identify.
+These data were manually reviewed, and 16 herbarium records were removed due to low geolocation quality or a georeferenced locality inconsistent with the specimen label which we could not accurately identify; leading to `r iter0n` presence records.
 
 Digital elevation models (DEMs) at 3 arc (TYPE) and 1 arc (TYPE) resolution, and digital elevation products (DEPs) at 1/3 arc resolution, were acquired from the United States Geological Survey and clipped to the analytical domain, a rectangle buffered 16 km (10 mi) beyond any known population.
 These elevation products were used to derive most geomorphology datasets with whiteboxTools [@wu2022whitebox], plus heat load and diurnal anisotropic heat indices calculated with spatialEco [@evans2025spatialeco].
@@ -185,7 +191,7 @@ n_comp_based_abs <- nrow(
   ) # manually entered to computer absences
 ```
 
-As our taxon had not had a recent survey work carried out for a it, a first round of sampling was used to detect occurrences which would be found by a field botanist without the need of statistical modelling approaches and thereby inflate the results of our study.
+As our taxon has not had recent targeted survey work carried out for a it, a first round of sampling was used to detect occurrences which would be found by a field botanist without the need of statistical modelling approaches and thereby inflate the results of our study.
 The first round of ground sampling was carried out from June to September 2024.
 All pre-existing occurrence points were considered candidates for revisits, and `r distinct(iter1_f_draw_pts, Trail) |>nrow()` trails leading to them were marked as sample areas.
 Each trail was manually mapped and buffered by 45m in each direction; 551 random points were drawn, thinned to distances > 90m, leaving `r n_iter1_f_draw_pts` random plots for assessment.
@@ -213,7 +219,7 @@ After the first modelling iteration, all additional presences and absences were 
 'Presences' with greater coordinate uncertainty than the modelling resolution were removed.
 
 Prior to fitting, uninformative predictor variables were removed for each model using Boruta feature selection, retaining both confirmed and tentative important variables [@kursa2010boruta].
-The mTry and tree-depth hyperparameter were tuned using PACKAGE ().
+The mTry and tree-depth hyperparameter were tuned using caret [@kuhn2008caret].
 All random forest models were fit using the ranger package; 95% confidence intervals were generated using the infinitesimal jackknife [@wager2014confidence; @wright2017ranger].
 
 ### 2.5 | Occupancy Based Field Sampling (H3)
@@ -224,11 +230,11 @@ The cost-distance anomaly utilises within-region residuals of least-cost distanc
 
 ### 2.6 | Plant Density (H4a)
 
-Plant density was modelled using NINE? approaches, and both spatial and non-spatial cross-validation [@mila2022nearest].
-Because one population (Cochetopa Dome) consistently has far higher plant counts than the others, a naive train-test split risked confounding genuine model generalisation with a simple between-population split; training and test sets were instead partitioned using data twinning on rescaled coordinates and count values, which selects a test set whose joint distribution mirrors the training set's [@vakayil2026twinning].
-Five density models were fit: four using XGBoost across two distributions (Poisson, Tweedie), and one using light gradient boosting [@chen2016xgboost; @ke2017lightgbm].
-Bayesian hierarchical models with poisson, zero-inflated, and hurdle distributions, with population as a fixed effect were also utilized, using a test train split on count of plants per quadrat.
-Two null models served as baselines for comparison: the arithmetic mean plant count by population, and ordinary kriging interpolation across the study area [@pebesma2004gstat].
+Plant density (plants per 3 $\times$ 3 m quadrat) was modelled with a ladder of approaches of increasing complexity, each evaluated under spatial and non-spatial cross-validation [@mila2022nearest] and against the held-out 2026 field plots.
+Because low-elevation plots hold roughly sixfold more plants than high-elevation ones, models were fit and scored separately within each elevation phase.
+Within each phase, train and test sets were partitioned by data twinning on rescaled coordinates and counts [@vakayil2026twinning].
+
+The ladder ran from null baselines (the per-phase mean and median), through interpolators of the observed counts -- ordinary kriging [@pebesma2004gstat], inverse-square inverse-distance weighting, and $k$-nearest-neighbour averaging -- and a single-covariate Poisson GLM on habitat suitability, to fitted models: gradient-boosted trees (XGBoost with Poisson and Tweedie likelihoods, LightGBM with Poisson) [@chen2016xgboost; @ke2017lightgbm] and Bayesian hierarchical models (brms; Poisson, negative-binomial, and hurdle negative-binomial, each with population as a fixed effect and a Gaussian-process spatial term), the last of which yield posterior credible intervals on the population total [@burkner2017brms].
 
 ```{r Prepate Data for Final Maps}
 
@@ -244,7 +250,28 @@ Transects began 50m inside this edge, extended outward across the disagreement b
 Patches containing a known occurrence within 100m received a size-proportional transect budget (area^0.5, floor of 3, ceiling of 12 per patch); patches without a nearby known occurrence were flagged as exploratory and given only a fixed floor of transects, kept as a separate sampling stage.
 A per-site cap of 15 transects (trimming exploratory transects first) and a no-crossing constraint were applied before finalising the field sheet, which records each transect's start coordinates, true and magnetic compass bearing, and a series of stations at 10m intervals along its length.
 
-### 2.8 | Final Models
+### 2.8 | Model Refinement
+
+Additional species distribution models were fit using the iteration 0 and iteration 1 data, and tested using the second ground truth round of data. 
+They effectively represent refinements of modelling approaches not explored during the original iteration 1 phase, but that could be used for the final modelling process. 
+They largely resulted from a realisation during ground truthing that two separate processes are desired of SDMs; the first to map known occurrences, the second to map suitable habitat [@pili2025correcting].
+
+Additional SDM's were fit using a variety of alternative cross-validation approaches, such as leave-multiple populations out intended to produce the best maps for population discovery, and a spatial subsetting approach intended to produce the most accurate maps of known occupied habitat. 
+For overall model classification we report three complementary discrimination metrics: the Boyce index, ROC-AUC, and PR-AUC as well as nAP which makes it comparable across a range of presence to absence ratios. 
+The Boyce index measures presence-background rank-calibration, but is insensitive to monotone rescaling and understates prediction magnitude [@hirzel2006evaluating].
+ROC-AUC measures discrimination, but is prevalence-invariant and so inflated by background placement rather than count [@fawcett2006introduction; @lobo2008auc; @jimenezvalverde2012insights].
+PR-AUC conveys the model's ability to discriminate suitable habitat, but is prevalence-dependent, and is corrected across presence:absence ratios using nAP = (AP $-$ $\pi$)/(1 $-$ $\pi$) [@davis2006relationship; @flach2015precision; @saito2015precision; @sofaer2019area; @allouche2006assessing].
+
+For model calibration we report the Cox calibration intercept and slope [@cox1958two; @steyerberg2014towards].
+The intercept measures overall bias: negative when predictions are too high, positive when too low, and zero when unbiased.
+The slope measures confidence: below one the model is overconfident (predictions too extreme), above one underconfident, and one when correctly scaled.
+
+We further report performance across three prediction domains defined by the area of applicability (AOA) and distance to known populations: (1) inside the AOA and within 270m of a known population, (2) inside the AOA but > 270m, and (3) outside the AOA (extrapolated niche).
+Domain (1) is occupiable, dispersal-accessible habitat the training data characterised, and errors here indicate a failure of the model.
+Domain (2) lies further from known occurrences, where errors are ambiguous, reflecting either limited model generalisation or genuine dispersal limitation.
+Domain (3) is environmental space unsampled by the biased training data (e.g. the Antero region), where failure reflects niche truncation in the data rather than a deficiency of the model *per se*.
+
+### 2.9 | Final Models
 
 Using occurrence, density, and boundary-transect data from both rounds of ground-truthing combined with the original records, we refit final models of habitat suitability, occupancy, and census size, evaluating each solely against a held-out subset of the ground-truthed data not used in any prior training or tuning step.
 
@@ -274,6 +301,7 @@ The differences between resolutions varies by XX-XX, with 3-arc second models' p
 
 ## phase HO, 'Publically Available Points'
 ## phase H1, 'Initial Survey'
+## phase H1a, 'Refined Modelling'
 ## phase H2, 'Field Verified'
 
 ## PLACEHOLDER: synthetic data previewing the layout for held-out vs.
@@ -293,11 +321,6 @@ heldout_field_mock <- tibble(
 ) |>
   pivot_longer(c(Heldout, Field), names_to = 'Set', values_to = 'PrAUC') |>
   mutate(Set = factor(Set, levels = c('Heldout', 'Field'), labels = c('Held-out', 'Field-validated')),
-         ## position_dodge infers a per-Phase y-offset for geom_point (it can tell
-         ## Resolution is the discrete axis), but not for geom_line - so the
-         ## connecting line was landing on the row's true center instead of
-         ## alongside its own pair of points. Offset y by hand instead, using
-         ## the same magnitude position_dodge(width = 0.5) gives geom_point.
          y_num = as.numeric(Resolution) + ifelse(Phase == 'H0', -0.125, 0.125))
 
 ggplot(heldout_field_mock, aes(y = y_num, x = PrAUC, color = Phase, group = interaction(Resolution, Phase))) +
@@ -384,21 +407,47 @@ ggplot(paratio, aes(x = ratio_label, y = metric, color = Split, fill = Split, sh
   labs(x = 'Presence:Absence Ratio', y = 'Pr-AUC', color = 'Train/test split', fill = 'Train/test split', shape = 'Train/test split') +
   theme_manuscript()
 ```
+```
 
-The area under the precision-recall curve (AUC-PR), the True Skill Statistic, and Sensitivity and Specificity [@sofaer2019area; @allouche2006assessing].
-
-### 3.3 | Occupancy Based Field Sampling (H3)
+### 3.3 | Occurrence Dectection and Occupancy Based Field Sampling (H3)
 
 ```{r Sub-population Detection Table}
 ## Occupancy ~ Euclidean distance (E) and the region-orthogonalized cost-distance
 ## anomaly (R) at the 2026 ground-truth points (produced by
 ## Second_groundtruth/cost_residual_occupancy.R, Seed1021 realization of
-## 1-3arc-Iteration1-PA1:1DO:0). Detection bands follow the Introduction's "Here we"
-## list: extension < 270m, sub-population 270-450m, new population >= 450m of a known
-## occurrence.
-## NOTE: these are per-POINT counts - adjacent detections that belong to the same real
-## population will be merged into named populations before this is final; a cluster of
-## "new population" points 500m apart is one new population, not several.
+## 1-3arc-Iteration1-PA1:1DO:0). 
+fp = file.path('..', '..', 'data', 'Data4modelling')
+f_pops = st_read(
+  file.path(fp, 'Final_LOPO_CV_Population_Boundaries.gpkg'), 
+  layer = 'Final_LOPO_CV_Population_Boundaries') |>
+  ## combine coche- which are split for MODELLING, not as actually separate populations
+  mutate(
+    Name = if_else(Name %in% c('Cochetopa Dome', 'Cochetopa Dome - North'), 'Cochetopa Dome', Name),
+    Name = if_else(grepl('Mt. Bellview', Name), 'Mt. Bellview', Name)
+  )
+
+## number of quadrats withiin
+quadrats = st_read(file.path(fp, '3m-presence-iter2.gpkg'))
+
+subpop_extensions <- st_read(
+    file.path(fp, 'SubPops_Extensions_from_2026_grountruthing.gpkg')
+  ) |>
+  bind_rows(
+    filter(f_pops, Name == 'Hasley Basin - Ridge South') |>
+      mutate(Type = 'Subpopulation')
+  )
+
+quadrat_cnts = subpop_extensions |>
+    st_transform(st_crs(quadrats)) |>
+    st_join( quadrats)
+
+hbrs = 'Hasley Basin - Ridge South'
+asc = 'Antero - Spring Creek'
+pop_q_cnts = f_pops |>
+  filter(Name %in% c(hbrs, asc)) |>
+  st_transform(st_crs(quadrats)) |>
+  st_join( quadrats)
+
 bands <- read_csv(file.path('..', '..', 'results', 'tables', '2026-groundtruth-occupancy-bands.csv'),
                    show_col_types = FALSE)
 get_band <- function(b) { v <- bands$n_presences[bands$band == b]; if (length(v) == 1) v else 'XX' }
@@ -413,70 +462,150 @@ p_E_given_R <- get_p('E (given R)')
 p_R_given_E <- get_p('R (given E)')
 p_E_alone   <- get_p('E (alone)')
 p_R_alone   <- get_p('R (alone)')
+
+hb = 'Hasley Basin - South'
 ```
 
-`r n_subpop` sub-populations (occurrences found between 270-450m) and `r n_newpop` new populations (>=450m) were detected while field sampling, plus `r n_extension` extensions of already-known populations (<270m); these per-point detections will be merged into named populations before final reporting.
-A logistic model of occupancy on Euclidean distance (E) and the cost-distance anomaly (R) finds that neither predictor is significant alone (E: p = `r p_E_alone`; R: p = `r p_R_alone`), but each becomes significant once the other is included (E given R: p = `r p_E_given_R`; R given E: p = `r p_R_given_E`), indicating the two distance measures are complementary rather than redundant predictors of occupancy.
+Two new populations (> 450m from a known population) were detected: Cochetopa Dome - Highway 114 (based on field crews intuition) with `r nrow(pop_q_cnts$Name==hbrs)` mapped quadrats, and Antero - Spring Creek (based on iNaturalist) `r nrow(pop_q_cnts$Name==asc)` mapped quadrats. 
+There were `r nrow(unique(subpop_extensions$Name))` large areas of occurrences, `r sum(subpop_extensions$Type=='Subpopulation')` subpopulations (270-450m from a known population), and `r sum(subpop_extensions$Type=='Extension')` major extensions ( 100-270m from a known population), attributable to the intepretation of the models by field workers.
+The two new subpoulations, a large one on Hasley Basin - Ridge South `r nrow(pop_q_cnts$Name==hbrs)` mapped quadrats, and a small one on Fridgid Ridge `r nrow(quadrat_cnts$Name=="Frigid Ridge")` mapped quadrat. 
+The two extensions occurred on both Hasley Basin - South `r nrow(quadrat_cnts$Name==hb)` mapped quadrats,  and Crystal Peak `r nrow(quadrat_cnts$Name=="Crystal Peak East")` mapped quadrat. 
+
+Across all new occurrence points detected during the 2026 modelling, less those in the Antero region, a logistic regression model treating occupancy as a dependent variable on euclidean and cost distance to known occurrence was fit. 
+The model of occupancy on Euclidean distance and the cost-distance anomaly finds that neither predictor is significant alone (distance: p = `r p_E_alone`; resistance: p = `r p_R_alone`), but each becomes significant once the other is included (distance given resistance: p = `r p_E_given_R`; resistance given distance: p = `r p_R_given_E`), indicating the two distance measures are complementary rather than redundant predictors of occupancy. 
+
+```{r}
+rm(quadrats, pop_q_cnts, hbrs, asc, quadrat_cnts, subpop_extensions, p_R_alone, p_E_alone, p_R_given_E, p_E_given_R, get_p, occ_lrt, n_extension, f_pops, fp)
+```
 
 ### 3.4 | Plant Density (H4a)
 
-```{r Regression of Plant Density Observed and Predicted Plot, eval = FALSE}
-## NOTE: kept for reference - written around the PA-ratio comparison, which
-## is being dropped for this section, and doesn't yet have a field-validated
-## MAE series. Needs reworking before this goes back into the doc; see the
-## placeholder chunk below for the intended layout in the meantime.
-fp = file.path('..', '..', 'results','count_models','tables')
-f = file.path(fp, list.files(fp, pattern = 'csv'))
+```{r count-model-table}
+## Read ALL per-plot predictions (Antero kept - it is the extrapolation column).
+## Non-finite AbsError is left in: it arises only for the gp()-based brms models
+## at Antero and collapses to '---' in the extrapolation column by design.
+cm_pred <- read_csv(file.path('..', '..', 'results', 'tables',
+                              '1-3arc-Iteration1-PA1:1-2026groundtruth-predictions.csv'),
+                    show_col_types = FALSE)
 
-ab_models = tibble(File = f) |>
-    mutate(
-      Run_Info = gsub('[.]csv', '', basename(File)),
-      Resolution = factor(gsub('arc.*$', '', Run_Info), levels = c("1-3", "1", "3")),
-      PresAbsRatio = as.numeric(gsub('^.*PA1_', '', Run_Info))
-      ) |>
-    mutate(Data = lapply(File, read_csv, show_col_types = FALSE)) |>
-    unnest(Data) |>
-    mutate(Model = str_replace(Model, 'Arithmatic', 'Arithmetic')) |>
-    select(-File) |>
-    filter(Metric == 'MAE')
+cm_lab <- function(m) {
+  m <- str_replace(m, 'Constant: (High|Low)-phase training mean.*',   'Arithmetic mean')
+  m <- str_replace(m, 'Constant: (High|Low)-phase training median.*', 'Median')
+  m <- str_replace(m, 'GLM Poisson \\((High|Low)-phase\\): suitability only', 'GLM Poisson ~ suitability')
+  m <- str_replace(m, 'Spat[.]', '(Spatial CV)')
+  m <- str_replace(m, 'Ordinary kriging.*', 'Ordinary Kriging')          # drop '(raw count)'
+  m <- str_replace(m, 'IDW \\(gstat default, idp=2\\)', 'IDW (inverse-square)')
+  m <- str_replace(m, 'brms Hurdlenegbinomial', 'Hurdle NegBinomial')
+  m <- str_replace(m, 'brms Negbinomial', 'NegBinomial')
+  m
+}
 
-ggplot(ab_models, aes(x = PresAbsRatio, y = Value, color = Model, group = Model)) +
-  geom_point(size = 5) +
-  geom_smooth() +
-  facet_wrap(~Resolution, ncol = 3) +
-  theme_minimal() +
-  labs(y = 'Mean Absolute Error (Number of Plants per quadrat)')
+## brms exists pooled only; brms Poisson omitted (non-convergent gp()).
+brms_keep <- c('brms Hurdlenegbinomial', 'brms Negbinomial')
+## One cell block: phase (High/Low) x domain (interp = plots within the sampled
+## range; extrap = the Antero site, 86 km out). Antero is low-elevation only, so
+## there is no high-elevation extrapolation block.
+cm_slice <- function(phase, domain) {
+  keep <- if (domain == 'extrap') function(s) s == 'Antero' else function(s) s != 'Antero'
+  pb <- cm_pred |> filter(ScoredBy == 'Phase B (per-phase)', Phase == phase, keep(Site))
+  pa <- cm_pred |> filter(ScoredBy == 'Phase A (pooled)', Phase == phase, keep(Site),
+                          Tier == '3 Spatial interpolation' | Model %in% brms_keep)
+  bind_rows(pb, pa) |>
+    filter(is.finite(AbsError)) |>   # per-phase baselines are NA on their off-phase plots; drop those
+    group_by(Model = cm_lab(Model)) |>
+    summarise(all = mean(AbsError), occ = mean(AbsError[Occupied]), .groups = 'drop')
+}
+
+cm_groups <- tibble::tribble(
+  ~Group,                         ~Model,
+  'Null models',                  'Arithmetic mean',
+  'Null models',                  'Median',
+  'Interpolation & GLM baseline', 'Ordinary Kriging',
+  'Interpolation & GLM baseline', 'IDW (inverse-square)',
+  'Interpolation & GLM baseline', 'kNN (within pop)',
+  'Interpolation & GLM baseline', 'kNN (across pop)',
+  'Interpolation & GLM baseline', 'GLM Poisson ~ suitability',
+  'Gradient-boosted trees',       'XGB Tweedie',
+  'Gradient-boosted trees',       'XGB Tweedie (Spatial CV)',
+  'Gradient-boosted trees',       'XGB Poisson',
+  'Gradient-boosted trees',       'XGB Poisson (Spatial CV)',
+  'Gradient-boosted trees',       'LGBM Poisson',
+  'Gradient-boosted trees',       'LGBM Poisson (Spatial CV)',
+  'Bayesian (brms)',              'Hurdle NegBinomial',
+  'Bayesian (brms)',              'NegBinomial'
+)
+
+cm_fix <- function(x) ifelse(is.finite(x) & x <= 1e6, round(x, 2), NA_real_)  # Inf/overflow -> '---'
+ih <- cm_slice('High', 'interp')
+il <- cm_slice('Low',  'interp')
+el <- cm_slice('Low',  'extrap')
+cm_tab <- cm_groups |>
+  left_join(ih, by = 'Model') |> rename(IH_all = all, IH_occ = occ) |>
+  left_join(il, by = 'Model') |> rename(IL_all = all, IL_occ = occ) |>
+  left_join(el, by = 'Model') |> rename(EL_all = all, EL_occ = occ) |>
+  mutate(across(where(is.numeric), cm_fix)) |>
+  ## gp()-based Bayesian models extrapolate unreliably out of domain; their
+  ## Antero errors are real but enormous, so the extrapolation cells are not
+  ## reported ('---') rather than inviting a misread of a finite-looking number.
+  mutate(EL_all = if_else(Group == 'Bayesian (brms)', NA_real_, EL_all),
+         EL_occ = if_else(Group == 'Bayesian (brms)', NA_real_, EL_occ)) |>
+  filter(if_any(IH_all:EL_occ, ~ !is.na(.)))
+
+cm_n <- distinct(cm_pred, point_id, Phase, Occupied, Site)
+nn  <- function(ph, ant) sum(cm_n$Phase == ph & (cm_n$Site == 'Antero') == ant)
+nno <- function(ph, ant) sum(cm_n$Phase == ph & (cm_n$Site == 'Antero') == ant & cm_n$Occupied)
+
+grp <- rle(cm_tab$Group); grp_end <- cumsum(grp$lengths); grp_beg <- grp_end - grp$lengths + 1L
+
+options(knitr.kable.NA = '---')
+cm_kbl <- kable(select(cm_tab, -Group), format = 'latex', booktabs = TRUE, linesep = '',
+      align = c('l', rep('r', 6)),
+      col.names = c('Model',
+                    paste0('n = ', nn('High', FALSE)), paste0('occ. n = ', nno('High', FALSE)),
+                    paste0('n = ', nn('Low',  FALSE)), paste0('occ. n = ', nno('Low',  FALSE)),
+                    paste0('n = ', nn('Low',  TRUE)),  paste0('occ. n = ', nno('Low',  TRUE))),
+      caption = 'Field-validated mean absolute error (MAE, plants per 3$\\times$3 m quadrat) of count models against the 2026 ground-truth plots. Models are scored within each elevation phase and split by prediction regime: \\textit{interpolation} (plots inside the sampled range) versus \\textit{extrapolation} (the Antero site, 86 km beyond it; low elevation only). \\textit{n} columns score all plots (zeros included), \\textit{occ.} columns occupied plots only; `---` marks the gp()-based Bayesian models, whose spatial term extrapolates unreliably beyond the sampled range, so out-of-domain errors are not reported.') |>
+  add_header_above(c(' ' = 1, 'High elevation' = 2, 'Low elevation' = 2, 'Low elevation' = 2)) |>
+  add_header_above(c(' ' = 1, 'Interpolation' = 4, 'Extrapolation' = 2))
+for (i in seq_along(grp$values))
+  cm_kbl <- pack_rows(cm_kbl, grp$values[i], grp_beg[i], grp_end[i])
+cm_kbl |> kable_styling(latex_options = c('striped', 'hold_position'))
 ```
+
+```{r count-context-table}
+## Observed plant-count distribution per area (occupied plots only), giving the
+## scale against which the MAE in the preceding table should be read. Reuses
+## cm_pred from the chunk above.
+ctx <- cm_pred |>
+  distinct(point_id, Site, Phase, Occupied, Observed) |>
+  filter(Occupied) |>
+  mutate(Area = case_when(
+    Phase == 'High'  ~ 'High elevation (interpolation)',
+    Site == 'Antero' ~ 'Low: Antero (extrapolation)',
+    TRUE             ~ 'Low: Cochetopa (interpolation)')) |>
+  group_by(Area) |>
+  summarise(`occ. n`   = dplyr::n(),
+            `25th pct` = round(quantile(Observed, 0.25)),
+            `median`   = round(median(Observed)),
+            `75th pct` = round(quantile(Observed, 0.75)),
+            `max`      = max(Observed), .groups = 'drop') |>
+  arrange(factor(Area, levels = c('High elevation (interpolation)',
+                                  'Low: Cochetopa (interpolation)',
+                                  'Low: Antero (extrapolation)')))
+
+kable(ctx, format = 'latex', booktabs = TRUE, linesep = '',
+      align = c('l', 'r', 'r', 'r', 'r', 'r'),
+      caption = 'Observed plant counts per 3$\\times$3 m quadrat on occupied plots (count $>$ 0) in each area, giving the scale against which the mean absolute errors in the preceding table should be read.') |>
+  kable_styling(latex_options = c('striped', 'hold_position'))
+```
+
+Estimating plant density has two distinct purposes 1) modelling the census size of known populations (interpolation census) and 2) predicting the population size at unknown, or populations without count data (extrapolation census). 
+
+- **Interpolation census.** Density is predicted *within* the sampled domain, so the whole model suite is admissible (Table \@ref(tab:count-model-table)). Here we take the best field-validated surface -- the gradient-boosted XGBoost Tweedie for the presence/absence-aware count surface -- while the Bayesian hurdle and negative-binomial models supply posterior **credible intervals** on the population total, the uncertainty quantity a census most needs. Estimates are precise and their intervals narrow.
+- **Extrapolation census (newly discovered or distant populations).** For populations beyond the sampled range (e.g. Antero, 86 km out) the `gp()`-based Bayesian surfaces extrapolate catastrophically and the interpolators have no nearby data to borrow from. Here we fall back to transferable estimators -- the per-phase arithmetic mean or covariate-only models, which cannot blow up -- and report correspondingly wider uncertainty. The Antero failure is the evidence that this fallback, not the interpolation surface, is the honest tool out of domain.
 
 Predictive results were compared with n field visited plots (n = sample draw, n = opportunistic).
-The inflation of MAE by modelling ranged from (X -- Y), and the average difference between the spatial and non-spatial CV folds was XX, indicating that CV FOLDS LEAD TO OPTIMISTIC results.
-
-```{r Plant Density Held-out vs Field-validated MAE Placeholder, out.width='100%', fig.width=8, fig.height=3.5}
-## PLACEHOLDER: synthetic data previewing the layout for held-out vs.
-## field-validated MAE of the XGBoost Tweedie model (the headline density
-## model), split by spatial vs. non-spatial cross-validation. Swap for the
-## real chunk once field-validated MAE is computed.
-res_levels <- c('3 arc-second', '1 arc-second', '1/3 arc-second')  # coarse (bottom) -> fine (top)
-
-mae_mock <- tibble(
-  Resolution = factor(rep(res_levels, each = 2), levels = res_levels),
-  CV         = factor(rep(c('Non-spatial', 'Spatial'), times = length(res_levels)), levels = c('Non-spatial', 'Spatial')),
-  Heldout    = c(6.8, 10.6,  7.9, 13.0,  6.5, 9.8),
-  Field      = c(8.8, 12.6,  10.1, 16.2,  7.8, 12.2)
-) |>
-  pivot_longer(c(Heldout, Field), names_to = 'Set', values_to = 'MAE') |>
-  mutate(Set = factor(Set, levels = c('Heldout', 'Field'), labels = c('Held-out', 'Field-validated')))
-
-ggplot(mae_mock, aes(y = Resolution, x = MAE, shape = CV, group = interaction(Resolution, CV))) +
-  geom_line(position = position_dodge(width = 0.5), color = 'grey70', linewidth = 0.6) +
-  geom_point(aes(fill = Set), position = position_dodge(width = 0.5), size = 3, stroke = 1.1) +
-  scale_shape_manual(values = c('Non-spatial' = 21, 'Spatial' = 24)) +
-  scale_fill_manual(values = c('Held-out' = 'white', 'Field-validated' = 'black')) +
-  guides(fill = guide_legend(override.aes = list(shape = 21))) +
-  labs(x = 'Mean Absolute Error (plants / 3m^2 quadrat)', y = NULL, shape = 'CV', fill = NULL,
-       title = '(mock) H4a - XGB Tweedie: held-out vs. field-validated MAE') +
-  theme_manuscript()
-```
+The inflation of MAE by modelling ranged from (X -- Y), and the average difference between the spatial and non-spatial CV folds was XX, indicating that default spatial cross-validation folds slightly outperformed classical folds.
 
 ### 3.5 | Population Boundaries (H4b)
 
@@ -542,6 +671,14 @@ Be sure to mention --
 3) While very high-resolution spatial data are becoming increasingly available, they may not be required for assessment of many species' niches, and existing standard of YADA YADA for naturserve is still valuable.
 4) Every approach generates estimates of statistical uncertainty, albeit some (infinitesimal jackknife) are highly time intensive.
 
+
+Methods to prevent the extrapolation of SDMs beyond there training data has been a major concern [thuiller2004effects]. 
+Here, by utilising areas of applicability, based on the presence data only, we show that AOA is only a fraction of an already small geographic domain. 
+Further, in the presence of strongly geographically biased data, it is able to highlight portions of the realized species distribution entirely.
+Hence these masks should always be created to refine the understanding of where a model may make inference too on the landscape.  
+...
+This separates the two tasks SDMs are routinely asked to perform but which biased data force into a trade-off: mapping the known, occupied niche versus characterising the fundamental niche [@thuiller2004effects; @jimenezvalverde2012insights; @leeyaw2022biology]. The usual evidence for this trade-off is simulated (virtual species); here the 2026 field data let us observe it directly -- field-verified presences in predictor space the model scored unsuitable -- making the distinction between a biased model and an inadequate one empirically, rather than theoretically, visible.
+
 ## 5 | Conclusions
 
 ENMs have proven themselves an essential tool for conservation planning.
@@ -561,9 +698,9 @@ All authors read, revised and approved the final manuscript.
 
 Hannah Lovell, and Phoebe Roberts, are thanked for assistance with field work in 2026.
 Julia R. Benkendorf is thanked for editorial services.
-The following individuals are thanked for uploading multiple iNaturalist observations that were used in modelling: Rick Williams, Rosemary Smith, John Powers.
-Both XXX, YYY, and ZZZ are thanked for observations that greatly extended the niche of *E. coloradense*.
-Savanna Smith is thanked for verifying the placement of an undocumented population.
+Rick Williams, Rosemary Smith, and John Powers, are thanked for uploading many iNaturalist observations that were used in modelling. 
+Scott F. Smith, and Matt Langemeier, are thanked for iNaturalist observations that greatly extended the niche of *E. coloradense*.
+Savanna Smith is thanked for verifying the placement of an undocumented population in the Gothic area.
 
 ### Funding
 

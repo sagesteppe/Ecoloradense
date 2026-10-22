@@ -1,0 +1,53 @@
+\begin{table}[!h]
+\centering
+\caption{\label{tab:count-model-table}Field-validated mean absolute error (MAE, plants per 3$\times$3 m quadrat) of count models against the 2026 ground-truth plots. Models are scored within each elevation phase and split by prediction regime: \textit{interpolation} (plots inside the sampled range) versus \textit{extrapolation} (the Antero site, 86 km beyond it; low elevation only). \textit{n} columns score all plots (zeros included), \textit{occ.} columns occupied plots only; `---` marks the gp()-based Bayesian models, whose spatial term extrapolates unreliably beyond the sampled range, so out-of-domain errors are not reported.}
+\centering
+\begin{tabular}[t]{lrrrrrr}
+\toprule
+\multicolumn{1}{c}{ } & \multicolumn{4}{c}{Interpolation} & \multicolumn{2}{c}{Extrapolation} \\
+\cmidrule(l{3pt}r{3pt}){2-5} \cmidrule(l{3pt}r{3pt}){6-7}
+\multicolumn{1}{c}{ } & \multicolumn{2}{c}{High elevation} & \multicolumn{2}{c}{Low elevation} & \multicolumn{2}{c}{Low elevation} \\
+\cmidrule(l{3pt}r{3pt}){2-3} \cmidrule(l{3pt}r{3pt}){4-5} \cmidrule(l{3pt}r{3pt}){6-7}
+Model & n = 111 & occ. n = 60 & n = 33 & occ. n = 20 & n = 33 & occ. n = 16\\
+\midrule
+\addlinespace[0.3em]
+\multicolumn{7}{l}{\textbf{Null models}}\\
+\cellcolor{gray!10}{\hspace{1em}Arithmetic mean} & \cellcolor{gray!10}{4.26} & \cellcolor{gray!10}{3.83} & \cellcolor{gray!10}{37.66} & \cellcolor{gray!10}{41.64} & \cellcolor{gray!10}{40.84} & \cellcolor{gray!10}{50.73}\\
+\hspace{1em}Median & 3.44 & 6.37 & 38.05 & 53.35 & 37.47 & 61.88\\
+\addlinespace[0.3em]
+\multicolumn{7}{l}{\textbf{Interpolation \& GLM baseline}}\\
+\cellcolor{gray!10}{\hspace{1em}Ordinary Kriging} & \cellcolor{gray!10}{4.49} & \cellcolor{gray!10}{3.71} & \cellcolor{gray!10}{37.35} & \cellcolor{gray!10}{42.02} & \cellcolor{gray!10}{37.80} & \cellcolor{gray!10}{60.25}\\
+\hspace{1em}IDW (inverse-square) & 4.98 & 4.03 & 37.69 & 40.91 & 36.90 & 66.99\\
+\cellcolor{gray!10}{\hspace{1em}kNN (within pop)} & \cellcolor{gray!10}{6.51} & \cellcolor{gray!10}{4.95} & \cellcolor{gray!10}{38.18} & \cellcolor{gray!10}{44.38} & \cellcolor{gray!10}{36.90} & \cellcolor{gray!10}{67.01}\\
+\hspace{1em}kNN (across pop) & 4.53 & 3.55 & 38.28 & 55.43 & 36.90 & 67.01\\
+\cellcolor{gray!10}{\hspace{1em}GLM Poisson \textasciitilde{} suitability} & \cellcolor{gray!10}{3.83} & \cellcolor{gray!10}{5.06} & \cellcolor{gray!10}{37.84} & \cellcolor{gray!10}{41.74} & \cellcolor{gray!10}{40.55} & \cellcolor{gray!10}{51.40}\\
+\addlinespace[0.3em]
+\multicolumn{7}{l}{\textbf{Gradient-boosted trees}}\\
+\hspace{1em}XGB Tweedie & 3.58 & 5.30 & 32.49 & 41.02 & 37.12 & 64.78\\
+\cellcolor{gray!10}{\hspace{1em}XGB Tweedie (Spatial CV)} & \cellcolor{gray!10}{3.53} & \cellcolor{gray!10}{5.29} & \cellcolor{gray!10}{31.57} & \cellcolor{gray!10}{48.40} & \cellcolor{gray!10}{36.89} & \cellcolor{gray!10}{73.09}\\
+\hspace{1em}XGB Poisson & 3.69 & 5.96 & 34.82 & 54.83 & 36.30 & 74.87\\
+\cellcolor{gray!10}{\hspace{1em}XGB Poisson (Spatial CV)} & \cellcolor{gray!10}{3.66} & \cellcolor{gray!10}{5.80} & \cellcolor{gray!10}{35.10} & \cellcolor{gray!10}{54.66} & \cellcolor{gray!10}{36.30} & \cellcolor{gray!10}{74.69}\\
+\hspace{1em}LGBM Poisson (Spatial CV) & 3.54 & 5.95 & 36.38 & 59.82 & 36.30 & 74.87\\
+\addlinespace[0.3em]
+\multicolumn{7}{l}{\textbf{Bayesian (brms)}}\\
+\cellcolor{gray!10}{\hspace{1em}Hurdle NegBinomial} & \cellcolor{gray!10}{5.00} & \cellcolor{gray!10}{3.67} & \cellcolor{gray!10}{43.41} & \cellcolor{gray!10}{47.99} & \cellcolor{gray!10}{---} & \cellcolor{gray!10}{---}\\
+\hspace{1em}NegBinomial & 3.75 & 4.92 & 50.52 & 48.18 & --- & ---\\
+\bottomrule
+\end{tabular}
+\end{table}
+\efloatseparator
+ 
+\begin{table}[!h]
+\centering
+\caption{\label{tab:count-context-table}Observed plant counts per 3$\times$3 m quadrat on occupied plots (count $>$ 0) in each area, giving the scale against which the mean absolute errors in the preceding table should be read.}
+\centering
+\begin{tabular}[t]{lrrrrr}
+\toprule
+Area & occ. n & 25th pct & median & 75th pct & max\\
+\midrule
+\cellcolor{gray!10}{High elevation (interpolation)} & \cellcolor{gray!10}{60} & \cellcolor{gray!10}{3} & \cellcolor{gray!10}{6} & \cellcolor{gray!10}{7} & \cellcolor{gray!10}{30}\\
+Low: Cochetopa (interpolation) & 20 & 31 & 56 & 108 & 156\\
+\cellcolor{gray!10}{Low: Antero (extrapolation)} & \cellcolor{gray!10}{16} & \cellcolor{gray!10}{32} & \cellcolor{gray!10}{65} & \cellcolor{gray!10}{108} & \cellcolor{gray!10}{171}\\
+\bottomrule
+\end{tabular}
+\end{table}

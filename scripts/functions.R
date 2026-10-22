@@ -2517,6 +2517,23 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
     saveRDS(lgbm_conformal, f)
   } else {lgbm_conformal <- readRDS(f)}
 
+  # Non-spatial LGBM Poisson (random-CV complement of LGBM Poisson Spat.), fit
+  # on the ordinary resample `rs` like the non-spatial XGB candidates above.
+  t0 <- Sys.time()
+  f <- file.path(fp, 'models', paste0(bn, metric_suffix, '-lgbm-poisson.rds'))
+  if(!file.exists(f)){
+    lgbm_ns_cv <- gbs(rec, rs, train, test, tune_gr, mode = 'regression', tune_metric = tune_metric,
+                      engine = 'lightgbm', objective = 'poisson', resp = 'Prsnc_All')
+    saveRDS(lgbm_ns_cv, f)
+  } else {lgbm_ns_cv <- readRDS(f)}
+  message(sprintf('[timing] LGBM Poisson: %.1fs', as.numeric(difftime(Sys.time(), t0, units = 'secs'))))
+
+  f <- file.path(fp, 'models', paste0(bn, metric_suffix, '-lgbm-poisson-conformal.rds'))
+  if(!file.exists(f)){
+    lgbm_ns_conformal <- conformal_calibrate_candidate(lgbm_ns_cv$Model, train, test, indx_nndm_rs)
+    saveRDS(lgbm_ns_conformal, f)
+  } else {lgbm_ns_conformal <- readRDS(f)}
+
   # Bayesian candidates (census_uncertainty_roadmap.md Phase 1, scripts/Census_uncertainty/density_bayes.R).
   # RFE (above) may have dropped Longitude/Latitude from `train` since they're
   # coordinates, not predictive features - reattach them here, they're required by the
@@ -2555,11 +2572,13 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
   # what is now the IDW row.
   namev <- c('Arithmetic Mean', 'IDW (idp=2)', 'Ordinary Kriging',
              'kNN (within pop)', 'kNN (across pop)',
-             'XGB Poisson Spat.', 'XGB Poisson', 'XBG Tweedie Spat.',  'XGB Tweedie', 'LGBM Poisson Spat.')
+             'XGB Poisson Spat.', 'XGB Poisson', 'XBG Tweedie Spat.',  'XGB Tweedie',
+             'LGBM Poisson Spat.', 'LGBM Poisson')
   mods <- list(mean_preds, idw_preds, krig_preds,
                knn_preds$within_population, knn_preds$across_population,
                poiss_spat_cv$Predictions, poiss_cv$Predictions,
-               tweedie_spat_cv$Predictions, tweedie_cv$Predictions, lgbm_cv$Predictions)
+               tweedie_spat_cv$Predictions, tweedie_cv$Predictions,
+               lgbm_cv$Predictions, lgbm_ns_cv$Predictions)
 
   metrrs <- lapply(mods, mets) |>
     dplyr::bind_rows() |>
@@ -2578,7 +2597,8 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
     'XGB Poisson'        = poiss_conformal,
     'XBG Tweedie Spat.'  = tweedie_spat_conformal,
     'XGB Tweedie'        = tweedie_conformal,
-    'LGBM Poisson Spat.' = lgbm_conformal
+    'LGBM Poisson Spat.' = lgbm_conformal,
+    'LGBM Poisson'       = lgbm_ns_conformal
   )
 
   conformal_widths <- dplyr::bind_rows(lapply(names(conformal_ml), function(nm){
