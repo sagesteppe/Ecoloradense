@@ -80,8 +80,8 @@ coxCalibration <- function(truth, prob, weights = NULL){
 
   # The intercept-only fit with logit_p as an offset is solved directly from its score
   # equation, sum(w * (truth - plogis(a + logit_p))) = 0, which is monotone in a with a
-  # single root - glm(truth ~ offset(logit_p)) can run off to ~1e14 (still reporting
-  # converged = TRUE) when many clamped predictions sit at +-13.8 on the logit scale.
+  # single root - glm(truth ~ offset(logit_p)) can diverge (still reporting converged)
+  # under near-separation from clamped predictions.
   intercept <- uniroot(function(a) sum(weights * (truth - plogis(a + logit_p))),
                        interval = c(-50, 50), tol = 1e-10)$root
   fitted_p <- plogis(intercept + logit_p)

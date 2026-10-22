@@ -165,8 +165,8 @@ plattCalibrate <- function(truth, prob){
 #' @param x input occurrence data
 #' @param resolution list of paths to geodata at different resolutions.
 #' @param iteration numeric, which iteration of modelling is being performed?
-#' @param se_prediction boolean, whether to predict the SE surfaces or not, can add roughly
-#' a week onto the prediction at 3m. 
+#' @param se_prediction boolean, whether to predict the SE surfaces or not; cost can be
+#' substantial at fine resolutions.
 #' @param p2proc path to the processed raster data. 
 #' @param train_split Numeric. The proportion of data to use for train, at first iteration
 #' a standard 0.8, good, but lot's of data are available for test later so up to 0.9 good.
@@ -222,11 +222,9 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
 
   fname <- fname_build(resolution, iteration, PAratio, distOrder, seed, weight_scheme)
   #######################         MODELLING           ##########################
-  # this is the fastest portion of this process. It will take at most a few minutes
-  # at any resolution, the goal of this paper wasn't really focused on comparing
-  # multiple models of families nor messing with parameters, so we use Random Forest
-  # simply because they work very well with default settings, almost 'controlling' 
-  # for stochasticity in this portion of the work. 
+  # Random Forest with default settings - this paper isn't comparing model
+  # families, and RF defaults absorb a lot of the stochasticity that would
+  # otherwise show up as hyperparameter sensitivity.
   
   # only rerun modelling if a saved .rds object doesn't exist. Reload both objects: the
   # cross-validated caret `model` for CAST::aoa()'s weighting/CV folds - not just `rf_model`.
@@ -308,11 +306,9 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   rn <- rownames(importance)
   important_vars <- Boruta::getSelectedAttributes(BorutaRes, withTentative = TRUE)
 
-  # Guard against the rare run where Boruta rejects every attribute (seen e.g. on the
-  # final-stage replicate of a 1:1 adaptive search). Without it, Train collapses to a
-  # single column (Occurrence), ncol(Train) = 1, mtry grid is floor(1/2.4):floor(1/1.6)
-  # = 0:0, and ranger errors out. Fall back to the full predictor set so caret can at
-  # least tune on something.
+  # Guard against Boruta rejecting every attribute: Train would collapse to just
+  # Occurrence, the mtry grid below becomes 0:0, and ranger errors out. Fall back
+  # to the full predictor set so caret has something to tune on.
   if(length(important_vars) == 0){
     warning('Boruta rejected all attributes for ', fname,
             '; keeping all predictors (no feature pruning) for this fit.', immediate. = TRUE)
@@ -496,13 +492,7 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   if(predict_surface){
 
   pout <- paste0(results_root, '/suitability_maps')
-  ###################      PREDICT ONTO SURFACE        #########################
-  # the prediction is generally straightforward, it doesn't take an obscene
-  # amount of RAM and can happen relatively quickly; overnight for the 
-  # higher resolution data products.  
-  
-  # there is some weird corner case where we could not skip to the post prediction steps:
-  # AOA, and SE. 
+  ###################      PREDICT ONTO SURFACE        ######################### 
   
   if(!file.exists(file.path(pout, paste0(fname, '-Pr.tif')))){
   
@@ -606,25 +596,22 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   aoaSurfaces(model, rast_dat, fname, results_root)
   
   ###############      STANDARD ERROR PREDICTION        ########################
-  # the SE predictions are absurdly memory hungry, We will create 'tiles' to 
-  # predict onto, and then combine them once the predictions are complete
-  # Note I use the term SE here, because it's what the R package uses, however, 
-  # upon further reading what they are actually calculating is a Confidence 
-  # interval - so great naming... https://github.com/imbs-hl/ranger/issues/136 
-  
+  # SE predictions are memory-heavy; tile the raster, predict per tile, mosaic.
+  # Note the ranger package calls this `se` but it's actually a confidence
+  # interval - https://github.com/imbs-hl/ranger/issues/136
+
   if(se_prediction == TRUE){
-    
+
   tile_path_4se <- file.path(pout, paste0(resolution, 'TilesSE'))
   final_se_path <- file.path(pout, paste0(resolution, 'SETiles'))
-  
-  # it seems the tiles pretty much need to be under 200MB or so for safe CI prediction???
-  if(resolution == '3arc'){ntile = 2} else # 4 tiles 
-    if(resolution == '1arc'){ntile = 6} else # 36 tiles Needed # earlier iteration with 16 FAILED # iter w/ 25 failed on tile 18...
-      if(resolution == '1-3arc'){ntile = 16}  # 144 /121/81 failed - follow under 200mb rule. 
+
+  # tile count tuned so per-tile size stays under ~200MB (empirical safe limit).
+  if(resolution == '3arc'){ntile = 2} else
+    if(resolution == '1arc'){ntile = 6} else
+      if(resolution == '1-3arc'){ntile = 16}
   
   if(resolution == '3m'){
-    'Confidence Intervals cannot be produced for data of these size;
-    it would require over 2k tiles and 1 week of compute'}  else {
+    'Confidence intervals are not produced at this resolution.'}  else {
   
     # don't create the tiles if they already exist.
     if(file.exists(tile_path_4se)){

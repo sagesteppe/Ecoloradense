@@ -92,19 +92,13 @@ knn_density_null <- function(train.sf, test, k = 5){
 #'   log-scale likelihood, not an absolute difference).
 #' @param tune_metric one of 'mae', 'huber', 'poisson'.
 #' @return list(fn = <yardstick metric function>, name = <string for
-#' `tune::select_best(metric=)`/`.metric` matching>).
-#' @return list(fn = <yardstick metric function, for calling directly>, name
-#' = <string for `tune::select_best(metric=)`/`.metric` matching>, metrics =
-#' <a `yardstick::metric_set()` built from `fn`, for `tune_race_anova()`/
-#' `tune_grid()`'s `metrics=` argument>. `metrics` is built here (via a
-#' literal `switch()`, not by passing an indirected variable like `m$fn` into
-#' `metric_set()`) because `metric_set()` names its metric from the *deparsed
-#' calling expression*, not the function's own identity - passing it a
-#' variable like `m$fn` silently produces a metric literally named `"m$fn"`,
-#' which then can't be found by `select_best(metric = "huber_loss")` and (for
-#' `tune_race_anova()` specifically) breaks its internal ANOVA step outright
-#' - confirmed by testing (real held-out failure under `tune_metric =
-#' 'huber'`).
+#' `tune::select_best(metric=)`/`.metric` matching>, metrics =
+#' <a `yardstick::metric_set()` built from `fn`>). `metrics` is built with a
+#' literal `switch()` rather than by passing an indirected variable into
+#' `metric_set()` because `metric_set()` names its metric from the deparsed
+#' calling expression - a variable like `m$fn` would silently produce a metric
+#' literally named `"m$fn"`, which then can't be matched by
+#' `select_best(metric = "huber_loss")` and breaks `tune_race_anova()` outright.
 resolve_tune_metric <- function(tune_metric = c('mae', 'huber', 'poisson')){
   tune_metric <- match.arg(tune_metric)
   switch(tune_metric,
@@ -117,25 +111,14 @@ resolve_tune_metric <- function(tune_metric = c('mae', 'huber', 'poisson')){
   )
 }
 
-#' Robustness wrapper for `finetune::tune_race_anova()` (`gbs()`)
-#' around a real, reproducible-given-the-same-inputs
-#' failure: when a hyperparameter grid's racing elimination narrows down to
-#' a single surviving configuration before every resample has been used
-#' (which some metrics provoke more readily than others by separating
-#' configurations' performance more decisively - confirmed to reliably
-#' happen under `tune_metric = 'huber'` on a specific RFE-selected covariate
-#' subset/grid/CV combination that never triggered it under 'mae'),
-#' `tune_race_anova()`'s internal ANOVA summary step errors on a
-#' single-level `.config` factor ("contrasts can be applied only to factors
-#' with 2 or more levels" / "no non-missing arguments to max; returning
-#' -Inf") - a real limitation of its early-elimination bookkeeping, not
-#' something a retry reliably escapes (confirmed: 3 retries in a row failed
-#' identically on the triggering input). Falls back to plain
-#' `tune::tune_grid()` (same grid/resamples/metrics, no early elimination,
-#' so immune to this specific failure mode) after `max_tries` racing
-#' attempts - slower (evaluates the full grid x resample product instead of
-#' eliminating early) but only pays that cost on the rare input that
-#' actually breaks racing.
+#' Robustness wrapper for `finetune::tune_race_anova()` (`gbs()`) around a
+#' reproducible failure mode: when racing eliminates down to a single surviving
+#' configuration before every resample is used, `tune_race_anova()`'s internal
+#' ANOVA summary step errors on a single-level `.config` factor ("contrasts can
+#' be applied only to factors with 2 or more levels"). This is a limitation of
+#' its early-elimination bookkeeping, not transient - retrying fails the same
+#' way. Falls back to `tune::tune_grid()` after `max_tries` racing attempts -
+#' slower (full grid x resample product) but immune to this failure.
 #' @param ... passed to `finetune::tune_race_anova()` / `tune::tune_grid()`.
 #' @param max_tries racing attempts before falling back to `tune_grid()`.
 tune_race_anova_safe <- function(..., max_tries = 3){
@@ -287,8 +270,7 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
   # reattach them later.
   train_coords <- train[, c('Longitude', 'Latitude')]
 
-  # feature selection - timed: this is the step the near-LOO nndm() folds
-  # made take >1 day before splitData() switched to fixed-k knndm().
+  # feature selection
   t0 <- Sys.time()
   if(!file.exists(file.path(fp, 'modelsTune', paste0(bn, '.rds')))){
 
@@ -315,18 +297,11 @@ densityModeller <- function(x, bn, fp, brms_families = NULL, brms_refit_args = l
   rs <- rsample::bootstraps(train, 10)
   indx_nndm_rs <- CAST2rsample(nndm_indices, train)
   
-  # now define a tuning grid for trees.
-  # stop_iter (early stopping) deliberately NOT tuned: confirmed by testing,
-  # a fitted XGBoost booster that stops early ends up with fewer actual trees
-  # than the grid's `trees=` value, and a known xgboost/parsnip prediction-path
-  # bug then predicts using the *requested* tree count instead of the
-  # *actual* one - "Check failed: tree_end <= model_.trees.size()" - which
-  # only ever surfaced once this tuning grid was run against data other than
-  # the single, long-cached twinning split it had exclusively been validated
-  # against (Census_uncertainty/compare_split_strategies.R). Leaving
-  # `stop_iter` unset disables early stopping entirely (every candidate trains
-  # its full requested `trees=`), trading that one tuning dimension away for
-  # not hitting this crash on data this grid hasn't specifically been fit to.
+  # Tuning grid for trees. stop_iter (early stopping) is deliberately not
+  # tuned: an xgboost/parsnip prediction-path bug ("Check failed: tree_end <=
+  # model_.trees.size()") predicts using the requested tree count instead of
+  # the actual (post-early-stop) count. Leaving `stop_iter` unset disables
+  # early stopping entirely and sidesteps the bug.
   tune_gr <- parsnip::boost_tree(
     mode = 'regression',
     trees = tune(),
@@ -559,22 +534,14 @@ gbs <- function(rec, cv, train, test, resp, tune_gr, mode, engine, objective, le
   is_lgbm <- identical(engine, 'lightgbm')
 
   if(is_lgbm){
-    # LightGBM's OpenMP backend, R's OpenBLAS, and data.table all default to
-    # claiming every core (num_threads=0, OMP_NUM_THREADS unset, and
-    # getDTthreads() ~ 8 respectively). future::multisession below fans this
-    # function's model-fitting out across several worker *processes*, and each
-    # worker independently re-triggers all three of those "use everything"
-    # defaults - severe oversubscription that took a single LGBM candidate from
-    # minutes to 6-10+ hours (confirmed: system load average hit ~138 on a
-    # 16-core box while this ran, and worker processes showed >200% sustained
-    # CPU each despite lightgbm's own num_threads being capped). Setting the
-    # env vars here, before `future::plan()` spawns the workers, is required
-    # because each multisession worker is a fresh Rscript process that inherits
-    # the parent's environment at spawn time but re-resolves its own BLAS/
-    # data.table thread defaults independently - pinning lightgbm's engine arg
-    # alone (which only bounds lightgbm's own threads) was insufficient.
-    # XGBoost paths skip this throttling - it leaves full-core parallelism
-    # on the table and matches the pre-consolidation poiss()/tweed() behavior.
+    # LightGBM's OpenMP backend, R's OpenBLAS, and data.table each default to
+    # claiming every core, and future::multisession below spawns workers that
+    # re-trigger those defaults independently (each worker is a fresh Rscript
+    # process that re-resolves its own BLAS/data.table thread settings).
+    # Pinning lightgbm's own num_threads arg isn't enough - BLAS and data.table
+    # oversubscribe anyway - so set the env vars here, BEFORE future::plan()
+    # spawns the workers, so each worker inherits them.
+    # XGBoost paths skip this throttling to keep full-core parallelism.
     Sys.setenv(OMP_NUM_THREADS = '1', OPENBLAS_NUM_THREADS = '1', R_DATATABLE_NUM_THREADS = '1')
     model <- parsnip::set_engine(tune_gr, engine = engine, objective = objective, num_threads = 1)
   } else {

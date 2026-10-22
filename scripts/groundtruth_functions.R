@@ -123,17 +123,14 @@ OrderRandomPtsIDS <- function(trails, points, revisits){
 
 
 
-#' Reduce the number of points per training/test set so that no cells are duplicated. 
-#' 
-#' @description Each of the different resolutions of raster data will require
-#' different testing and training data to ensure that records (e.g. a raster grid 
-#' cell) are not replicated. This function first calculates the hypotenuse of a the resolution
-#' using the 'ideal' X & Y edges of the raster - which we know to be inaccurate by 
-#' ca. an entire meter at the '10m' resolution scale - to give us a rough estimate
-#' of how many points will be dropped.  Then it loads an actual layer of the 
-#' raster stack at the relevant resolution, extracts the pixel ID's and removes
-#' the duplicate cells. At this stage it will look at the absences, and remove
-#' any which are in the same cell as an occurrence. 
+#' Reduce the number of points per training/test set so that no cells are duplicated.
+#'
+#' @description Different raster resolutions need different train/test sets so a
+#' single raster cell isn't represented by multiple point records. Loads one layer
+#' of the raster stack at the requested resolution, extracts each point's cell id,
+#' and keeps one record per cell - preferring presences over absences, and current
+#' records over historic ones. In 'Count' mode, counts within a cell are summed and
+#' rescaled from the 3x3m quadrat to the cell area.
 #' 
 #' @param x sf data set of presences and absences. 
 #' @param res Numeric. Simplified resolution as meters, one of 3, 10, 30, 90. 
@@ -155,20 +152,7 @@ subset_pts <- function(x, res, root, mode){
                        stop("Input to `res` invalid. Need be one of: 3, 10, 30, 90")
   )
   
-  within_hypotenuse <- sum( 
-    as.numeric(
-      sf::st_distance(
-        x, 
-        x[sf::st_nearest_feature(x),],
-        by_element = TRUE)
-    ) < sqrt(2 * (res^2))
-  ) # these records are possibly in the same cell as another
-  # record for the finest resolution modelling.  
-  # doesn't fit very well. anyways on to the empirical method. 
-  # message('As many as: ', within_hypotenuse/2, ' records could be dropped')
-  
-  rasta <- terra::rast( # we only need to read in one raster - by definition these
-    # are all aligned to each other. 
+  rasta <- terra::rast( # one raster is enough - all resolutions are co-aligned.
     file.path(root, paste0('dem_', res_string), 'dem.tif')
   )
   

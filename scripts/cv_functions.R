@@ -26,12 +26,9 @@
 #' @param train_split Numeric in (0, 1). Target fraction of points in Train, per class.
 #' @param test_tolerance Numeric. Passed to \code{knndm()}'s \code{test_tolerance} - how
 #' far \code{knndm} may search from the target test proportion for a configuration that
-#' matches the prediction-domain distance distribution at all. This needs to stay loose:
-#' knndm's achievable test proportions are set by how the points happen to cluster, and
-#' finding any valid configuration can require a surprisingly wide search (observed:
-#' presences here needed ~0.1 before a single valid configuration existed, landing near
-#' 27% rather than the ~20% target). The exact final proportion is enforced afterward
-#' regardless of where knndm itself lands within that search.
+#' matches the prediction-domain distance distribution at all. Needs to stay loose
+#' because knndm's achievable proportions are set by point clustering; the exact
+#' final proportion is enforced afterward regardless of where knndm lands.
 #' @return A list: \code{train_id}, \code{test_id} (the \code{.id} values assigned to
 #' each, pooled across both classes, after forcing the exact target proportion),
 #' \code{presence_knndm}, \code{absence_knndm} (the raw per-class \code{knndm} objects,
@@ -92,26 +89,18 @@ spatial_class_split <- function(x, rast_dat, train_split, test_tolerance = 0.1){
 
 #' Join real-population identity onto occurrence/background points
 #'
-#' @description Phase 0 of \code{population_rarefaction_roadmap.md}: primary assignment
-#' is point-in-polygon against the \code{areas} layer's named population/site polygons
-#' (\code{data/GroundTruthPts/ground_truth_median-VISITED.gpkg}). That layer was built for
-#' ground-truthing/transect work, not as an exhaustive population census, so coverage is
-#' incomplete - checked empirically against the iter1 3m presence pool, ~75% of points
-#' fall inside a polygon; of the rest, ~55% sit within 500m of one and ~71% within 1km, but
-#' the tail runs out to ~27km, and those are real, distinct, unsurveyed populations rather
-#' than boundary/GPS slop. \code{max_dist} defaults to 500m to recover the boundary-slop
-#' cases via nearest-polygon fallback without silently annexing a genuinely separate,
-#' unsurveyed population into whichever named site happens to be closest.
+#' @description Phase 0 of \code{population_rarefaction_roadmap.md} - see roadmap for
+#' the empirical coverage of the \code{areas} layer and the choice of \code{max_dist}
+#' (nearest-polygon fallback within 500m recovers boundary/GPS slop without annexing
+#' genuinely separate, unsurveyed populations).
 #' @param x sf points (presence and/or absence/background).
-#' @param areas sf polygons with a \code{Site} name column - the \code{areas} layer.
+#' @param areas sf polygons with a \code{Site} name column.
 #' @param max_dist Numeric, meters. Fallback radius for the strict \code{population} field.
 #' @return \code{x} with two new columns. \code{population}: \code{Site} name if inside a
-#' polygon or within \code{max_dist} of one, else \code{NA} - use this wherever true
-#' population membership matters (Phase 0/2/3's per-population rarefaction; dropping
-#' \code{NA} rows there is the right call, per the roadmap, rather than guessing).
-#' \code{population_zone}: always the single nearest \code{Site}, regardless of distance -
-#' a full-landscape, no-\code{NA} partition meant only as a spatial blocking key for
-#' \code{population_lopo_search()}, not a membership claim.
+#' polygon or within \code{max_dist}, else \code{NA} - use this wherever true membership
+#' matters (drop \code{NA} rather than guess). \code{population_zone}: always the single
+#' nearest \code{Site}, regardless of distance - a full-landscape, no-\code{NA} partition
+#' meant only as a spatial blocking key for \code{population_lopo_search()}.
 assign_population <- function(x, areas, max_dist = 500){
 
   x <- sf::st_transform(x, sf::st_crs(areas))
@@ -264,17 +253,13 @@ population_lopo_search <- function(x, resolution, distOrder, iteration, p2proc, 
 
 #' Presence-n-weighted summary of a \code{population_lopo_search()} table
 #'
-#' @description Folds vary enormously in size - in the real iter1 90m pool, Cochetopa's
-#' held-out presence n is 50 vs. Bellview-Rustler/Gothic's n=3 - so an unweighted mean
-#' across populations would let a 3-point fold's PR-AUC (which, with that few positives,
-#' can only take a handful of discrete values and is essentially a coin flip) count the
-#' same as a 50-point fold's genuinely well-estimated one. Weights each population's
-#' contribution by its own \code{n_presence_test} instead. Rows with \code{NA} metrics
-#' (a zero-class fold \code{population_lopo_search()} had to skip) are dropped first.
+#' @description Folds vary enormously in size (e.g. iter1 90m: Cochetopa n=50 vs
+#' Bellview-Rustler/Gothic n=3), so each population is weighted by its own
+#' \code{n_presence_test} rather than counted equally. \code{NA}-metric rows (zero-class
+#' folds \code{population_lopo_search()} had to skip) are dropped first.
 #' @param x The \code{per_population} data.frame \code{population_lopo_search()} returns.
-#' @return A one-row data.frame: \code{n_populations} (folds actually scored, after
-#' dropping \code{NA} rows), \code{total_n_presence_test}, \code{weighted_pr_auc},
-#' \code{weighted_roc_auc}.
+#' @return One-row data.frame: \code{n_populations}, \code{total_n_presence_test},
+#' \code{weighted_pr_auc}, \code{weighted_roc_auc}.
 summarize_lopo <- function(x){
   x <- x[!is.na(x$pr_auc) & !is.na(x$roc_auc), ]
   data.frame(
@@ -713,19 +698,14 @@ split_indices <- function(df, method = 'twinning', replicate = 1, k = 10){
 
 #' Curate a coverage set of leave-2-3-populations-out replicates.
 #'
-#' @description `split_indices(method = 'population')`'s single-population
-#' LOPO produces wildly uneven, often tiny test sets (n=4 to n=78 depending
-#' which population is held out - see `compare_split_strategies.R`'s
-#' `run_replicate()` docs) - a long way from a "natural" 80/20-ish train/test
-#' split. This groups 2-3 populations per replicate instead, randomly
-#' sampling combinations whose combined size falls within `target_frac +-
-#' tol` of `nrow(df)` (default targets the same ~20% `split_indices(method =
-#' 'classic')` uses), continuing until every eligible population has
-#' appeared in at least one held-out group (or `max_replicates` is hit,
-#' whichever comes first) rather than exhaustively enumerating every
-#' in-window combination (~165 for this dataset's 13 presence populations -
-#' impractical at ~30min/replicate for the full `densityModeller()`
-#' pipeline).
+#' @description `split_indices(method = 'population')`'s single-population LOPO
+#' produces test sets that vary too wildly in size for a "natural" ~80/20
+#' split. This groups 2-3 populations per replicate instead, sampling
+#' combinations whose combined size falls within `target_frac +- tol` of
+#' `nrow(df)` (default ~20%, matching `split_indices(method = 'classic')`), and
+#' stops once every eligible population has appeared in at least one held-out
+#' group (or `max_replicates` is hit) rather than exhaustively enumerating
+#' every in-window combination.
 #'
 #' @param df sf occurrence data.frame, same shape `splitData()` receives.
 #' @param target_frac,tol test-set size window, as a fraction of `nrow(df)`:
@@ -783,28 +763,15 @@ population_group_replicates <- function(df, target_frac = 0.2, tol = 0.05,
 
 #' Curate a coverage set of leave-2-3-populations-out replicates, for SDM presence data.
 #'
-#' @description SDM analogue of `population_group_replicates()` (built for the
-#' count/density data, where every row - including absences - carries a
-#' `Lctn_bb` population label). The presence/near-absence data bound into
-#' `First_modelling/Modelling.Rmd`'s `m90`/`m30`/`m10` (from
-#' `data/Data4modelling/{res}-presence-iter1.gpkg`, before `select(Occurrence)`
-#' drops it) carries `Lctn_bb` on BOTH presence and paired field-verified
-#' near-absence rows - but the shared background pseudo-absence pool
-#' (`data/Data4modelling/iter1-pa.gpkg`) has no `Lctn_bb` at all, since those
-#' points aren't tied to any surveyed population (see `population_group_split()`
-#' for how that pool is folded into a replicate's test set). `target_frac`/`tol`
-#' are therefore evaluated against the number of *labeled* rows only (`nrow(x)`
-#' after `population_group_replicates_sdm()`'s own NA/zero-presence filtering),
-#' not the full presence+background N - the background pool's contribution to
-#' test-set size depends on `buffer_m` and isn't known until split time.
-#'
-#' As in `population_group_replicates()`, true-zero populations (surveyed,
-#' never occupied - e.g. CP/WMB in this dataset) are excluded as *replicate*
-#' targets: holding one out and predicting "absent everywhere" is trivially
-#' achievable and doesn't test generalization the way a real presence
-#' population does. They (and any row with `Lctn_bb == NA`, e.g. unassigned
-#' opportunistic iNat/herbarium presences) still appear normally in every
-#' replicate's training data.
+#' @description SDM analogue of `population_group_replicates()` - same algorithm,
+#' same return shape. The difference: SDM training data mixes labeled rows
+#' (presence + field-verified near-absence, both carrying `Lctn_bb`) with an
+#' unlabeled shared background pseudo-absence pool. `target_frac`/`tol` are
+#' therefore evaluated against the *labeled* rows only, not the full N - the
+#' background pool's contribution to a replicate's test set depends on
+#' `buffer_m` and isn't known until split time (see `population_group_split()`).
+#' True-zero populations and `Lctn_bb == NA` rows are excluded as replicate
+#' targets but still appear in every replicate's training data.
 #'
 #' @param x sf object, the presence+near-absence data for one resolution
 #' (`Lctn_bb` retained - do not `select(Occurrence)` before calling this), NOT
@@ -922,6 +889,18 @@ population_group_split <- function(x, replicate, buffer_m = 1000){
   list(train_id = train_id, test_id = test_id, summary = summary)
 }
 
+#' Build a train/test split and its inner CV folds for the density pipeline.
+#'
+#' @description Wraps `split_indices()` to produce (train, test), then builds a
+#' `CAST::knndm()`-based spatial CV structure on the training set for
+#' hyperparameter tuning. See `split_indices()` for the taxonomy of `method`
+#' values and the semantics of `replicate` and `k`. Caches the test indices on
+#' disk under `fp/test_data/` so repeat invocations with the same inputs are
+#' deterministic; the inner knndm folds are rebuilt each call.
+#' @param df sf occurrence data.frame with `Prsnc_All`, `Longitude`, `Latitude`.
+#' @param fp,bn Cache root and basename used for the on-disk test-index file.
+#' @param method,replicate,k Passed through to `split_indices()`.
+#' @return list(nndm_indices, train, test, train.sf).
 splitData <- function(df, fp, bn, method = 'twinning', replicate = 1, k = 10){
 
   # We will create three columns for our data, which can then be used
@@ -993,13 +972,11 @@ splitData <- function(df, fp, bn, method = 'twinning', replicate = 1, k = 10){
     sf::st_union()
   
   train.sf <- sf::st_as_sf(train, coords = c('Longitude', 'Latitude'), crs = 32613)
-  # Fixed-k (not CAST::nndm()'s near-leave-one-out - fold count == nrow(train),
-  # confirmed by testing, same finding density_bayes.R's brms_spatial_fold_ids()
-  # made for the Bayesian candidates) - RFE (caret::rfeControl(index=...)) and the
-  # ML candidates' spatial-CV resampling (CAST2rsample() below) both consume this,
-  # and near-LOO scale made RFE alone take over a day on this dataset. knndm()'s
-  # indx_train/indx_test are the same list-of-per-fold-indices shape nndm() returns,
-  # so this is a drop-in swap - just k=10 folds instead of ~n.
+  # Fixed-k knndm (not CAST::nndm()'s near-leave-one-out, which produces
+  # fold count == nrow(train)) - RFE (caret::rfeControl(index=...)) and the ML
+  # candidates' spatial-CV resampling (CAST2rsample() below) both consume this.
+  # knndm()'s indx_train/indx_test match nndm()'s list-of-per-fold-indices
+  # shape, so this is a drop-in swap - just k=10 folds instead of ~n.
   indices_nndm_CAST <- CAST::knndm(
     train.sf,
     sf::st_transform(bbs, sf::st_crs(train.sf)),
