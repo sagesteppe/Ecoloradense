@@ -15,8 +15,7 @@
 #' `elevation` in the thousands, `NDVI` near 0, raw UTM coordinates in the
 #' millions - that blows up the initial linear predictor enough to send the
 #' count-family log-likelihood to `log(0)`, and Stan can't start sampling at
-#' all ("Initialization between (-2, 2) failed after 100 attempts", confirmed
-#' via `Census_uncertainty/diagnose_brms_failure.R`). Same numerical failure
+#' all ("Initialization between (-2, 2) failed after 100 attempts"). Same numerical failure
 #' mode `sagesteppe/safeHavens`'s `bayesianSDM()` already hit and fixed -
 #' matches its approach here: environmental covariates are z-scored, and the
 #' `gp()` coordinates are centred and rescaled to **kilometres** rather than
@@ -120,7 +119,7 @@ brms_density_formula <- function(train, gp_coords = c('Longitude', 'Latitude'),
 #' Fit one brms count-model candidate and predict onto a held-out test set.
 #'
 #' @description Mirrors the `list(Model = , Predictions = )` return shape of
-#' `poiss()`/`tweed()`/`gbs()` (../functions.R) so a brms candidate slots into
+#' `gbs()` (../functions.R) so a brms candidate slots into
 #' `densityModeller()`'s `mods`/`namev`/`mets()` pipeline without changes to
 #' that pipeline.
 #'
@@ -139,7 +138,7 @@ brms_density_formula <- function(train, gp_coords = c('Longitude', 'Latitude'),
 #'
 #' @param train,test data.frames (not sf) with `Prsnc_All`, `Pr.SuitHab`,
 #' `Longitude`, `Latitude` and covariate columns - the same shape
-#' `densityModeller()` passes to `poiss()`/`tweed()`/`gbs()`, plus the two
+#' `densityModeller()` passes to `gbs()`, plus the two
 #' coordinate columns for the `gp()` term.
 #' @param family a brms family object: `poisson()`, `negbinomial()`,
 #' `brms::hurdle_poisson()`, or `brms::hurdle_negbinomial()`.
@@ -175,8 +174,7 @@ brms_count_model <- function(train, test, family,
 #'
 #' @description brms's own default is a flat (improper) prior on `class = 'b'`
 #' (the environmental-covariate slopes) - the actual gap that mattered for the
-#' initialization failure (../Census_uncertainty/diagnose_brms_failure.R),
-#' since a flat prior does nothing to keep slope draws away from extreme
+#' initialization failure, since a flat prior does nothing to keep slope draws away from extreme
 #' values. Combined with standardized covariates (`standardize_covariates()`),
 #' `normal(0, 1)` here is weakly-informative on the (standardized) predictor
 #' scale - same family of choice as `sagesteppe/safeHavens::bayesianSDM()`'s
@@ -330,7 +328,7 @@ brms_cv_compare <- function(train, test,
     # standardized with `train`'s own center/scale, needed below to score this
     # candidate on the actual held-out set - not the in-sample `train` it was
     # fit on - matching the convention every ML candidate in this table
-    # (`poiss()`/`tweed()`/`gbs()`, ../functions.R) already uses.
+    # (`gbs()`, ../functions.R) already uses.
     std <- standardize_covariates(train, test)
     use_gp <- !(fam %in% no_gp)
 

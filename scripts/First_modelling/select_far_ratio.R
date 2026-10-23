@@ -10,8 +10,8 @@
 ##             SELECTS the ratio.
 ##   spatial - the common test set, background only (score_common_testset.R); 21 ratios x
 ##             3 seeds. Confirms. (1/3 arc-second = leave-Cochetopa-out.)
-##   lopo    - presences vs background per held-out population (score_lopo_by_abs_type.R);
-##             1:4 vs 1:20 only. Confirms the direction.
+##   lopo    - presences vs background per held-out population; superseded by
+##             the LMPO folds elsewhere in the pipeline.
 ##
 ## Selection rule, per resolution and design (fixed before looking at any results):
 ##   criterion   - mean scaled Brier at the target prevalence (a proper scoring rule)

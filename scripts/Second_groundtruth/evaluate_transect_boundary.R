@@ -44,7 +44,7 @@ VISITED_PATH       <- file.path(p2proj, 'data', 'GroundTruthPts', 'visited_subse
 
 ## ---- 1. load polygons + station points -------------------------------------
 ## Polygons are built directly from THRESHOLD_TIF (same polygonize -> dedupe ->
-## min-area-filter -> union recipe as transect_placement_Seed1061.R), not read
+## min-area-filter -> union recipe as transect_placement_byseed.R), not read
 ## from a pre-saved threshold_layers.gpkg, so swapping VER is the only change
 ## needed to re-point this at a different model run.
 
@@ -84,7 +84,7 @@ stations <- bind_rows(
 )
 
 ## ---- 2. reconstruct per-transect geometry from its stations ----------------
-## transect_placement_Seed1061.R writes stations but not the line itself -
+## transect_placement_byseed.R writes stations but not the line itself -
 ## direction and length are recoverable from the two extreme stations
 ## (min/max dist_m) of each transect, so there's no need to re-derive dx/dy
 ## from scratch.
@@ -105,7 +105,7 @@ transect_lines <- stations |>
   )
 
 ## ---- 3. crossing distance: where a rule's boundary crosses this transect ---
-## Mirrors exit_distance() in transect_placement_Seed1061.R. A transect can
+## Mirrors exit_distance() in transect_placement_byseed.R. A transect can
 ## clip a polygon boundary more than once near a corner - take the outermost
 ## crossing (max distance from the start), consistent with "the edge is the
 ## outermost point this rule calls suitable along this line".
@@ -255,7 +255,7 @@ evaluate_transect_boundary <- function(visited_path = VISITED_PATH) {
 
   ## Exploratory-stage transects have no disagreement band to calibrate
   ## against (their patches failed the `populated` filter in
-  ## transect_placement_Seed1061.R) - report detection rate only, kept
+  ## transect_placement_byseed.R) - report detection rate only, kept
   ## separate from the core-stage boundary comparison above rather than
   ## folded into it.
   exploratory_detection <- field |>

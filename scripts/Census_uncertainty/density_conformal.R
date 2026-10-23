@@ -11,7 +11,7 @@
 #' @description Two calibrations, compared rather than committing to one (same
 #' spirit as Phase 1 comparing 4 brms families up front):
 #' - **Split**: `fitted` predicted on `test` - the same held-out split every ML
-#'   candidate (`poiss()`/`tweed()`/`gbs()`, ../functions.R) is already scored
+#'   candidate (`gbs()`, ../functions.R) is already scored
 #'   on, so this reuses an existing split rather than carving out a fresh
 #'   calibration set. Residuals are kept **signed** (`Observed - Predicted`),
 #'   not absolute - this project's count-data residuals are right-skewed, so
@@ -28,7 +28,7 @@
 #'   the quantities the Barber et al. CV+ interval formula needs at prediction
 #'   time (see `predict_density_draw_conformal()`).
 #'
-#' @param fitted a `parsnip` `model_fit` - `poiss()`/`tweed()`/`gbs()`'s
+#' @param fitted a `parsnip` `model_fit` - `gbs()`'s
 #' `$Model` (../functions.R). Must carry `$spec` (the finalized model spec
 #' `fit()` was called with), which every plain `parsnip::fit()` result does.
 #' @param train,test data.frames as `densityModeller()` uses - `test` is only

@@ -54,15 +54,21 @@ gt <- gt |>
 cv_roots <- c(
   'results'              = 'spatial knndm',
   'results_classicsplit' = 'classic',
-  # First_modelling/highPA_grid.R's three split designs on the extended absence pool
+  'results_populationsplit'      = 'LOPO',
+  'results_populationgroupsplit' = 'leave-pop-group-out',
+  # Partitioner.R CV flavors (scripts/final_sdm/Partitioner.R + Modelling_partitionerCV.R)
+  'results_spatial_mapping' = 'spatial_mapping (Partitioner)',
+  'results_LMPO'            = 'LMPO (Partitioner)',
+  # First_modelling/highPA_grid.R split designs on the extended absence pool
   'results_highPA'                 = 'spatial knndm, high-PA pool',
   'results_highPA_classicsplit'    = 'classic, high-PA pool',
   'results_highPA_populationsplit' = 'LOPO, high-PA pool',
   # ... and with every field absence kept in every fit (highPA_grid.R keep_field_absences)
   'results_highPA_fieldabs'                 = 'spatial knndm, high-PA pool + field abs',
   'results_highPA_classicsplit_fieldabs'    = 'classic, high-PA pool + field abs',
-  'results_highPA_populationsplit_fieldabs' = 'LOPO, high-PA pool + field abs'
-  # 'results_spatialblock' = 'spatial block'  # add once population-blocked CV is fit
+  'results_highPA_populationsplit_fieldabs' = 'LOPO, high-PA pool + field abs',
+  'results_highPA_spatial_mapping_fieldabs' = 'spatial_mapping (Partitioner), high-PA pool + field abs',
+  'results_highPA_LMPO_fieldabs'            = 'LMPO (Partitioner), high-PA pool + field abs'
 )
 # roots that haven't been fit yet (or have no models so far) are skipped
 cv_roots <- cv_roots[vapply(names(cv_roots), function(root)
@@ -83,20 +89,20 @@ parse_model_id <- function(f) {
 
 model_files <- map_dfr(names(cv_roots), function(root) {
   f <- list.files(file.path(p2proj, root, 'models'), pattern = '\\.rds$', full.names = TRUE)
-  bind_cols(map_dfr(f, parse_model_id), root = root, cv_structure = unname(cv_roots[root]))
+  bind_cols(map_dfr(f, parse_model_id), tree = root, cv_structure = unname(cv_roots[root]))
 })
 
 ## modeller()'s own holdout evaluation (results_root/tables/<model>.csv) - fit-time
 ## pr_auc/roc_auc on that fit's internal train/test split, for comparing against how the
 ## same model does on the independent 2026 ground truth below.
-read_orig_eval <- function(root, model) {
-  f <- file.path(p2proj, root, 'tables', paste0(model, '.csv'))
+read_orig_eval <- function(tree, model) {
+  f <- file.path(p2proj, tree, 'tables', paste0(model, '.csv'))
   if (!file.exists(f)) return(tibble(orig_pr_auc = NA_real_, orig_roc_auc = NA_real_))
   oe <- read.csv(f)
   tibble(orig_pr_auc = oe$estimate[oe$metric == 'pr_auc'][1],
          orig_roc_auc = oe$estimate[oe$metric == 'roc_auc'][1])
 }
-model_files <- bind_cols(model_files, pmap_dfr(model_files, function(root, model, ...) read_orig_eval(root, model)))
+model_files <- bind_cols(model_files, pmap_dfr(model_files, function(tree, model, ...) read_orig_eval(tree, model)))
 
 ## 3. Extract point-level predictor values once per resolution, reused by every model ----
 ## fit at that resolution - the predictor stack doesn't change with split/PAratio/seed,
@@ -111,7 +117,7 @@ point_covs_by_res <- map(unique(model_files$resolution), function(res) {
 
 ## 4. Predict each model at the ground-truth points, evaluate PR-AUC --------------------
 
-evaluate_model <- function(path, model, resolution, iteration, pa_ratio, dist_order, seed,
+evaluate_model <- function(path, tree, model, resolution, iteration, pa_ratio, dist_order, seed,
                             cv_structure, orig_pr_auc, orig_roc_auc, within_m = NULL, ...) {
   covs <- point_covs_by_res[[resolution]]
   keep_dist <- if (is.null(within_m)) rep(TRUE, nrow(gt)) else gt$dist_known_occ <= within_m
@@ -119,7 +125,8 @@ evaluate_model <- function(path, model, resolution, iteration, pa_ratio, dist_or
   pred <- predict(rf_model, data = covs, type = 'response')$predictions[, '1']
   keep <- keep_dist & !is.na(pred) & !is.na(gt$Presence)
 
-  base <- tibble(model = model, resolution = unname(res_labels[resolution]), iteration = iteration,
+  base <- tibble(tree = tree, model = model,
+                 resolution = unname(res_labels[resolution]), iteration = iteration,
                  pa_ratio = pa_ratio, dist_order = dist_order, seed = seed, cv_structure = cv_structure,
                  orig_pr_auc = orig_pr_auc, orig_roc_auc = orig_roc_auc)
 

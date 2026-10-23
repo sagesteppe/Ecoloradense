@@ -4,7 +4,7 @@
 ## The existing pool (iter1-pa.gpkg, 1071 gDist background points, plus each
 ## resolution's own field absences) caps the achievable ratio at ~1:4 - 1:6 depending on
 ## resolution; distOrder_PAratio_simulator() silently caps any higher request. Reweighted
-## holdout scoring (summarize_iter_calibration_reweighted.R) put the best-calibrated
+## holdout scoring (summarize_iter_calibration.R --prevalences=0.01,…,0.40) put the best-calibrated
 ## ratio at the top of the tested range at realistic (1-3%) landscape prevalences, so the
 ## grid needs to extend well past it.
 ##

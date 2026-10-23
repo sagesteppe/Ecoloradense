@@ -30,11 +30,7 @@ cfg <- list(
   ver         = '1-3arc-Iteration1-PA1:1DO:0-Seed1021',
   cost_thresh = 'spec_sens',
   band_near   = 270,   # < this: extension of a known population
-  band_far    = 450,   # >= this: new population; in between: sub-population
-  ## Antero sits on a separate massif far from the Elk Mountains core; its points carry
-  ## very high E (and thus R), which can dominate or mask the signal from the relevant
-  ## areas. Drop them before band-classifying and model fitting.
-  exclude_sites = c('Antero', 'Antero-South')
+  band_far    = 450    # >= this: new population; in between: sub-population
 )
 
 ## 1. Ground-truth points (same construction as digitize_evaluate_2026_groundtruth.R) ----
@@ -74,19 +70,6 @@ region_v <- sf::st_read(file.path(p2proj, 'data', 'hikingTrails', 'GroundTruch_A
 region_v$region_id <- as.integer(factor(region_v$Site))
 region <- terra::rasterize(terra::vect(region_v), S_mean, field = 'region_id')
 
-## Drop ground-truth points that fall inside an excluded Site (e.g. Antero) before any
-## covariate extraction, band-classification, or model fitting. st_intersects gives one
-## logical per point (no row duplication if Site polygons overlap); points outside every
-## excluded polygon are kept.
-if (length(cfg$exclude_sites) > 0) {
-  excl_poly <- region_v[region_v$Site %in% cfg$exclude_sites, ] |>
-    sf::st_transform(sf::st_crs(gt))
-  in_excl <- lengths(sf::st_intersects(gt, excl_poly)) > 0
-  gt <- gt[!in_excl, ]
-  message(sprintf('Excluded %d ground-truth point(s) in site(s): %s.',
-                  sum(in_excl), paste(cfg$exclude_sites, collapse = ', ')))
-}
-
 known_occ <- sf::st_read(file.path(p2proj, 'data', 'Data4modelling', '3m-presence-iter1.gpkg'), quiet = TRUE) |>
   dplyr::filter(Presenc == 1) |>
   sf::st_transform(terra::crs(S_mean))
@@ -107,7 +90,7 @@ stk <- c(S_mean, E, Cost, region)
 names(stk) <- c('S', 'E', 'Cost', 'region')
 
 ## Region-aware cost orthogonalization: R = within-region residual of Cost on E - same
-## logic/guardrails as sdm_groundtruth_design_1-3arc_Seed1021.R.
+## logic/guardrails as sdm_groundtruth_design_1-3arc_byseed.R.
 df <- as.data.frame(stk, cells = TRUE, na.rm = TRUE) |>
   dplyr::mutate(region = factor(region, labels = levels(factor(region_v$region_id)))) |>
   dplyr::filter(!is.na(region)) |>
@@ -136,7 +119,7 @@ pts <- gt |>
   sf::st_drop_geometry()
 
 ## Points outside every named GroundTruth Site region have no region-relative R (masked
-## to NA above, by design - see sdm_groundtruth_design_1-3arc_Seed1021.R's Details) and
+## to NA above, by design - see sdm_groundtruth_design_1-3arc_byseed.R's Details) and
 ## are dropped from the glm() below along with any other NA covariate.
 message(sprintf('%d of %d ground-truth points fall inside a named region and have E/R.',
                 sum(!is.na(pts$R)), nrow(pts)))

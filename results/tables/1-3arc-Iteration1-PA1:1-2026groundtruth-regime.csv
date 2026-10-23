@@ -40,6 +40,7 @@
 "Phase B (per-phase)","KNOWN (resurvey)","4 Fitted model","XGB Poisson",66,49,17,16.311,5.712,46.863,5.99,41.245
 "Phase B (per-phase)","KNOWN (resurvey)","4 Fitted model","brms Poisson",66,49,17,15.566,4.6,47.173,4.061,32.752
 "Phase B (per-phase)","KNOWN (resurvey)","1 Constant","Constant: Low-phase training median (14)",17,0,17,47.676,NA,47.676,NA,38.5
+"Phase B (per-phase)","KNOWN (resurvey)","4 Fitted model","LGBM Poisson",66,49,17,16.962,5.22,50.808,5.367,52.591
 "Phase B (per-phase)","KNOWN (resurvey)","4 Fitted model","LGBM Poisson Spat.",66,49,17,17.726,5.582,52.726,6,52.611
 "Phase B (per-phase)","KNOWN (resurvey)","1 Constant","Constant: High-phase training mean (4.77)",49,49,0,3.379,3.379,NA,2.773,NA
 "Phase B (per-phase)","KNOWN (resurvey)","1 Constant","Constant: High-phase training median (0)",49,49,0,5.816,5.816,NA,6,NA
@@ -53,6 +54,7 @@
 "Phase B (per-phase)","NEW (fresh survey)","4 Fitted model","XGB Tweedie Spat.",30,11,19,51.242,6.187,77.326,3.017,66.64
 "Phase B (per-phase)","NEW (fresh survey)","4 Fitted model","XGB Poisson Spat.",30,11,19,52.321,6.794,78.679,2.975,66.818
 "Phase B (per-phase)","NEW (fresh survey)","4 Fitted model","XGB Poisson",30,11,19,52.521,7.061,78.84,3.781,66.998
+"Phase B (per-phase)","NEW (fresh survey)","4 Fitted model","LGBM Poisson",30,11,19,52.128,5.987,78.841,2.997,66.999
 "Phase B (per-phase)","NEW (fresh survey)","4 Fitted model","LGBM Poisson Spat.",30,11,19,52.718,7.595,78.841,4.836,67
 "Phase B (per-phase)","NEW (fresh survey)","4 Fitted model","brms Poisson",30,11,19,1.94880247356786e+294,11209695421406892032,3.20979230940589e+294,27872580181793608,1.07983444794888e+42
 "Phase B (per-phase)","NEW (fresh survey)","1 Constant","Constant: High-phase training mean (4.77)",11,11,0,5.839,5.839,NA,2.227,NA

@@ -24,7 +24,9 @@
 #'   part <- build_partition(x, bg, pcs, partition_params())
 #'   ctrl <- caret::trainControl(index = part$indx_train, indexOut = part$indx_test, ...)
 #'   # fit with ctrl; then CAST::trainDI(model) inside aoaSurfaces() picks up these folds.
-#' indx_exclude (extrap, validation-only) is already removed from indx_train.
+#' indx_exclude (val-only extrap half) is already removed from indx_train. The other
+#' half of each extrap component is round-robined back into training as normal rows,
+#' so landscape-wide extrapolation structure still contributes to the fit.
 
 if (!requireNamespace("sf",         quietly = TRUE)) stop("Partitioner.R requires sf")
 if (!requireNamespace("FNN",        quietly = TRUE)) stop("Partitioner.R requires FNN")
@@ -137,6 +139,23 @@ partition_splittable <- function(x, pcs, purpose, min_split_n = 12, extrap_frac 
 }
 
 # ----------------------------------------------------------------------------
+# Half of each extrap component's rows are kept out of training (round-robin as
+# validation-only); the other half re-enter training as normal rows. Stratified
+# by component, deterministic under the active seed; odd counts round UP to
+# validation-only so the harder case stays represented.
+# ----------------------------------------------------------------------------
+partition_extrap_val_only <- function(component, is_extrap) {
+  out <- logical(length(is_extrap))
+  for (cmp in unique(component[is_extrap])) {
+    idx   <- which(component == cmp & is_extrap)
+    n_val <- ceiling(length(idx) / 2)
+    # sample.int positions into idx — base sample() treats length-1 idx as "1:idx"
+    out[idx[sample.int(length(idx), n_val)]] <- TRUE
+  }
+  out
+}
+
+# ----------------------------------------------------------------------------
 # knndm distance quantities: Gj / Gjstar / Gij (proxy) / W (twosamples::wass_stat)
 # ----------------------------------------------------------------------------
 partition_knndm_dists <- function(P, clusters, extrap) {
@@ -187,11 +206,23 @@ partition_split <- function(x, spl, pcs, train_target, seed = 1) {
     test_id <- c(test_id, ex_ids[kmed_pick(M, round(length(ex_ids) * test_frac))])
   }
 
-  # 2. interpolation splittable: within-component representative test subset
+  # 2. interpolation splittable: within-component test subset. Half the picks are env
+  #    medoids (k-means-medoid spread) and half are uniformly random — the medoid-only
+  #    heuristic pulled every env-central point out of train for dense populations like
+  #    Cochetopa Dome, starving the forest of the component's core signal; mixing in
+  #    random picks preserves env spread for coverage while keeping central train rows.
   for (cmp in spl$component[spl$role == "splittable (interpolation)"]) {
     idx  <- xd$.id[xd$component == cmp]
     M    <- as.matrix(xd[match(idx, xd$.id), pcs])
-    pick <- idx[kmed_pick(M, round(length(idx) * test_frac))]
+    n_test <- round(length(idx) * test_frac)
+    if (n_test == 0) next
+    n_med  <- ceiling(n_test / 2)                     # ceil so medoids get the odd one
+    n_rand <- n_test - n_med
+    med_rows  <- kmed_pick(M, min(n_med, length(idx)))
+    pool      <- setdiff(seq_along(idx), med_rows)
+    rand_rows <- if (n_rand > 0 && length(pool))
+                   sample(pool, min(n_rand, length(pool))) else integer(0)
+    pick <- idx[unique(c(med_rows, rand_rows))]
     test_id <- c(test_id, pick)
   }
 
@@ -244,6 +275,7 @@ partition_folds <- function(x, spl, pcs, train_id, k = 10, seed = 1) {
   xt <- xt[xt$.id %in% train_id, , drop = FALSE]
   mi <- match(as.character(xt$component), spl$component)
   xt$role <- spl$role[mi]; xt$extrap <- spl$extrap[mi]
+  xt$extrap_val_only <- partition_extrap_val_only(xt$component, xt$extrap)
   xt$row <- seq_len(nrow(xt))                       # positional index into the training frame
   k <- as.integer(k)
   fold <- integer(nrow(xt))
@@ -269,36 +301,41 @@ partition_folds <- function(x, spl, pcs, train_id, k = 10, seed = 1) {
     fold[idx] <- f; load[f] <- load[f] + length(idx)
   }
 
-  # extrapolation points: round-robin across folds as VALIDATION-ONLY. They are given a
-  # validation fold but are excluded from every fold's training (below), so each fold gets a
-  # comparable slice of genuinely-unseen points instead of one fold absorbing a whole segment.
+  # extrapolation points: round-robin across folds. Half of each extrap component (val-only)
+  # are excluded from every fold's training; the other half re-enter training as normal rows.
+  # Round-robining BOTH halves still gives every fold a comparable slice of unseen points.
   eload <- integer(k)
   for (i in which(xt$extrap)) { f <- which.min(eload); fold[i] <- f; eload[f] <- eload[f] + 1 }
 
-  # = extrap rows assigned to OTHER folds — neither trained nor validated in fold f.
+  # indx_exclude keeps only the val-only half out of training; the train-eligible half trains.
   indx_test    <- lapply(seq_len(k), function(f) xt$row[fold == f])
-  indx_train   <- lapply(seq_len(k), function(f) xt$row[fold != f & !xt$extrap])
-  indx_exclude <- lapply(seq_len(k), function(f) xt$row[fold != f &  xt$extrap])
+  indx_train   <- lapply(seq_len(k), function(f) xt$row[fold != f & !xt$extrap_val_only])
+  indx_exclude <- lapply(seq_len(k), function(f) xt$row[fold != f &  xt$extrap_val_only])
 
   fold_meta <- do.call(rbind, lapply(seq_len(k), function(f) {
     in_val <- fold == f
-    tr <- as.matrix(xt[fold != f & !xt$extrap, pcs]); te <- as.matrix(xt[in_val, pcs])
+    tr <- as.matrix(xt[fold != f & !xt$extrap_val_only, pcs]); te <- as.matrix(xt[in_val, pcs])
     tnn <- c(FNN::knn.dist(tr, k = 1))                          # fold-train sample-to-sample NN
     enn <- c(FNN::knnx.dist(data = tr, query = te, k = 1))      # CV-distances (validation -> fold-train)
     data.frame(fold = f, n_val = nrow(te), val_prop = nrow(te) / nrow(xt),
                n_extrap_val = sum(xt$extrap[in_val]),
+               n_extrap_val_only = sum(xt$extrap_val_only[in_val]),
                beyond_p95 = mean(enn > stats::quantile(tnn, 0.95)),
                beyond_max = mean(enn > max(tnn)))
   }))
 
-  d <- partition_knndm_dists(as.matrix(xt[pcs]), fold, xt$extrap)
+  d <- partition_knndm_dists(as.matrix(xt[pcs]), fold, xt$extrap_val_only)
   res <- list(
     clusters   = fold,                                  # per-training-row fold id (knndm$clusters)
     indx_train = indx_train, indx_test = indx_test, indx_exclude = indx_exclude,
     Gij = d$Gij, Gj = d$Gj, Gjstar = d$Gjstar, W = d$W,
     method = "single-linkage graph", q = "role-based (cut/re-represent/spread)",
     space = "feature", dist_space = "feature",
-    k = k, fold = setNames(fold, xt$.id), extrap_id = xt$.id[xt$extrap], fold_meta = fold_meta)
+    k = k, fold = setNames(fold, xt$.id),
+    extrap_id = xt$.id[xt$extrap],
+    extrap_val_only_id = xt$.id[xt$extrap_val_only],
+    extrap_train_id    = xt$.id[xt$extrap & !xt$extrap_val_only],
+    fold_meta = fold_meta)
   class(res) <- c("knndm", "list")
   res
 }
@@ -312,6 +349,7 @@ partition_folds_lopo <- function(x, spl, pcs, train_id, k = 10, seed = 1) {
   xt <- xt[xt$.id %in% train_id, , drop = FALSE]
   mi <- match(as.character(xt$component), spl$component)
   xt$role <- spl$role[mi]; xt$extrap <- spl$extrap[mi]
+  xt$extrap_val_only <- partition_extrap_val_only(xt$component, xt$extrap)
   xt$row <- seq_len(nrow(xt))                    # positional index into the training frame
   k <- as.integer(k)
   fold <- integer(nrow(xt))
@@ -326,39 +364,44 @@ partition_folds_lopo <- function(x, spl, pcs, train_id, k = 10, seed = 1) {
     fold[idx] <- f; load[f] <- load[f] + csz$n[i]
   }
 
-  # extrapolation points: round-robin across folds as VALIDATION-ONLY (excluded from training
-  # below), so every fold gets a comparable slice of genuinely-unseen points.
+  # extrapolation points: round-robin across folds. Val-only half stays out of training;
+  # the train-eligible half re-enters training as normal rows.
   eload <- integer(k)
   for (i in which(xt$extrap)) { f <- which.min(eload); fold[i] <- f; eload[f] <- eload[f] + 1 }
 
-  # CAST triple (nndm vocabulary): training EXCLUDES all extrap rows; validation = fold members
-  # (whole interp segment + extrap dealt there); indx_exclude[[f]] = extrap rows of OTHER folds.
+  # CAST triple (nndm vocabulary): training EXCLUDES only the val-only extrap half; validation
+  # = fold members; indx_exclude[[f]] = val-only extrap rows of OTHER folds.
   indx_test    <- lapply(seq_len(k), function(f) xt$row[fold == f])
-  indx_train   <- lapply(seq_len(k), function(f) xt$row[fold != f & !xt$extrap])
-  indx_exclude <- lapply(seq_len(k), function(f) xt$row[fold != f &  xt$extrap])
+  indx_train   <- lapply(seq_len(k), function(f) xt$row[fold != f & !xt$extrap_val_only])
+  indx_exclude <- lapply(seq_len(k), function(f) xt$row[fold != f &  xt$extrap_val_only])
 
   fold_meta <- do.call(rbind, lapply(seq_len(k), function(f) {
     in_val <- fold == f
-    tr <- as.matrix(xt[fold != f & !xt$extrap, pcs]); te <- as.matrix(xt[in_val, pcs])
+    tr <- as.matrix(xt[fold != f & !xt$extrap_val_only, pcs]); te <- as.matrix(xt[in_val, pcs])
     tnn <- c(FNN::knn.dist(tr, k = 1))                          # fold-train sample-to-sample NN
     enn <- c(FNN::knnx.dist(data = tr, query = te, k = 1))      # CV-distances (validation -> fold-train)
     data.frame(fold = f, n_val = nrow(te), val_prop = nrow(te) / nrow(xt),
            n_comp = length(unique(xt$component[in_val & !xt$extrap])),
            n_superc = length(unique(xt$supercluster[in_val])),
            n_extrap_val = sum(xt$extrap[in_val]),
+           n_extrap_val_only = sum(xt$extrap_val_only[in_val]),
            beyond_p95 = mean(enn > stats::quantile(tnn, 0.95)),
            beyond_max = mean(enn > max(tnn)))
   }))
 
   # knndm-canonical classed object (same as partition_folds), so CAST's print/plot dispatch here too
-  d <- partition_knndm_dists(as.matrix(xt[pcs]), fold, xt$extrap)
+  d <- partition_knndm_dists(as.matrix(xt[pcs]), fold, xt$extrap_val_only)
   res <- list(
     clusters   = fold,
     indx_train = indx_train, indx_test = indx_test, indx_exclude = indx_exclude,
     Gij = d$Gij, Gj = d$Gj, Gjstar = d$Gjstar, W = d$W,
     method = "segment-LOPO (whole segment)", q = "leave-segment-out",
     space = "feature", dist_space = "feature",
-    k = k, fold = setNames(fold, xt$.id), extrap_id = xt$.id[xt$extrap], fold_meta = fold_meta)
+    k = k, fold = setNames(fold, xt$.id),
+    extrap_id = xt$.id[xt$extrap],
+    extrap_val_only_id = xt$.id[xt$extrap_val_only],
+    extrap_train_id    = xt$.id[xt$extrap & !xt$extrap_val_only],
+    fold_meta = fold_meta)
   class(res) <- c("knndm", "list")
   res
 }
@@ -371,14 +414,14 @@ partition_classes <- function(pts, bg, split, folds, train_target, k, seed = 1) 
   test_prop <- 1 - mean(train_target)
 
   # presences: structured assignment from Steps 4-5 (test presences get fold = NA).
-  # extrap presences carry their validation fold but are flagged so they are NEVER put in
-  # any fold's training (they are validation-only, matching the Step 5 spread).
+  # Only the VAL-ONLY half of each extrap component is flagged here; those are held out
+  # of every fold's training. The other half of extrap rows re-enter training as normal.
   pres <- data.frame(
     id     = paste0("pres_", pts$.id),
     class  = 1L,
     set    = ifelse(pts$.id %in% split$test_id, "test", "train"),
     fold   = unname(folds$fold[as.character(pts$.id)]),
-    extrap = pts$.id %in% folds$extrap_id,
+    extrap = pts$.id %in% folds$extrap_val_only_id,
     stringsAsFactors = FALSE)
 
   # absences: random outer split, then balanced random folds within the train side

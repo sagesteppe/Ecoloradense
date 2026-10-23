@@ -14,7 +14,7 @@ suppressPackageStartupMessages({
 })
 
 p2proj <- '/media/steppe/hdd/EriogonumColoradenseTaxonomy'
-p2proj <- '/home/sagesteppe/Documents/Ecoloradense'
+
 ## rep()s source/date/site to nrow(geom) rather than relying on st_sf() recycling, which
 ## errors instead of recycling a length-1 attribute against a 0-row geometry set (the
 ## visited-points source below turns out to have zero presences).
@@ -72,9 +72,6 @@ transect_pres <- purrr::map_dfr(c('transects_known', 'transects_other'), functio
   st_transform(32613)
 transect_pts <- make_pts('2026-transect', NA_character_, paste0(transect_pres$layer, '-patch', transect_pres$patch_ID),
                           st_geometry(transect_pres))
-
-ggplot(transect_pts) +
-  geom_sf()
 
 ## occurrences_coloradense/occurrences.shp (the raw herbarium/iNat compilation, used
 ## elsewhere as `known_occ`) is deliberately NOT included here: 100 of its 125 points are

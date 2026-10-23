@@ -46,7 +46,10 @@ partition_pca_scores <- function(x_pres, rast_dat, pca_var_target = 0.90) {
 
   scores <- as.data.frame(pca$x[, seq_len(n_keep), drop = FALSE])
   names(scores) <- pcs
-  x_pres$.id <- seq_len(nrow(x_pres))
+  # Preserve the caller's .id when supplied — the downstream fit joins back to its own x
+  # on `pid = pres_<.id>`, so a silent re-numbering silently drops rows that don't match.
+  if (is.null(x_pres$.id) || anyNA(x_pres$.id) || anyDuplicated(x_pres$.id))
+    x_pres$.id <- seq_len(nrow(x_pres))
   x_pres <- cbind(x_pres, scores)
 
   list(x = x_pres, pcs = pcs, pca = pca,

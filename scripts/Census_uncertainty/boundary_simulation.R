@@ -155,7 +155,7 @@ simulate_boundary_fields <- function(pr_raster, se_raster, cov_params, n_draws =
 #' `scripts/Second_groundtruth/make_threshold_raster_masks.R`), except the
 #' level comes from the realization's own gradient structure instead of a
 #' fixed ROC-based cutoff. Applies the same >=2-pixel patch filter as the
-#' deterministic masks (`scripts/Second_groundtruth/transect_placement.R:71-78`)
+#' deterministic masks (`scripts/Second_groundtruth/transect_placement_byseed.R`)
 #' via `terra::patches()` + `terra::freq()`, so output masks are structurally
 #' comparable to those.
 #'
