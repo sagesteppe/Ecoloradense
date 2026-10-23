@@ -58,9 +58,21 @@ header-includes:
   - \makeatother
 ---
 
-```{r setup, include=FALSE}
+```{r global-options, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, comment = "")
+options(
+  warn                   = -1,     # mute R warnings globally
+  readr.show_col_types   = FALSE,  # no read_csv/read_tsv column-spec messages
+  readr.show_progress    = FALSE,  # no reader progress bars
+  dplyr.summarise.inform = FALSE   # no summarise() regrouping notes
+)
+```
+
+```{r setup, include=FALSE}
 set.seed(27)
+## Resolve every data/results/figure path from the project root, so chunks run
+## regardless of the working directory. Hardcoded for this machine for now.
+PROJ_ROOT <- '/home/sagesteppe/Documents/Ecoloradense'
 ```
 
 ```{r Required Libraries, message=F, warning=F, results='hide'}
@@ -74,7 +86,7 @@ library(sf)
 library(caret) # general data partitioning
 library(pROC)
 
-source('theme_manuscript.R')
+source(file.path(PROJ_ROOT, 'scripts', 'Manuscript', 'theme_manuscript.R'))
 ```
 
 # 1 | Introduction
@@ -122,7 +134,7 @@ Currently population boundaries are delineated implicitly: practitioners walk ou
 Many rare plant species are small and inconspicuous, and many taxa grow in small, clustered groups in specific habitats, making detection via either method difficult [@chen2013imperfect; @condit2000spatial].
 
 ```{r, out.width='100%', out.height='100%', fig.pos='p', fig.cap='figgy stardust'}
-knitr::include_graphics('../../results/ConceptualFigure.png')
+knitr::include_graphics(file.path(PROJ_ROOT, 'results', 'ConceptualFigure.png'))
 ```
 
 1) An ENM models the continuous probability of suitable habitat for a taxons realized niche, that is the habitat it is expected to grow to maturity in, based on known occurrences.
@@ -148,7 +160,7 @@ Further given the topographic roughness of this area, we tenatively define popul
 
 ### 2.2 | Data Acquisition
 ```{r}
-iter0n = sf::st_layers(file.path('..', '..', 'data', 'Data4modelling', '10m-presence-iter0.gpkg'))$features
+iter0n = sf::st_layers(file.path(PROJ_ROOT,'data', 'Data4modelling', '10m-presence-iter0.gpkg'))$features
 ```
 
 Occurrence records were downloaded from iNaturalist (80 records) and the Consortium of Southern Rockies herbaria (131 records) [@inaturalist2024ecolo; @soro2024].
@@ -165,7 +177,7 @@ Collectively these resulted in 50 independent variables for ENM modelling.
 
 ### 2.3 | Ground Verification (H1)
 ```{r import iteration 1 data, echo=F}
-bp = file.path('..','..', 'data', 'GroundTruthPts')
+bp = file.path(PROJ_ROOT, 'data', 'GroundTruthPts')
 iter1_f_draw_pts = bind_rows(
   sf::st_read(file.path(bp, 'Iteration1.shp'), quiet = T), 
   sf::st_read(file.path(bp, 'Iteration1-Coechotopa.shp'), quiet = T) |>mutate(Trail = 'Coechotopa')
@@ -173,7 +185,7 @@ iter1_f_draw_pts = bind_rows(
 
 n_iter1_f_draw_pts = nrow(iter1_f_draw_pts)
 
-iter1_gt = sf::st_read(file.path('..', '..', 'data', 'GroundTruthing', 'Iteration1Pts.shp'), quiet = TRUE) |>
+iter1_gt = sf::st_read(file.path(PROJ_ROOT,'data', 'GroundTruthing', 'Iteration1Pts.shp'), quiet = TRUE) |>
   sf::st_drop_geometry() |>
   drop_na('Lctn_bb')
 
@@ -186,7 +198,7 @@ opportunistic_absences = iter1_gt |> filter(Presenc == 0) |> nrow()
 opportunistic_presences = iter1_gt |> filter(Presenc > 0) |> nrow()
 n_comp_based_abs <- nrow(
   read.csv(
-    file.path('..', '..', 'data', 'GroundTruthing', 'ComputerAbs.csv')
+    file.path(PROJ_ROOT,'data', 'GroundTruthing', 'ComputerAbs.csv')
     )
   ) # manually entered to computer absences
 ```
@@ -286,7 +298,7 @@ Using occurrence, density, and boundary-transect data from both rounds of ground
 ## Only the 3 arc-second surface is evaluated for now - the 1 and 1/3
 ## arc-second suitability surfaces aren't built on this machine yet; add
 ## their rows to the same table once they are.
-gt2026_270 <- read_csv(file.path('..', '..', 'results', 'tables', '2026-groundtruth-evaluation-270m.csv'),
+gt2026_270 <- read_csv(file.path(PROJ_ROOT,'results', 'tables', '2026-groundtruth-evaluation-270m.csv'),
                         show_col_types = FALSE)
 
 best_model_row <- filter(gt2026_270, resolution == '3 arc-second')
@@ -361,8 +373,8 @@ read_paratio_search <- function(fp, split) {
 }
 
 paratio <- bind_rows(
-  read_paratio_search(file.path('..', '..', 'results', 'tables'), 'Spatial'),
-  read_paratio_search(file.path('..', '..', 'results', 'results_classicsplit', 'tables'), 'Classic')
+  read_paratio_search(file.path(PROJ_ROOT,'results', 'tables'), 'Spatial'),
+  read_paratio_search(file.path(PROJ_ROOT,'results', 'results_classicsplit', 'tables'), 'Classic')
 ) |>
   mutate(
     Resolution = factor(Resolution, levels = names(res_labels), labels = res_labels),
@@ -379,7 +391,7 @@ paratio <- bind_rows(
 ## 'XX' per-resolution when a presence file is missing (e.g. the 1/3
 ## arc-second presence-iter1 file doesn't exist yet).
 sample_sizes <- function(res_key) {
-  f <- file.path('..', '..', 'data', 'Data4modelling', paste0(res_key, 'm-presence-iter1.gpkg'))
+  f <- file.path(PROJ_ROOT,'data', 'Data4modelling', paste0(res_key, 'm-presence-iter1.gpkg'))
   if (!file.exists(f)) return(c(occ = NA_integer_, abs = NA_integer_))
   d <- sf::st_read(f, quiet = TRUE)
   c(occ = sum(d$Presenc == 1, na.rm = TRUE), abs = sum(d$Presenc == 0, na.rm = TRUE))
@@ -407,7 +419,6 @@ ggplot(paratio, aes(x = ratio_label, y = metric, color = Split, fill = Split, sh
   labs(x = 'Presence:Absence Ratio', y = 'Pr-AUC', color = 'Train/test split', fill = 'Train/test split', shape = 'Train/test split') +
   theme_manuscript()
 ```
-```
 
 ### 3.3 | Occurrence Dectection and Occupancy Based Field Sampling (H3)
 
@@ -416,10 +427,11 @@ ggplot(paratio, aes(x = ratio_label, y = metric, color = Split, fill = Split, sh
 ## anomaly (R) at the 2026 ground-truth points (produced by
 ## Second_groundtruth/cost_residual_occupancy.R, Seed1021 realization of
 ## 1-3arc-Iteration1-PA1:1DO:0). 
-fp = file.path('..', '..', 'data', 'Data4modelling')
+fp = file.path(PROJ_ROOT,'data', 'Data4modelling')
 f_pops = st_read(
   file.path(fp, 'Final_LOPO_CV_Population_Boundaries.gpkg'), 
-  layer = 'Final_LOPO_CV_Population_Boundaries') |>
+  layer = 'Final_LOPO_CV_Population_Boundaries',
+  quiet = T) |>
   ## combine coche- which are split for MODELLING, not as actually separate populations
   mutate(
     Name = if_else(Name %in% c('Cochetopa Dome', 'Cochetopa Dome - North'), 'Cochetopa Dome', Name),
@@ -427,10 +439,11 @@ f_pops = st_read(
   )
 
 ## number of quadrats withiin
-quadrats = st_read(file.path(fp, '3m-presence-iter2.gpkg'))
+quadrats = st_read(file.path(fp, '3m-presence-iter2.gpkg'), quiet = T)
 
 subpop_extensions <- st_read(
-    file.path(fp, 'SubPops_Extensions_from_2026_grountruthing.gpkg')
+    file.path(fp, 'SubPops_Extensions_from_2026_grountruthing.gpkg'),
+    quiet = T
   ) |>
   bind_rows(
     filter(f_pops, Name == 'Hasley Basin - Ridge South') |>
@@ -448,14 +461,14 @@ pop_q_cnts = f_pops |>
   st_transform(st_crs(quadrats)) |>
   st_join( quadrats)
 
-bands <- read_csv(file.path('..', '..', 'results', 'tables', '2026-groundtruth-occupancy-bands.csv'),
+bands <- read_csv(file.path(PROJ_ROOT,'results', 'tables', '2026-groundtruth-occupancy-bands.csv'),
                    show_col_types = FALSE)
 get_band <- function(b) { v <- bands$n_presences[bands$band == b]; if (length(v) == 1) v else 'XX' }
 n_extension <- get_band('extension (<270m)')
 n_subpop    <- get_band('sub-population (270-450m)')
 n_newpop    <- get_band('new population (>=450m)')
 
-occ_lrt <- read_csv(file.path('..', '..', 'results', 'tables', '2026-groundtruth-occupancy-glm-lrt.csv'),
+occ_lrt <- read_csv(file.path(PROJ_ROOT,'results', 'tables', '2026-groundtruth-occupancy-glm-lrt.csv'),
                      show_col_types = FALSE)
 get_p <- function(term_lbl) { v <- occ_lrt$p_value[occ_lrt$term == term_lbl]; if (length(v) == 1) signif(v, 2) else 'XX' }
 p_E_given_R <- get_p('E (given R)')
@@ -484,7 +497,7 @@ rm(quadrats, pop_q_cnts, hbrs, asc, quadrat_cnts, subpop_extensions, p_R_alone, 
 ## Read ALL per-plot predictions (Antero kept - it is the extrapolation column).
 ## Non-finite AbsError is left in: it arises only for the gp()-based brms models
 ## at Antero and collapses to '---' in the extrapolation column by design.
-cm_pred <- read_csv(file.path('..', '..', 'results', 'tables',
+cm_pred <- read_csv(file.path(PROJ_ROOT,'results', 'tables',
                               '1-3arc-Iteration1-PA1:1-2026groundtruth-predictions.csv'),
                     show_col_types = FALSE)
 
@@ -599,6 +612,15 @@ kable(ctx, format = 'latex', booktabs = TRUE, linesep = '',
   kable_styling(latex_options = c('striped', 'hold_position'))
 ```
 
+
+'1-3arc'
+'1arc'
+'3arc'
+
+cornell_77 = c("#f07537", "#f18e26", "#14a0aa", "#923c7d", "#c15d57", "#67678f",
+                 "#45829d", "#f16646", "#d33677", "#9d985e", "#ff820c"),
+
+
 Estimating plant density has two distinct purposes 1) modelling the census size of known populations (interpolation census) and 2) predicting the population size at unknown, or populations without count data (extrapolation census). 
 
 - **Interpolation census.** Density is predicted *within* the sampled domain, so the whole model suite is admissible (Table \@ref(tab:count-model-table)). Here we take the best field-validated surface -- the gradient-boosted XGBoost Tweedie for the presence/absence-aware count surface -- while the Bayesian hurdle and negative-binomial models supply posterior **credible intervals** on the population total, the uncertainty quantity a census most needs. Estimates are precise and their intervals narrow.
@@ -621,7 +643,23 @@ Field boundary-transect verification (`scripts/Second_groundtruth/evaluate_trans
 The population boundaries obtained by thresholding resulted in initial estimates of population geographic extent of ... for sensitivity and for equal sensitivity and specificity.
 The wombling approach shows that estimates at the XX-percentile led to more accurate estimates of population extent, correcting it towards YY.
 
-### 3.6 | Final Results
+### 3.6 | Ground Truth Based Model Refinement
+
+```{r Refinement Metric Grid by Holdout, out.width='100%', fig.width=9, fig.height=9}
+## Four model-diagnostic metrics (rows) across the three model-refinement CV strategies
+## (columns, section 2.8), one point per replicate, over the full 1:50 presence:absence
+## ratio range. nAP, Boyce index, Cox slope and Cox intercept; dashed lines mark each
+## metric's ideal value. ratioGrid()/nAP() live in theme_manuscript.R; data from
+## aggregate_all_metrics.R (all_fit_metrics.csv). Replicates still accruing.
+grid_metrics <- read.csv(file.path(PROJ_ROOT, 'results_summary', 'all_fit_metrics.csv'))
+holdout_cols <- c(
+  results_classicsplit                  = 'Classic split\n(KNNDM CV)',
+  results_LMPO_iter1a_high_pa           = 'LMPO\n(LMPO CV)',
+  results_spatialmapping_iter1a_high_pa = 'Spatial mapping\n(spatial CV)')
+ratioGrid(grid_metrics, holdouts = holdout_cols)
+```
+
+### 3.7 | Final Results
 
 ```{r Final Suitability Map, out.width='100%'}
 ## Title/subtitle, extent-box letter tags, the shifted+padded coche box,
@@ -632,7 +670,7 @@ The wombling approach shows that estimates at the XX-percentile led to more accu
 ##     appendix panel both need rasters that don't exist yet (see the
 ##     TODOs in maps.qmd's 'Final Suitability and Density Maps' and
 ##     'Suitability Iteration Diffs Appendix' chunks).
-img <- file.path('figures', 'suitability_final.png')
+img <- file.path(PROJ_ROOT, 'scripts', 'Manuscript', 'figures','suitability_final.png')
 if (file.exists(img)) knitr::include_graphics(img)
 ```
 
@@ -642,7 +680,7 @@ if (file.exists(img)) knitr::include_graphics(img)
 ## open: whether the B/D/F zoom crops need an actual named-locality label
 ## beyond the region name they already carry - flagged in maps.qmd, not
 ## guessed here.
-img <- file.path('figures', 'density_final.png')
+img <- file.path(PROJ_ROOT, 'scripts', 'Manuscript', 'figures','density_final.png')
 ## dpi = NA: skip knitr's auto width-from-pixel-size calculation, so only
 ## out.height constrains the figure and LaTeX scales width proportionally
 ## (otherwise a fixed, often page-overflowing width gets forced alongside
@@ -651,12 +689,12 @@ if (file.exists(img)) knitr::include_graphics(img, dpi = NA)
 ```
 
 ```{r Suitability Map Theme Preview, out.width='100%'}
-img <- file.path('figures', 'suitability_preview.png')
+img <- file.path(PROJ_ROOT, 'scripts', 'Manuscript', 'figures','suitability_preview.png')
 if (file.exists(img)) knitr::include_graphics(img)
 ```
 
 ```{r Density Map Theme Preview, out.height='50%'}
-img <- file.path('figures', 'density_preview.png')
+img <- file.path(PROJ_ROOT, 'scripts', 'Manuscript', 'figures','density_preview.png')
 if (file.exists(img)) knitr::include_graphics(img, dpi = NA)
 ```
 

@@ -9,7 +9,15 @@
 ## Sourcing this file loads all of them, so existing `source('functions.R')`
 ## callers keep working with no change.
 
-PROJ_ROOT <- '/media/steppe/hdd/EriogonumColoradenseTaxonomy'
+# Project root differs by machine; pick the first candidate that exists here.
+PROJ_ROOT <- local({
+  candidates <- c(
+    '/media/steppe/hdd/EriogonumColoradenseTaxonomy',
+    '/home/sagesteppe/Documents/Ecoloradense'
+  )
+  hit <- candidates[dir.exists(candidates)]
+  if (length(hit)) hit[1] else candidates[1]
+})
 
 local({
   # Resolve this file's directory from the live source() stack - works whether

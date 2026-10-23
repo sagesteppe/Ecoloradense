@@ -27,11 +27,12 @@ Model & n = 111 & occ. n = 60 & n = 33 & occ. n = 20 & n = 33 & occ. n = 16\\
 \cellcolor{gray!10}{\hspace{1em}XGB Tweedie (Spatial CV)} & \cellcolor{gray!10}{3.53} & \cellcolor{gray!10}{5.29} & \cellcolor{gray!10}{31.57} & \cellcolor{gray!10}{48.40} & \cellcolor{gray!10}{36.89} & \cellcolor{gray!10}{73.09}\\
 \hspace{1em}XGB Poisson & 3.69 & 5.96 & 34.82 & 54.83 & 36.30 & 74.87\\
 \cellcolor{gray!10}{\hspace{1em}XGB Poisson (Spatial CV)} & \cellcolor{gray!10}{3.66} & \cellcolor{gray!10}{5.80} & \cellcolor{gray!10}{35.10} & \cellcolor{gray!10}{54.66} & \cellcolor{gray!10}{36.30} & \cellcolor{gray!10}{74.69}\\
-\hspace{1em}LGBM Poisson (Spatial CV) & 3.54 & 5.95 & 36.38 & 59.82 & 36.30 & 74.87\\
+\hspace{1em}LGBM Poisson & 4.21 & 5.36 & 35.73 & 58.19 & 36.30 & 74.87\\
+\cellcolor{gray!10}{\hspace{1em}LGBM Poisson (Spatial CV)} & \cellcolor{gray!10}{3.54} & \cellcolor{gray!10}{5.95} & \cellcolor{gray!10}{36.38} & \cellcolor{gray!10}{59.82} & \cellcolor{gray!10}{36.30} & \cellcolor{gray!10}{74.87}\\
 \addlinespace[0.3em]
 \multicolumn{7}{l}{\textbf{Bayesian (brms)}}\\
-\cellcolor{gray!10}{\hspace{1em}Hurdle NegBinomial} & \cellcolor{gray!10}{5.00} & \cellcolor{gray!10}{3.67} & \cellcolor{gray!10}{43.41} & \cellcolor{gray!10}{47.99} & \cellcolor{gray!10}{---} & \cellcolor{gray!10}{---}\\
-\hspace{1em}NegBinomial & 3.75 & 4.92 & 50.52 & 48.18 & --- & ---\\
+\hspace{1em}Hurdle NegBinomial & 5.00 & 3.67 & 43.41 & 47.99 & --- & ---\\
+\cellcolor{gray!10}{\hspace{1em}NegBinomial} & \cellcolor{gray!10}{3.75} & \cellcolor{gray!10}{4.92} & \cellcolor{gray!10}{50.52} & \cellcolor{gray!10}{48.18} & \cellcolor{gray!10}{---} & \cellcolor{gray!10}{---}\\
 \bottomrule
 \end{tabular}
 \end{table}

@@ -188,7 +188,7 @@ window.Quarto = {
 <section id="study-species-system" class="level3">
 <h3 class="anchored" data-anchor-id="study-species-system">2.1 | Study Species &amp; System</h3>
 <p><em>Eriogonum coloradense</em> Small (Polygonaceae) is a synoecious, mat-forming perennial herb endemic to the south-central Rocky Mountains of Colorado, U.S.A. Its known range spans five counties and encompasses 22 documented populations, occurring across a broad range of elevation (2700-3900m asl), slope, aspects, soil types, and habitats - from high-elevation sagebrush steppe, through subalpine grasslands, to alpine slopes. It is ranked S3/G3 by NatureServe and listed as a Tier 2 species in Colorado Parks and Wildlife’s State Wildlife Action Plan [<span class="citation" data-cites="anderson2004eriogonum">D. G. Anderson (<a href="#ref-anderson2004eriogonum" role="doc-biblioref">2004</a>)</span>; NATURESERVE].</p>
-<p>This taxon is largely pollinated by solitary bees, flies and butterflies, which are known to move pollen considerably shorter distances than bumble bees (i.e.&nbsp;1km) ((NEED CITE)).</p>
+<p>This taxon is largely pollinated by solitary bees, flies and butterflies, which are known to generally forage under 1km<span class="citation" data-cites="gathmann2002foraging zurbuchen2010maximum">(<a href="#ref-gathmann2002foraging" role="doc-biblioref">Gathmann and Tscharntke 2002</a>; <a href="#ref-zurbuchen2010maximum" role="doc-biblioref">Zurbuchen et al. 2010</a>)</span>. Further given the topographic roughness of this area, we tenatively define populations as being isolated by &lt;500 meters, translated to 470m to match the 90m resolution grain.</p>
 </section>
 <section id="data-acquisition" class="level3">
 <h3 class="anchored" data-anchor-id="data-acquisition">2.2 | Data Acquisition</h3>
@@ -213,7 +213,8 @@ window.Quarto = {
 </section>
 <section id="plant-density-h4a" class="level3">
 <h3 class="anchored" data-anchor-id="plant-density-h4a">2.6 | Plant Density (H4a)</h3>
-<p>Plant density was modelled using NINE? approaches, and both spatial and non-spatial cross-validation <span class="citation" data-cites="mila2022nearest">(<a href="#ref-mila2022nearest" role="doc-biblioref">Milà et al. 2022</a>)</span>. Because one population (Cochetopa Dome) consistently has far higher plant counts than the others, a naive train-test split risked confounding genuine model generalisation with a simple between-population split; training and test sets were instead partitioned using data twinning on rescaled coordinates and count values, which selects a test set whose joint distribution mirrors the training set’s <span class="citation" data-cites="vakayil2026twinning">(<a href="#ref-vakayil2026twinning" role="doc-biblioref">Vakayil and Joseph 2026</a>)</span>. Five density models were fit: four using XGBoost across two distributions (Poisson, Tweedie), and one using light gradient boosting <span class="citation" data-cites="chen2016xgboost ke2017lightgbm">(<a href="#ref-chen2016xgboost" role="doc-biblioref">T. Chen and Guestrin 2016</a>; <a href="#ref-ke2017lightgbm" role="doc-biblioref">Ke et al. 2017</a>)</span>. Bayesian hierarchical models with negative binomial, poisson, distributions, with population as a fixed effect were also utilized, using a test train split on count of plants per quadrat. Two null models served as baselines for comparison: the arithmetic mean plant count by population, and ordinary kriging interpolation across the study area <span class="citation" data-cites="pebesma2004gstat">(<a href="#ref-pebesma2004gstat" role="doc-biblioref">E. J. Pebesma 2004</a>)</span>.</p>
+<p>Plant density (plants per 3 <span class="math inline">\(\times\)</span> 3 m quadrat) was modelled with a ladder of approaches of increasing complexity, each evaluated under spatial and non-spatial cross-validation <span class="citation" data-cites="mila2022nearest">(<a href="#ref-mila2022nearest" role="doc-biblioref">Milà et al. 2022</a>)</span> and against the held-out 2026 field plots. Because low-elevation plots hold roughly sixfold more plants than high-elevation ones, models were fit and scored separately within each elevation phase. Within each phase, train and test sets were partitioned by data twinning on rescaled coordinates and counts <span class="citation" data-cites="vakayil2026twinning">(<a href="#ref-vakayil2026twinning" role="doc-biblioref">Vakayil and Joseph 2026</a>)</span>.</p>
+<p>The ladder ran from null baselines (the per-phase mean and median), through interpolators of the observed counts – ordinary kriging <span class="citation" data-cites="pebesma2004gstat">(<a href="#ref-pebesma2004gstat" role="doc-biblioref">E. J. Pebesma 2004</a>)</span>, inverse-square inverse-distance weighting, and <span class="math inline">\(k\)</span>-nearest-neighbour averaging – and a single-covariate Poisson GLM on habitat suitability, to fitted models: gradient-boosted trees (XGBoost with Poisson and Tweedie likelihoods, LightGBM with Poisson) <span class="citation" data-cites="chen2016xgboost ke2017lightgbm">(<a href="#ref-chen2016xgboost" role="doc-biblioref">T. Chen and Guestrin 2016</a>; <a href="#ref-ke2017lightgbm" role="doc-biblioref">Ke et al. 2017</a>)</span> and Bayesian hierarchical models (brms; Poisson, negative-binomial, and hurdle negative-binomial, each with population as a fixed effect and a Gaussian-process spatial term), the last of which yield posterior credible intervals on the population total <span class="citation" data-cites="burkner2017brms">(<a href="#ref-burkner2017brms" role="doc-biblioref"><strong>burkner2017brms?</strong></a>)</span>.</p>
 </section>
 <section id="population-boundaries-h4b" class="level3">
 <h3 class="anchored" data-anchor-id="population-boundaries-h4b">2.7 | Population Boundaries (H4b)</h3>
@@ -221,8 +222,10 @@ window.Quarto = {
 </section>
 <section id="model-refinement" class="level3">
 <h3 class="anchored" data-anchor-id="model-refinement">2.8 | Model Refinement</h3>
-<p>Additional species distribution models were fit using the iteration 0 and iteration 1 data, and tested using the second ground truth round of data. They effectively represent refinements of modelling approaches not explored during the original iteration 1 phase, but that could be used for the final modelling process. They largely resulted from a realisation during ground truthing that two separate processes are desired of SDMs; the first to map known occurrences, the second to map suitable habitat (Pili et al.&nbsp;2025).</p>
-<p>Additional SDM’s were fit using a variety of alternative cross-validation approaches, such as leave-multiple populations out [ intended to produce the best maps for population discovery], and a spatial subsetting approach [intended to produce the most accurate maps of known occupied habitat]. All models were evaluated using a variety of metrics including: the boyce index (why, cite), brier scores (why, cite), and cox-slopes (why, cite). These</p>
+<p>Additional species distribution models were fit using the iteration 0 and iteration 1 data, and tested using the second ground truth round of data. They effectively represent refinements of modelling approaches not explored during the original iteration 1 phase, but that could be used for the final modelling process. They largely resulted from a realisation during ground truthing that two separate processes are desired of SDMs; the first to map known occurrences, the second to map suitable habitat <span class="citation" data-cites="pili2025correcting">(<a href="#ref-pili2025correcting" role="doc-biblioref">Pili et al. 2025</a>)</span>.</p>
+<p>Additional SDM’s were fit using a variety of alternative cross-validation approaches, such as leave-multiple populations out intended to produce the best maps for population discovery, and a spatial subsetting approach intended to produce the most accurate maps of known occupied habitat. For overall model classification we report three complementary discrimination metrics: the Boyce index, ROC-AUC, and PR-AUC as well as nAP which makes it comparable across a range of presence to absence ratios. The Boyce index measures presence-background rank-calibration, but is insensitive to monotone rescaling and understates prediction magnitude <span class="citation" data-cites="hirzel2006evaluating">(<a href="#ref-hirzel2006evaluating" role="doc-biblioref">Hirzel et al. 2006</a>)</span>. ROC-AUC measures discrimination, but is prevalence-invariant and so inflated by background placement rather than count <span class="citation" data-cites="fawcett2006introduction lobo2008auc jimenezvalverde2012insights">(<a href="#ref-fawcett2006introduction" role="doc-biblioref">Fawcett 2006</a>; <a href="#ref-lobo2008auc" role="doc-biblioref">Lobo et al. 2008</a>; <a href="#ref-jimenezvalverde2012insights" role="doc-biblioref">Jiménez-Valverde 2012</a>)</span>. PR-AUC conveys the model’s ability to discriminate suitable habitat, but is prevalence-dependent, and is corrected across presence:absence ratios using nAP = (AP <span class="math inline">\(-\)</span> <span class="math inline">\(\pi\)</span>)/(1 <span class="math inline">\(-\)</span> <span class="math inline">\(\pi\)</span>) <span class="citation" data-cites="davis2006relationship flach2015precision saito2015precision sofaer2019area allouche2006assessing">(<a href="#ref-davis2006relationship" role="doc-biblioref">Davis and Goadrich 2006</a>; <a href="#ref-flach2015precision" role="doc-biblioref">Flach and Kull 2015</a>; <a href="#ref-saito2015precision" role="doc-biblioref">Saito and Rehmsmeier 2015</a>; <a href="#ref-sofaer2019area" role="doc-biblioref">Sofaer et al. 2019</a>; <a href="#ref-allouche2006assessing" role="doc-biblioref">Allouche et al. 2006</a>)</span>.</p>
+<p>For model calibration we report the Cox calibration intercept and slope <span class="citation" data-cites="cox1958two steyerberg2014towards">(<a href="#ref-cox1958two" role="doc-biblioref">Cox 1958</a>; <a href="#ref-steyerberg2014towards" role="doc-biblioref">Steyerberg and Vergouwe 2014</a>)</span>. The intercept measures overall bias: negative when predictions are too high, positive when too low, and zero when unbiased. The slope measures confidence: below one the model is overconfident (predictions too extreme), above one underconfident, and one when correctly scaled.</p>
+<p>We further report performance across three prediction domains defined by the area of applicability (AOA) and distance to known populations: (1) inside the AOA and within 270m of a known population, (2) inside the AOA but &gt; 270m, and (3) outside the AOA (extrapolated niche). Domain (1) is occupiable, dispersal-accessible habitat the training data characterised, and errors here indicate a failure of the model. Domain (2) lies further from known occurrences, where errors are ambiguous, reflecting either limited model generalisation or genuine dispersal limitation. Domain (3) is environmental space unsampled by the biased training data (e.g.&nbsp;the Antero region), where failure reflects niche truncation in the data rather than a deficiency of the model <em>per se</em>.</p>
 </section>
 <section id="final-models" class="level3">
 <h3 class="anchored" data-anchor-id="final-models">2.9 | Final Models</h3>
@@ -242,6 +245,15 @@ window.Quarto = {
 </div>
 </div>
 </div>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="SDManuscript_files/figure-html/Refinement%20Metric%20Grid%20by%20Holdout-1.png" class="img-fluid figure-img" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+</div>
 </section>
 <section id="comparison-of-different-spatial-resolutions-h2-1" class="level3">
 <h3 class="anchored" data-anchor-id="comparison-of-different-spatial-resolutions-h2-1">3.2 | Comparison of Different Spatial Resolutions (H2)</h3>
@@ -255,7 +267,6 @@ window.Quarto = {
 </div>
 </div>
 </div>
-<p>The area under the precision-recall curve (AUC-PR), the True Skill Statistic, and Sensitivity and Specificity <span class="citation" data-cites="sofaer2019area allouche2006assessing">(<a href="#ref-sofaer2019area" role="doc-biblioref">Sofaer et al. 2019</a>; <a href="#ref-allouche2006assessing" role="doc-biblioref">Allouche et al. 2006</a>)</span>.</p>
 </section>
 <section id="occurrence-dectection-and-occupancy-based-field-sampling-h3" class="level3">
 <h3 class="anchored" data-anchor-id="occurrence-dectection-and-occupancy-based-field-sampling-h3">3.3 | Occurrence Dectection and Occupancy Based Field Sampling (H3)</h3>
@@ -301,16 +312,17 @@ Geodetic CRS:  WGS 84</code></pre>
 
 </div>
 </div>
-<p>Predictive results were compared with n field visited plots (n = sample draw, n = opportunistic). The inflation of MAE by modelling ranged from (X – Y), and the average difference between the spatial and non-spatial CV folds was XX, indicating that CV FOLDS LEAD TO OPTIMISTIC results.</p>
 <div class="cell">
 <div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="SDManuscript_files/figure-html/Plant%20Density%20Held-out%20vs%20Field-validated%20MAE%20Placeholder-1.png" class="img-fluid figure-img" style="width:100.0%"></p>
-</figure>
+
 </div>
 </div>
-</div>
+<p>Estimating plant density has two distinct purposes 1) modelling the census size of known populations (interpolation census) and 2) predicting the population size at unknown, or populations without count data (extrapolation census).</p>
+<ul>
+<li><strong>Interpolation census.</strong> Density is predicted <em>within</em> the sampled domain, so the whole model suite is admissible (Table @ref(tab:count-model-table)). Here we take the best field-validated surface – the gradient-boosted XGBoost Tweedie for the presence/absence-aware count surface – while the Bayesian hurdle and negative-binomial models supply posterior <strong>credible intervals</strong> on the population total, the uncertainty quantity a census most needs. Estimates are precise and their intervals narrow.</li>
+<li><strong>Extrapolation census (newly discovered or distant populations).</strong> For populations beyond the sampled range (e.g.&nbsp;Antero, 86 km out) the <code>gp()</code>-based Bayesian surfaces extrapolate catastrophically and the interpolators have no nearby data to borrow from. Here we fall back to transferable estimators – the per-phase arithmetic mean or covariate-only models, which cannot blow up – and report correspondingly wider uncertainty. The Antero failure is the evidence that this fallback, not the interpolation surface, is the honest tool out of domain.</li>
+</ul>
+<p>Predictive results were compared with n field visited plots (n = sample draw, n = opportunistic). The inflation of MAE by modelling ranged from (X – Y), and the average difference between the spatial and non-spatial CV folds was XX, indicating that default spatial cross-validation folds slightly outperformed classical folds.</p>
 </section>
 <section id="population-boundaries-h4b-1" class="level3">
 <h3 class="anchored" data-anchor-id="population-boundaries-h4b-1">3.5 | Population Boundaries (H4b)</h3>
@@ -358,6 +370,8 @@ Geodetic CRS:  WGS 84</code></pre>
 <li>While very high-resolution spatial data are becoming increasingly available, they may not be required for assessment of many species’ niches, and existing standard of YADA YADA for naturserve is still valuable.</li>
 <li>Every approach generates estimates of statistical uncertainty, albeit some (infinitesimal jackknife) are highly time intensive.</li>
 </ol>
+<p>Methods to prevent the extrapolation of SDMs beyond there training data has been a major concern [thuiller2004effects]. Here, by utilising areas of applicability, based on the presence data only, we show that AOA is only a fraction of an already small geographic domain. Further, in the presence of strongly geographically biased data, it is able to highlight portions of the realized species distribution entirely. Hence these masks should always be created to refine the understanding of where a model may make inference too on the landscape.<br>
+… This separates the two tasks SDMs are routinely asked to perform but which biased data force into a trade-off: mapping the known, occupied niche versus characterising the fundamental niche <span class="citation" data-cites="thuiller2004effects jimenezvalverde2012insights leeyaw2022biology">(<a href="#ref-thuiller2004effects" role="doc-biblioref">Thuiller et al. 2004</a>; <a href="#ref-jimenezvalverde2012insights" role="doc-biblioref">Jiménez-Valverde 2012</a>; <a href="#ref-leeyaw2022biology" role="doc-biblioref">Lee-Yaw et al. 2022</a>)</span>. The usual evidence for this trade-off is simulated (virtual species); here the 2026 field data let us observe it directly – field-verified presences in predictor space the model scored unsuitable – making the distinction between a biased model and an inadequate one empirically, rather than theoretically, visible.</p>
 </section>
 <section id="conclusions" class="level2">
 <h2 class="anchored" data-anchor-id="conclusions">5 | Conclusions</h2>
@@ -368,7 +382,7 @@ Geodetic CRS:  WGS 84</code></pre>
 <p>R.C.B.: Conceptualization, Data curation, Formal analysis, Investigation, Methodology, Software, Visualization, Writing. S.T. and J.B.F.: Writing. All authors read, revised and approved the final manuscript.</p>
 <section id="acknowledgments" class="level3">
 <h3 class="anchored" data-anchor-id="acknowledgments">Acknowledgments</h3>
-<p>Hannah Lovell, and Phoebe Roberts, are thanked for assistance with field work in 2026. Julia R. Benkendorf is thanked for editorial services. The following individuals are thanked for uploading multiple iNaturalist observations that were used in modelling: Rick Williams, Rosemary Smith, John Powers. Both XXX, YYY, and ZZZ are thanked for observations that greatly extended the niche of <em>E. coloradense</em>. Savanna Smith is thanked for verifying the placement of an undocumented population.</p>
+<p>Hannah Lovell, and Phoebe Roberts, are thanked for assistance with field work in 2026. Julia R. Benkendorf is thanked for editorial services. Rick Williams, Rosemary Smith, and John Powers, are thanked for uploading many iNaturalist observations that were used in modelling. Scott F. Smith, and Matt Langemeier, are thanked for iNaturalist observations that greatly extended the niche of <em>E. coloradense</em>. Savanna Smith is thanked for verifying the placement of an undocumented population in the Gothic area.</p>
 </section>
 <section id="funding" class="level3">
 <h3 class="anchored" data-anchor-id="funding">Funding</h3>
@@ -446,6 +460,12 @@ Commission, Natural Resources. Species Survival. 2001. <em>IUCN Red List Categor
 <div id="ref-condit2000spatial" class="csl-entry" role="listitem">
 Condit, Richard, Peter S. Ashton, Patrick Baker, et al. 2000. <span>“Spatial Patterns in the Distribution of Tropical Tree Species.”</span> <em>Science</em> 288 (5470): 1414–18.
 </div>
+<div id="ref-cox1958two" class="csl-entry" role="listitem">
+Cox, David R. 1958. <span>“Two Further Applications of a Model for Binary Regression.”</span> <em>Biometrika</em> 45 (3/4): 562–65.
+</div>
+<div id="ref-davis2006relationship" class="csl-entry" role="listitem">
+Davis, Jesse, and Mark Goadrich. 2006. <span>“The Relationship Between <span>Precision-Recall</span> and <span>ROC</span> Curves.”</span> <em>Proceedings of the 23rd International Conference on Machine Learning (ICML)</em>, 233–40. <a href="https://doi.org/10.1145/1143844.1143874">https://doi.org/10.1145/1143844.1143874</a>.
+</div>
 <div id="ref-doser2022spabundance" class="csl-entry" role="listitem">
 Doser, Jeffrey W., Andrew O. Finley, Marc Kéry, and Elise F. Zipkin. 2024. <span>“spAbundance: An r Package for Single-Species and Multi-Species Spatially Explicit Abundance Models.”</span> <em>Methods in Ecology and Evolution</em> 15 (6): 1024–33. https://doi.org/<a href="https://doi.org/10.1111/2041-210X.14332">https://doi.org/10.1111/2041-210X.14332</a>.
 </div>
@@ -473,17 +493,26 @@ Evans, Jeffrey S., and Melanie A. Murphy. 2025. <em>spatialEco</em>. <a href="ht
 <div id="ref-faber2012natureserve" class="csl-entry" role="listitem">
 Faber-Langendoen, Don, Jennifer Nichols, Larry Master, et al. 2012. <span>“NatureServe Conservation Status Assessments: Methodology for Assigning Ranks.”</span> <em>NatureServe, Arlington, VA</em>.
 </div>
+<div id="ref-fawcett2006introduction" class="csl-entry" role="listitem">
+Fawcett, Tom. 2006. <span>“An Introduction to <span>ROC</span> Analysis.”</span> <em>Pattern Recognition Letters</em> 27 (8): 861–74. <a href="https://doi.org/10.1016/j.patrec.2005.10.010">https://doi.org/10.1016/j.patrec.2005.10.010</a>.
+</div>
 <div id="ref-feeley2011keep" class="csl-entry" role="listitem">
 Feeley, Kenneth J., and Miles R. Silman. 2011. <span>“Keep Collecting: Accurate Species Distribution Modelling Requires More Collections Than Previously Thought.”</span> <em>Diversity and Distributions</em> 17 (6): 1132–40.
 </div>
 <div id="ref-feldman2021trends" class="csl-entry" role="listitem">
 Feldman, Mariano J., Louis Imbeau, Philippe Marchand, Marc J. Mazerolle, Marcel Darveau, and Nicole J. Fenton. 2021. <span>“Trends and Gaps in the Use of Citizen Science Derived Data as Input for Species Distribution Models: A Quantitative Review.”</span> <em>PloS One</em> 16 (3): e0234587.
 </div>
+<div id="ref-flach2015precision" class="csl-entry" role="listitem">
+Flach, Peter A., and Meelis Kull. 2015. <span>“Precision-Recall-Gain Curves: <span>PR</span> Analysis Done Right.”</span> <em>Advances in Neural Information Processing Systems (NeurIPS)</em> 28: 838–46.
+</div>
 <div id="ref-franklin2010moving" class="csl-entry" role="listitem">
 Franklin, Janet. 2010. <span>“Moving Beyond Static Species Distribution Models in Support of Conservation Biogeography.”</span> <em>Diversity and Distributions</em> 16 (3): 321–30.
 </div>
 <div id="ref-gabor2022positional" class="csl-entry" role="listitem">
 Gábor, Lukáš, Walter Jetz, Muyang Lu, et al. 2022. <span>“Positional Errors in Species Distribution Modelling Are Not Overcome by the Coarser Grains of Analysis.”</span> <em>Methods in Ecology and Evolution</em> 13 (10): 2289–302.
+</div>
+<div id="ref-gathmann2002foraging" class="csl-entry" role="listitem">
+Gathmann, Achim, and Teja Tscharntke. 2002. <span>“Foraging Ranges of Solitary Bees.”</span> <em>Journal of Animal Ecology</em> 71 (5): 757–64.
 </div>
 <div id="ref-graham2008influence" class="csl-entry" role="listitem">
 Graham, Catherine H., Jane Elith, Robert J. Hijmans, et al. 2008. <span>“The Influence of Spatial Errors in Species Occurrence Data Used in Distribution Models.”</span> <em>Journal of Applied Ecology</em> 45 (1): 239–47.
@@ -506,11 +535,17 @@ Hijmans, Robert J., Andrew Brown, and Márcia Barbosa. 2026. <em>Terra: Spatial 
 <div id="ref-hijman2024dismo" class="csl-entry" role="listitem">
 Hijmans, Robert J., Steven Phillips, John Leathwick, and Jane Elith. 2024. <em>Dismo: Species Distribution Modeling</em>. <a href="https://doi.org/10.32614/CRAN.package.dismo">https://doi.org/10.32614/CRAN.package.dismo</a>.
 </div>
+<div id="ref-hirzel2006evaluating" class="csl-entry" role="listitem">
+Hirzel, Alexandre H., Gwenaëlle Le Lay, Véronique Helfer, Christophe Randin, and Antoine Guisan. 2006. <span>“Evaluating the Ability of Habitat Suitability Models to Predict Species Presences.”</span> <em>Ecological Modelling</em> 199 (2): 142–52. <a href="https://doi.org/10.1016/j.ecolmodel.2006.05.017">https://doi.org/10.1016/j.ecolmodel.2006.05.017</a>.
+</div>
 <div id="ref-inaturalist2024ecolo" class="csl-entry" role="listitem">
 iNaturalist. 2024. <em>Observations of <span class="nocase">Eriogonum coloradense</span> from <span>Colorado</span>, <span>USA</span>, Observed Before 16 <span>J</span>une 2024</em>. <a href="https://www.inaturalist.org" class="uri">Https://www.inaturalist.org</a>.
 </div>
 <div id="ref-jansen2022stop" class="csl-entry" role="listitem">
 Jansen, Jan, Skipton NC Woolley, Piers K. Dunstan, et al. 2022. <span>“Stop Ignoring Map Uncertainty in Biodiversity Science and Conservation Policy.”</span> <em>Nature Ecology &amp; Evolution</em> 6 (7): 828–29.
+</div>
+<div id="ref-jimenezvalverde2012insights" class="csl-entry" role="listitem">
+Jiménez-Valverde, Alberto. 2012. <span>“Insights into the Area Under the Receiver Operating Characteristic Curve (<span>AUC</span>) as a Discrimination Measure in Species Distribution Modelling.”</span> <em>Global Ecology and Biogeography</em> 21 (4): 498–507. <a href="https://doi.org/10.1111/j.1466-8238.2011.00683.x">https://doi.org/10.1111/j.1466-8238.2011.00683.x</a>.
 </div>
 <div id="ref-johnson2023field" class="csl-entry" role="listitem">
 Johnson, Sara, Brenda Molano-Flores, and David Zaya. 2023. <span>“Field Validation as a Tool for Mitigating Uncertainty in Species Distribution Modeling for Conservation Planning.”</span> <em>Conservation Science and Practice</em> 5 (8): e12978.
@@ -535,6 +570,12 @@ Kuhn, and Max. 2008. <span>“Building Predictive Models in r Using the Caret Pa
 </div>
 <div id="ref-kursa2010boruta" class="csl-entry" role="listitem">
 Kursa, Miron B., and Witold R. Rudnicki. 2010. <span>“Feature Selection with the <span>B</span>oruta Package.”</span> <em>Journal of Statistical Software</em> 36 (11): 1–13. <a href="https://doi.org/10.18637/jss.v036.i11">https://doi.org/10.18637/jss.v036.i11</a>.
+</div>
+<div id="ref-leeyaw2022biology" class="csl-entry" role="listitem">
+Lee-Yaw, Julie A., Jenny L. McCune, Samuel Pironon, and Seema N. Sheth. 2022. <span>“Species Distribution Models Rarely Predict the Biology of Real Populations.”</span> <em>Ecography</em> 2022 (6): e05877. <a href="https://doi.org/10.1111/ecog.05877">https://doi.org/10.1111/ecog.05877</a>.
+</div>
+<div id="ref-lobo2008auc" class="csl-entry" role="listitem">
+Lobo, Jorge M., Alberto Jiménez-Valverde, and Raimundo Real. 2008. <span>“<span>AUC</span>: A Misleading Measure of the Performance of Predictive Distribution Models.”</span> <em>Global Ecology and Biogeography</em> 17 (2): 145–51. <a href="https://doi.org/10.1111/j.1466-8238.2007.00358.x">https://doi.org/10.1111/j.1466-8238.2007.00358.x</a>.
 </div>
 <div id="ref-nic2020extinction" class="csl-entry" role="listitem">
 Lughadha, Eimear Nic, Steven P. Bachman, Tarciso CC Leão, et al. 2020. <span>“Extinction Risk and Threats to Plants and Fungi.”</span> <em>Plants, People, Planet</em> 2 (5): 389–408.
@@ -578,6 +619,9 @@ Reisch, Christoph, Christoph Schmid, and Florian Hartig. 2018. <span>“A Compar
 <div id="ref-rominger2019application" class="csl-entry" role="listitem">
 Rominger, Kody, and Susan E. Meyer. 2019. <span>“Application of UAV-Based Methodology for Census of an Endangered Plant Species in a Fragile Habitat.”</span> <em>Remote Sensing</em> 11 (6): 719.
 </div>
+<div id="ref-saito2015precision" class="csl-entry" role="listitem">
+Saito, Takaya, and Marc Rehmsmeier. 2015. <span>“The Precision-Recall Plot Is More Informative Than the <span>ROC</span> Plot When Evaluating Binary Classifiers on Imbalanced Datasets.”</span> <em>PLOS ONE</em> 10 (3): e0118432. <a href="https://doi.org/10.1371/journal.pone.0118432">https://doi.org/10.1371/journal.pone.0118432</a>.
+</div>
 <div id="ref-schorr2013using" class="csl-entry" role="listitem">
 Schorr, Robert A. 2013. <span>“Using Distance Sampling to Estimate Density and Abundance of <span>S</span>aussurea Weberi <span>H</span>ult<span>é</span>n (<span>W</span>eber’s Saw-Wort).”</span> <em>The Southwestern Naturalist</em> 58 (3): 378–83.
 </div>
@@ -590,6 +634,9 @@ Sofaer, Helen R., Jennifer A. Hoeting, and Catherine S. Jarnevich. 2019. <span>�
 <div id="ref-soro2024" class="csl-entry" role="listitem">
 <em>Southern Rocky Mountain Herbaria Portal</em>. n.d. <a href="https://www.soroherbaria.org/portal" class="uri">Https://www.soroherbaria.org/portal</a>.
 </div>
+<div id="ref-steyerberg2014towards" class="csl-entry" role="listitem">
+Steyerberg, Ewout W., and Yvonne Vergouwe. 2014. <span>“Towards Better Clinical Prediction Models: Seven Steps for Development and an ABCD for Validation.”</span> <em>European Heart Journal</em> 35 (29): 1925–31.
+</div>
 <div id="ref-stockwell2002effects" class="csl-entry" role="listitem">
 Stockwell, David RB, and A. Townsend Peterson. 2002. <span>“Effects of Sample Size on Accuracy of Species Distribution Models.”</span> <em>Ecological Modelling</em> 148 (1): 1–13.
 </div>
@@ -598,6 +645,9 @@ Stolar, Jessica, and Scott E. Nielsen. 2015. <span>“Accounting for Spatially B
 </div>
 <div id="ref-syfert2014using" class="csl-entry" role="listitem">
 Syfert, Mindy M., Lucas Joppa, Matthew J. Smith, David A. Coomes, Steven P. Bachman, and Neil A. Brummitt. 2014. <span>“Using Species Distribution Models to Inform IUCN Red List Assessments.”</span> <em>Biological Conservation</em> 177: 174–84.
+</div>
+<div id="ref-thuiller2004effects" class="csl-entry" role="listitem">
+Thuiller, Wilfried, Lluís Brotons, Miguel B. Araújo, and Sandra Lavorel. 2004. <span>“Effects of Restricting Environmental Range of Data to Project Current and Future Species Distributions.”</span> <em>Ecography</em> 27 (2): 165–72. <a href="https://doi.org/10.1111/j.0906-7590.2004.03673.x">https://doi.org/10.1111/j.0906-7590.2004.03673.x</a>.
 </div>
 <div id="ref-tuanmu2014global" class="csl-entry" role="listitem">
 Tuanmu, Mao-Ning, and Walter Jetz. 2014. <span>“A Global 1-Km Consensus Land-Cover Product for Biodiversity and Ecosystem Modelling.”</span> <em>Global Ecology and Biogeography</em> 23 (9): 1031–45.
@@ -631,6 +681,9 @@ Zellweger, Florian, Pieter De Frenne, Jonathan Lenoir, Duccio Rocchini, and Davi
 </div>
 <div id="ref-zimmer2023field" class="csl-entry" role="listitem">
 Zimmer, Scott N., Kenneth W. Holsinger, and Carol A. Dawson. 2023. <span>“A Field-Validated Ensemble Species Distribution Model of <span>E</span>riogonum Pelinophilum, an Endangered Subshrub in Colorado, USA.”</span> <em>Ecology and Evolution</em> 13 (12): e10816.
+</div>
+<div id="ref-zurbuchen2010maximum" class="csl-entry" role="listitem">
+Zurbuchen, Antonia, Lisa Landert, Jeannine Klaiber, Andreas Müller, Silke Hein, and Silvia Dorn. 2010. <span>“Maximum Foraging Ranges in Solitary Bees: Only Few Individuals Have the Capability to Cover Long Foraging Distances.”</span> <em>Biological Conservation</em> 143 (3): 669–76.
 </div>
 <div id="ref-zvoleff2020glcm" class="csl-entry" role="listitem">
 Zvoleff, Alex. 2020. <em><span class="nocase">g</span>lcm: Calculate Textures from Grey-Level Co-Occurrence Matrices (GLCMs)</em>. <a href="https://CRAN.R-project.org/package=glcm">https://CRAN.R-project.org/package=glcm</a>.

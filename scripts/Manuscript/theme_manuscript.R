@@ -311,3 +311,123 @@ example_surface <- function(bb, res = 0.003, range = c(0, 1), smooth_iter = 8, s
   terra::values(r) <- range[1] + v * (range[2] - range[1])
   r
 }
+
+## --- PA-ratio sensitivity ---------------------------------------------------------------
+## nAP: prevalence-normalized average precision. AP = pr_auc; each fit's own holdout carries
+## absences at its PA ratio, so a no-skill classifier scores AP = pi = 1 / (1 + ratio). nAP
+## rescales onto [baseline -> 0, perfect -> 1], stripping out the ratio-driven prevalence
+## shift that otherwise flatters high ratios. Vectorized; computed inline from the ratio.
+nAP <- function(ap, ratio) {
+  pi <- 1 / (1 + ratio)
+  (ap - pi) / (1 - pi)
+}
+
+## Boxplot per ratio + raw per-replicate points, faceted by holdout method. Reads the
+## consolidated results_summary/all_fit_metrics.csv (one row per fit). Same box+jitterdodge
+## idiom as the manuscript PA-ratio panel, but facets on holdout method and series on
+## resolution.
+##   df       all_fit_metrics.csv rows (needs the ratio column, `resolution`, `holdout` col)
+##   y        metric column to plot on y; the default 'nAP' is derived from pr_auc + ratio
+##   ratio    name of the PA-ratio column (default 'PAratio')
+##   holdout  column to facet over (default 'tree')
+##   labels   optional named vector remapping holdout values to readable facet titles
+##   y_lab    y-axis label (defaults to `y`)
+ratioSensitivity <- function(df, y = 'nAP', ratio = 'PAratio', holdout = 'tree',
+                             labels = NULL, y_lab = y) {
+  df$.ratio   <- df[[ratio]]
+  df$.y       <- if (identical(y, 'nAP')) nAP(df$pr_auc, df$.ratio) else df[[y]]
+  df$.holdout <- if (is.null(labels)) as.character(df[[holdout]]) else labels[as.character(df[[holdout]])]
+  df$.ratio_f <- factor(df$.ratio, levels = sort(unique(df$.ratio)))
+  df$Resolution <- factor(df$resolution)
+
+  ggplot2::ggplot(df, ggplot2::aes(.ratio_f, .y,
+                                   color = Resolution, fill = Resolution, shape = Resolution)) +
+    ggplot2::geom_boxplot(ggplot2::aes(group = interaction(.ratio_f, Resolution)),
+                          position = ggplot2::position_dodge2(width = 0.7, preserve = 'single'),
+                          alpha = 0.25, outlier.shape = NA, linewidth = 0.4) +
+    ggplot2::geom_point(position = ggplot2::position_jitterdodge(jitter.width = 0.12,
+                                                                 dodge.width = 0.7),
+                        size = 1.6, alpha = 0.8) +
+    ggplot2::facet_wrap(~ .holdout, scales = 'free_x') +
+    ggplot2::labs(x = 'Presence:absence ratio', y = y_lab,
+                  color = 'Resolution', fill = 'Resolution', shape = 'Resolution') +
+    theme_manuscript()
+}
+
+## Multi-metric PA-ratio grid: metrics down the rows, holdout methods across the columns,
+## points only (one per replicate), x = PA ratio on a fixed scale (default 1:50). Boxplots
+## are dropped - at these sparse replicate counts the raw points are clearer. nAP is derived
+## inline from pr_auc + ratio; the other metrics are read from their own columns. Dashed
+## reference lines mark each metric's ideal (nAP & Boyce -> 1, Cox slope -> 1, Cox intercept
+## -> 0). Pairs with aggregate_all_metrics.R output (all_fit_metrics.csv).
+##   df        all_fit_metrics.csv rows
+##   holdouts  named vector tree -> column label; its order sets column order and which
+##             trees are kept
+##   metrics   named vector metric-column -> row label; its order sets row order
+##   xlim      x-axis (ratio) limits
+
+
+ratioGrid <- function(df, holdouts,
+                      metrics = c(nAP = 'nAP', boyce = 'Boyce index',
+                                  cox_slope = 'Cox slope', cox_intercept = 'Cox intercept'),
+                      xlim = c(1, 50),
+                      clip = list(cox_slope = c(0, 2), cox_intercept = c(-1, 1))) {
+  df <- df[df$tree %in% names(holdouts), , drop = FALSE]
+  df$holdout    <- factor(holdouts[as.character(df$tree)], levels = holdouts)
+  df$Resolution <- factor(df$resolution)
+  if ('nAP' %in% names(metrics)) df$nAP <- nAP(df$pr_auc, df$PAratio)
+
+  ## Hide out-of-window points so that row's free_y zooms to the bulk (facet_grid +
+  ## free_y can't take a per-row coord_cartesian). For each clipped metric, count how
+  ## many points per panel fall outside the window and annotate it, then set them NA.
+  ann <- list()
+  for (m in names(clip)) {
+    if (!m %in% names(df)) next
+    lim <- clip[[m]]
+    outside <- !is.na(df[[m]]) & (df[[m]] < lim[1] | df[[m]] > lim[2])
+    if (m %in% names(metrics)) {
+      cnt <- tapply(outside, df$holdout, sum)
+      ann[[m]] <- data.frame(
+        holdout = factor(names(cnt), levels = holdouts),
+        metric  = factor(metrics[[m]], levels = metrics),
+        n       = as.integer(cnt), ytext = lim[2])
+    }
+    df[[m]][outside] <- NA
+  }
+  ann <- do.call(rbind, ann)
+  if (!is.null(ann)) ann <- ann[!is.na(ann$n) & ann$n > 0, , drop = FALSE]
+
+  long <- tidyr::pivot_longer(df, dplyr::all_of(names(metrics)),
+                              names_to = 'metric', values_to = 'value')
+  long$metric <- factor(metrics[long$metric], levels = metrics)
+
+  ideal <- c(nAP = 1, boyce = 1, cox_slope = 1, cox_intercept = 0)
+  refs <- data.frame(metric = factor(metrics, levels = metrics),
+                     yint = unname(ideal[names(metrics)]))
+  refs <- refs[!is.na(refs$yint), , drop = FALSE]
+
+  p <- ggplot2::ggplot(long, ggplot2::aes(PAratio, value,
+                                     color = Resolution, shape = Resolution)) +
+    ggplot2::geom_hline(data = refs, ggplot2::aes(yintercept = yint),
+                        inherit.aes = FALSE, linetype = '31',
+                        linewidth = 0.3, colour = 'grey55') +
+    ## default-method smooth per resolution group; CI ribbon at 1/4 the default 0.4 alpha.
+    ## Drawn before the points so the raw replicates sit on top.
+    ggplot2::geom_smooth(ggplot2::aes(fill = Resolution), alpha = 0.1, linewidth = 0.6) +
+    ggplot2::geom_point(size = 1.5, alpha = 0.85)
+
+  if (!is.null(ann) && nrow(ann)) {
+    p <- p + ggplot2::geom_text(
+      data = ann, inherit.aes = FALSE,
+      ggplot2::aes(x = xlim[2], y = ytext, label = paste0(n, ' omitted')),
+      hjust = 1, vjust = 1.3, size = 2.7, colour = 'grey35')
+  }
+
+  p +
+    ggplot2::facet_grid(metric ~ holdout, scales = 'free_y', switch = 'y') +
+    ggplot2::scale_x_continuous(limits = xlim, breaks = c(1, 10, 20, 30, 40, 50)) +
+    ggplot2::labs(x = 'Presence:absence ratio', y = NULL,
+                  color = 'Resolution', shape = 'Resolution') +
+    theme_manuscript() +
+    ggplot2::theme(strip.placement = 'outside')
+}
