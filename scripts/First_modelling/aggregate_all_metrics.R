@@ -13,7 +13,7 @@ suppressPackageStartupMessages(library(dplyr))
 source('functions.R')
 
 roots <- list.dirs(PROJ_ROOT, recursive = FALSE)
-roots <- roots[grepl('^results(_|$)', basename(roots))]
+roots <- roots[grepl('^[Rr]esults(_|$)', basename(roots))]
 
 pull_metric <- function(met, name, col = 'estimate'){
   v <- met[[col]][met$metric == name]

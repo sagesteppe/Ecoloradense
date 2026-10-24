@@ -645,17 +645,18 @@ The wombling approach shows that estimates at the XX-percentile led to more accu
 
 ### 3.6 | Ground Truth Based Model Refinement
 
-```{r Refinement Metric Grid by Holdout, out.width='100%', fig.width=9, fig.height=9}
-## Four model-diagnostic metrics (rows) across the three model-refinement CV strategies
+```{r Refinement Metric Grid by Holdout, out.width='100%', fig.width=12, fig.height=9}
+## Four model-diagnostic metrics (rows) across the four model-refinement CV strategies
 ## (columns, section 2.8), one point per replicate, over the full 1:50 presence:absence
 ## ratio range. nAP, Boyce index, Cox slope and Cox intercept; dashed lines mark each
 ## metric's ideal value. ratioGrid()/nAP() live in theme_manuscript.R; data from
 ## aggregate_all_metrics.R (all_fit_metrics.csv). Replicates still accruing.
 grid_metrics <- read.csv(file.path(PROJ_ROOT, 'results_summary', 'all_fit_metrics.csv'))
 holdout_cols <- c(
-  results_classicsplit                  = 'Classic split\n(KNNDM CV)',
-  results_LMPO_iter1a_high_pa           = 'LMPO\n(LMPO CV)',
-  results_spatialmapping_iter1a_high_pa = 'Spatial mapping\n(spatial CV)')
+  Results_random_iter1a_high_pa         = 'Classic split\n(20/80 random, occ-stratified)',
+  Results_spatialknn_iter1a_high_pa     = 'Spatial kNN\n(kNNDM CV)',
+  Results_spatialmapping_iter1a_high_pa = 'Spatial mapping\n(spatial CV)',
+  Results_LMPO_iter1a_high_pa           = 'LMPO\n(LMPO CV)')
 ratioGrid(grid_metrics, holdouts = holdout_cols)
 ```
 
