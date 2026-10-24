@@ -95,9 +95,21 @@ aoaSurfaces <- function(model, rast_dat, fname, results_root, LPD = TRUE, overwr
 presenceTrainDI <- function(model, LPD = FALSE){
   td <- model$trainingData
   oc <- if('.outcome' %in% names(td)) td$.outcome else td$Occurrence
-  model$trainingData <- td[as.character(oc) == '1', , drop = FALSE]
+  td_p <- td[as.character(oc) == '1', , drop = FALSE]
+  model$trainingData <- td_p
   if(!is.null(model$control)){ model$control$index <- NULL; model$control$indexOut <- NULL }
-  CAST::trainDI(model, LPD = LPD, verbose = FALSE)
+  # Subsetting to presences can leave predictors constant (e.g. a habitat/landcover dummy
+  # that's always 1 at known occurrences), and CAST::trainDI()'s scaling step divides by
+  # the per-column sd - a zero column throws "some variables in train seem to have no
+  # variance". Restrict `variables` to the non-constant predictors so trainDI never sees
+  # the zero-variance columns; downstream aoa() uses the same list via tdi$variables.
+  predictors <- setdiff(names(td_p), c('.outcome', 'Occurrence', '.weights'))
+  keep <- vapply(predictors, function(v){
+    x <- td_p[[v]]
+    if(is.numeric(x)) !is.na(stats::sd(x, na.rm = TRUE)) && stats::sd(x, na.rm = TRUE) > 0
+    else length(unique(x[!is.na(x)])) > 1
+  }, logical(1))
+  CAST::trainDI(model, variables = predictors[keep], LPD = LPD, verbose = FALSE)
 }
 
 
