@@ -18,7 +18,7 @@ source('functions.R')
 
 far <- read.csv(file.path(PROJ_ROOT, 'results_highPA_fieldabs', 'tables', 'far-ratio-median-models.csv'))
 far <- far[far$target_prevalence %in% c(0.01, 0.05), ]
-far$root <- ifelse(far$design == 'spatial', 'results_highPA_fieldabs', 'results_highPA_classicsplit_fieldabs')
+far$root <- ifelse(far$design == 'spatial', 'results_highPA_fieldabs', 'Results_random_iter1a_high_pa')
 far <- far[order(match(far$resolution, c('3arc', '1arc', '1-3arc')), far$target_prevalence), ] # fastest first
 far$fname <- mapply(fname_build, far$resolution, 1, far$chosen_ratio, 0, far$median_replicate, USE.NAMES = FALSE)
 far <- far[!duplicated(paste(far$root, far$fname)), ] # one ratio can be chosen at both targets

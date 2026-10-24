@@ -1,0 +1,13 @@
+"metric","estimate","std_error","resolution","iteration","n"
+"pr_auc",0.504477291185017,NA,"3arc",1,283
+"roc_auc",0.625222816399287,NA,"3arc",1,283
+"brier_class",0.287458460541814,NA,"3arc",1,283
+"brier_scaled",-0.282434305165627,NA,"3arc",1,283
+"prevalence",0.339222614840989,NA,"3arc",1,283
+"cox_intercept",-1.00551816797324,0.168872895257011,"3arc",1,283
+"cox_slope",0.0321053634761595,0.0318955818028765,"3arc",1,283
+"dca_prop_useful",0.131313131313131,NA,"3arc",1,283
+"dca_mean_excess_nb",-0.141530984059232,NA,"3arc",1,283
+"dca_nb_pt25",0.10718492343934,NA,"3arc",1,283
+"dca_nb_pt50",-0.0742049469964665,NA,"3arc",1,283
+"dca_nb_pt75",-0.279151943462898,NA,"3arc",1,283

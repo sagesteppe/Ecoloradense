@@ -5,13 +5,15 @@
 ## across the whole grid search (500+ fitted models).
 ##
 ## CV structure is recorded per model, inferred from which results tree it was fit under:
-##   results/              -> 'spatial knndm'  (CAST::knndm() class-stratified split)
-##   results_classicsplit/ -> 'classic'        (caret::createDataPartition() random split)
-##   results_spatialblock/ -> 'spatial block'  (not fit yet - see note below)
-## A future spatial-block CV needs to block/permute on POPULATION, not individual site -
-## sites cluster tightly within a population, so a site-level block would leak population
-## identity across folds. That grouping isn't implemented yet, so no 'spatial block' rows
-## exist until scripts/First_modelling fits models under a results_spatialblock/ tree.
+##   results/                              -> 'spatial knndm'  (CAST::knndm() class-stratified)
+##   results_classicsplit/                 -> 'classic'        (caret::createDataPartition())
+##   Results_spatialknn_iter1a_high_pa/    -> spatial knndm, high-PA pool
+##   Results_random_iter1a_high_pa/        -> random, high-PA pool + field abs
+##   Results_spatialmapping_iter1a_high_pa -> Partitioner build_partition_mapping(),
+##                                            population-aware spatial split
+##   Results_LMPO_iter1a_high_pa/          -> Partitioner build_partition_lmpo(),
+##                                            leave-M-populations-out whole-segment folds
+## See cv_roots below for the full inventory of trees walked.
 
 library(sf)
 library(terra)
@@ -52,23 +54,20 @@ gt <- gt |>
 ## 2. Locate every fitted grid-search model, across both CV trees -----------------------
 
 cv_roots <- c(
+  # Low-PA (original) trees
   'results'              = 'spatial knndm',
   'results_classicsplit' = 'classic',
   'results_populationsplit'      = 'LOPO',
   'results_populationgroupsplit' = 'leave-pop-group-out',
-  # Partitioner.R CV flavors (scripts/final_sdm/Partitioner.R + Modelling_partitionerCV.R)
-  'results_spatial_mapping' = 'spatial_mapping (Partitioner)',
-  'results_LMPO'            = 'LMPO (Partitioner)',
-  # First_modelling/highPA_grid.R split designs on the extended absence pool
-  'results_highPA'                 = 'spatial knndm, high-PA pool',
-  'results_highPA_classicsplit'    = 'classic, high-PA pool',
-  'results_highPA_populationsplit' = 'LOPO, high-PA pool',
-  # ... and with every field absence kept in every fit (highPA_grid.R keep_field_absences)
+  # High-PA pool, diluted / background-only absences (highPA_grid.R keep_field_absences=FALSE)
+  'Results_spatialknn_iter1a_high_pa' = 'spatial knndm, high-PA pool',
+  # High-PA pool with every field absence kept in every fit (keep_field_absences=TRUE)
   'results_highPA_fieldabs'                 = 'spatial knndm, high-PA pool + field abs',
-  'results_highPA_classicsplit_fieldabs'    = 'classic, high-PA pool + field abs',
   'results_highPA_populationsplit_fieldabs' = 'LOPO, high-PA pool + field abs',
-  'results_highPA_spatial_mapping_fieldabs' = 'spatial_mapping (Partitioner), high-PA pool + field abs',
-  'results_highPA_LMPO_fieldabs'            = 'LMPO (Partitioner), high-PA pool + field abs'
+  # Partitioner.R CV flavors (final_sdm/Partitioner.R + Modelling_partitionerCV.R), high-PA pool
+  'Results_random_iter1a_high_pa'           = 'random, high-PA pool + field abs',
+  'Results_spatialmapping_iter1a_high_pa'   = 'spatial_mapping (Partitioner), high-PA pool + field abs',
+  'Results_LMPO_iter1a_high_pa'             = 'LMPO (Partitioner), high-PA pool + field abs'
 )
 # roots that haven't been fit yet (or have no models so far) are skipped
 cv_roots <- cv_roots[vapply(names(cv_roots), function(root)

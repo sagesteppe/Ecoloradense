@@ -5,7 +5,7 @@
 ## "Far" is scored on holdout presences vs. BACKGROUND absences only (field absences are
 ## the near-population question), reweighted to a realistic landscape prevalence.
 ## Done separately per CV design:
-##   classic - each model's own holdout (results_highPA_classicsplit_fieldabs/test_data),
+##   classic - each model's own holdout (Results_random_iter1a_high_pa/test_data),
 ##             field absences dropped by matching cell coordinates; 21 ratios x 10 shuffles.
 ##             SELECTS the ratio.
 ##   spatial - the common test set, background only (score_common_testset.R); 21 ratios x
@@ -45,7 +45,7 @@ resolutions <- c('3arc' = 90, '1arc' = 30, '1-3arc' = 10)
 out_dir <- file.path(PROJ_ROOT, 'results_highPA_fieldabs', 'tables')
 
 ## 1. Classic: score every model's own holdout, background absences only ----------------
-classic_root <- file.path(PROJ_ROOT, 'results_highPA_classicsplit_fieldabs')
+classic_root <- file.path(PROJ_ROOT, 'Results_random_iter1a_high_pa')
 model_re <- '^(1-3arc|1arc|3arc)-Iteration1-PA1:([0-9.]+)DO:0-Seed(50[0-9]{2})\\.csv$'
 
 field_abs_cells <- function(res_str){

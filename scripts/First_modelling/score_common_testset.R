@@ -1,5 +1,5 @@
 ## Score every high-PA spatial-split model on ONE common test set: the entire test side of
-## the cached spatial split (results_highPA/tables/{res}-split.rds) - all test presences
+## the cached spatial split (Results_spatialknn_iter1a_high_pa/tables/{res}-split.rds) - all test presences
 ## and every test absence, field and background alike.
 ##
 ## Why: each model's own holdout (results_*/test_data/) contains only the absences drawn at
@@ -11,7 +11,7 @@
 ##
 ## Leak-free: the split partitions every point (all 18k absences included) once, before any
 ## PA subsampling; modeller() trains only on split$train_id rows, and a ratio only changes
-## how many of those it draws. No spatial-split model - diluted (results_highPA/) or
+## how many of those it draws. No spatial-split model - diluted (Results_spatialknn_iter1a_high_pa/) or
 ## field-absence (results_highPA_fieldabs/), which share the split - has seen any test-side
 ## point. Only split 1's models (seeds 5001-5099) are scored; split 2's used another split.
 ## Classic-split models can't be scored this way: their split is redrawn per fit, so no
@@ -32,7 +32,7 @@ resolution <- as.numeric(args[1])
 stopifnot('first argument must be a resolution: 90, 30 or 10' = resolution %in% c(90, 30, 10))
 res_str <- res_string(resolution)
 target_prevalences <- round(seq(0.01, 0.40, by = 0.01), 2)
-roots <- c(diluted = 'results_highPA', field_abs = 'results_highPA_fieldabs')
+roots <- c(diluted = 'Results_spatialknn_iter1a_high_pa', field_abs = 'results_highPA_fieldabs')
 p2proc <- file.path('..', 'data', 'spatial', 'processed')
 p2dat  <- file.path('..', 'data', 'Data4modelling')
 

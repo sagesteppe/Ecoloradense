@@ -9,12 +9,14 @@
 ##
 ## Three split designs, mirroring the original search's three results trees:
 ##   spatial - n_splits independent class-stratified knndm splits per resolution
-##             (spatial_class_split()), each cached (results_highPA/tables/
-##             {res}-split{k}.rds; split 1 is {res}-split.rds) and each run through the
-##             whole ratio grid -> results_highPA/
+##             (spatial_class_split()), each cached (Results_spatialknn_iter1a_high_pa/
+##             tables/{res}-split{k}.rds; split 1 is {res}-split.rds) and each run through
+##             the whole ratio grid -> Results_spatialknn_iter1a_high_pa/
+##             (field-absence variant: results_highPA_fieldabs/).
 ##   classic - modeller()'s random caret::createDataPartition() split, redrawn for every
 ##             fit from its seed, so the holdout spans all populations
-##             -> results_highPA_classicsplit/
+##             -> Results_random_iter1a_high_pa/ (field-absence variant;
+##             the diluted/background-only run has been archived off-tree)
 ##   lopo    - leave-one-population-out (population_lopo_search()) at only a few ratios
 ##             (lopo_ratios below): every population with >= 3 presences takes a turn
 ##             as the whole test set -> results_highPA_populationsplit/
@@ -84,11 +86,12 @@ seeds_of <- function(k) 5000 + 100 * (k - 1) + seq_len(n_seeds)
 # un-suffixed results_highPA* trees for comparison.
 keep_field_absences <- TRUE
 root_sfx <- if(keep_field_absences) '_fieldabs' else ''
-# Partitioner modes use the tidy Results_<cvtag>_iter1a_high_pa scheme; the pre-existing
-# non-partitioner modes keep their legacy names so nothing downstream has to be rewired.
+# All modes now use the tidy Results_<cvtag>_iter1a_high_pa scheme, except for the LOPO
+# tree and the field-absence spatial-knn tree, which keep their legacy names so nothing
+# downstream has to be rewired. The non-fieldabs classic tree has been archived off-tree.
 results_root <- file.path(PROJ_ROOT, switch(mode,
-  spatial         = paste0('results_highPA',               root_sfx),
-  classic         = paste0('results_highPA_classicsplit',  root_sfx),
+  spatial         = if(keep_field_absences) 'results_highPA_fieldabs' else 'Results_spatialknn_iter1a_high_pa',
+  classic         = if(keep_field_absences) 'Results_random_iter1a_high_pa' else stop('classic non-fieldabs tree is archived'),
   lopo            = paste0('results_highPA_populationsplit', root_sfx),
   spatial_mapping = 'Results_spatialmapping_iter1a_high_pa',
   LMPO            = 'Results_LMPO_iter1a_high_pa'
@@ -160,7 +163,7 @@ get_spatial_split <- function(k){
   split_path <- file.path(results_root, 'tables', paste0(res_string(resolution), '-split', sfx, '.rds'))
   # reuse the un-suffixed tree's split if it exists, so the field-absence runs differ from
   # the diluted runs only in absence sampling (same points, same .id order)
-  base_split <- file.path(PROJ_ROOT, 'results_highPA', 'tables', basename(split_path))
+  base_split <- file.path(PROJ_ROOT, 'Results_spatialknn_iter1a_high_pa', 'tables', basename(split_path))
   if(!file.exists(split_path) && root_sfx != '' && file.exists(base_split))
     file.copy(base_split, split_path)
   if(file.exists(split_path)){

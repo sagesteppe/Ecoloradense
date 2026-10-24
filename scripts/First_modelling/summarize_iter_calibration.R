@@ -18,8 +18,8 @@
 ##
 ## Run with the working directory set to scripts/ - e.g.
 ##   Rscript First_modelling/summarize_iter_calibration.R                        # unweighted on results/
-##   Rscript First_modelling/summarize_iter_calibration.R results_highPA         # unweighted on an alt tree
-##   Rscript First_modelling/summarize_iter_calibration.R results_highPA --prevalences=0.01,0.05,0.10,0.20,0.34,0.40
+##   Rscript First_modelling/summarize_iter_calibration.R Results_spatialknn_iter1a_high_pa         # unweighted on an alt tree
+##   Rscript First_modelling/summarize_iter_calibration.R Results_spatialknn_iter1a_high_pa --prevalences=0.01,0.05,0.10,0.20,0.34,0.40
 
 suppressPackageStartupMessages({
   library(dplyr)

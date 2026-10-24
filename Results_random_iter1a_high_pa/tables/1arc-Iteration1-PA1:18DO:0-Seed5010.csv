@@ -1,0 +1,7 @@
+"metric","estimator","estimate","std_error","resolution","iteration"
+"pr_auc","binary",0.654890622824159,NA,"1arc",1
+"roc_auc","binary",0.954955290611028,NA,"1arc",1
+"brier_class","binary",0.0253699810508183,NA,"1arc",1
+"cox_intercept","glm",-0.284528799575045,0.200688772217378,"1arc",1
+"cox_slope","glm",0.56957140035765,0.0705258588008029,"1arc",1
+"boyce","continuous",0.832,NA,"1arc",1

@@ -55,7 +55,7 @@ near <- tibble(
 far <- read.csv(file.path(out_dir, 'far-ratio-median-models.csv')) |>
   filter(target_prevalence == 0.01) |>
   transmute(design, resolution, far_ratio = chosen_ratio, far_seed = median_replicate,
-            far_root = ifelse(design == 'spatial', 'results_highPA_fieldabs', 'results_highPA_classicsplit_fieldabs'))
+            far_root = ifelse(design == 'spatial', 'results_highPA_fieldabs', 'Results_random_iter1a_high_pa'))
 pairs <- inner_join(near, far, by = c('design', 'resolution'))
 
 score <- function(truth, p){
