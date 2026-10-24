@@ -22,15 +22,30 @@
 #' @param LPD Logical. Also compute local point density; noticeably slower, especially at
 #' 1/3 arc-second. Default TRUE so nothing is left to recompute later.
 #' @param overwrite Logical. Recompute and overwrite an existing AOA raster/trainDI.
+#' @param reference Which training points define the applicability domain. \code{'train'}
+#' (default, unchanged behaviour) uses the full training cloud - presences AND pseudo-
+#' absences - with the model's CV folds setting the threshold, writing the original
+#' \code{{fname}-AOA*} files. \code{'presence'} uses the PRESENCES only: pseudo-absences are
+#' background draws, not occurrence data, so this defines extrapolation relative to the known
+#' niche - the surface for comparing models against held-out ground truth. It keeps the
+#' model's variable weights but drops the CV folds (they index the full training frame, so
+#' the threshold instead comes from the presence DIs) and writes to \code{-presence}-suffixed
+#' files (\code{{fname}-AOA-presence*}, \code{{fname}-trainDI-presence.rds}) so both surfaces
+#' coexist. NOTE: the presence branch is untested on this checkout (no CAST/models here) -
+#' validate on the data machine.
 #' @return The trainDI object, invisibly.
-aoaSurfaces <- function(model, rast_dat, fname, results_root, LPD = TRUE, overwrite = TRUE){
+aoaSurfaces <- function(model, rast_dat, fname, results_root, LPD = TRUE, overwrite = TRUE,
+                        reference = c('train', 'presence')){
+  reference <- match.arg(reference)
+  tag <- if(reference == 'presence') '-presence' else ''
 
-  tdi_path <- file.path(results_root, 'modelsTune', paste0(fname, '-trainDI.rds'))
+  tdi_path <- file.path(results_root, 'modelsTune', paste0(fname, '-trainDI', tag, '.rds'))
   if(file.exists(tdi_path) && !overwrite){
     tdi <- readRDS(tdi_path)
   } else {
-    message('Computing trainDI (once) for ', fname)
-    tdi <- CAST::trainDI(model, LPD = LPD, verbose = FALSE)
+    message('Computing trainDI (', reference, ', once) for ', fname)
+    tdi <- if(reference == 'presence') presenceTrainDI(model, LPD = LPD)
+           else CAST::trainDI(model, LPD = LPD, verbose = FALSE)
     saveRDS(tdi, tdi_path)
   }
 
@@ -41,25 +56,48 @@ aoaSurfaces <- function(model, rast_dat, fname, results_root, LPD = TRUE, overwr
   }
 
   pout <- file.path(results_root, 'suitability_maps')
-  surf_path <- file.path(pout, paste0(fname, '-AOA-surfaces.tif'))
+  surf_path <- file.path(pout, paste0(fname, '-AOA', tag, '-surfaces.tif'))
   # Honour overwrite = FALSE for the surfaces too (not just the trainDI read above): skip the
   # expensive predict/write when they already exist rather than letting terra error on them.
   if(file.exists(surf_path) && !overwrite){
     message('AOA surfaces already exist; skipping (overwrite = FALSE): ', surf_path)
     return(invisible(tdi))
   }
-  message('Writing Area of Applicability surfaces (', paste(layers, collapse = ', '), ') to raster')
+  message('Writing Area of Applicability surfaces (', reference, ': ', paste(layers, collapse = ', '), ') to raster')
   surf <- terra::predict(
     rast_dat, model = model, fun = AOAfun, tdi = tdi, LPD = LPD, layers = layers,
     cores = 1, cpkgs = 'CAST', na.rm = TRUE,
     filename = surf_path,
     wopt = list(names = layers), overwrite = overwrite)
-  # the single-layer binary AOA raster every downstream script reads (threshold masks,
-  # patches, cost distances, maps) - unchanged in name and content
-  terra::writeRaster(surf[['AOA']], file.path(pout, paste0(fname, '-AOA.tif')),
+  # the single-layer binary AOA raster downstream scripts read (threshold masks, patches,
+  # cost distances, maps). The 'train' name is unchanged; 'presence' is a parallel file.
+  terra::writeRaster(surf[['AOA']], file.path(pout, paste0(fname, '-AOA', tag, '.tif')),
                      names = 'AOA', overwrite = overwrite)
 
   invisible(tdi)
+}
+
+
+#' Presence-only trainDI for a fitted model
+#'
+#' @description Reference cloud for \code{CAST::aoa()} built from the PRESENCES only - the
+#' pseudo-absences are background draws, not occurrence data, so this defines extrapolation
+#' relative to the known niche. Reuses the model (keeping its variable-importance weights)
+#' but subsets its training frame to presences and drops the stored CV fold indices, which
+#' point into the full training frame and would misalign after subsetting; the AOA threshold
+#' then comes from the presence-only nearest-neighbour DIs. Shared by
+#' \code{aoaSurfaces(reference = 'presence')} and the point-level AOA classifier
+#' (Second_groundtruth/aoa_gt_point_domain.R).
+#' @param model The caret \code{train} object (results_root/modelsTune/{fname}.rds).
+#' @param LPD Logical, also compute local point density. Default FALSE (not needed for the
+#' binary interpolation/extrapolation verdict).
+#' @return A \code{CAST::trainDI} object referenced on the presences.
+presenceTrainDI <- function(model, LPD = FALSE){
+  td <- model$trainingData
+  oc <- if('.outcome' %in% names(td)) td$.outcome else td$Occurrence
+  model$trainingData <- td[as.character(oc) == '1', , drop = FALSE]
+  if(!is.null(model$control)){ model$control$index <- NULL; model$control$indexOut <- NULL }
+  CAST::trainDI(model, LPD = LPD, verbose = FALSE)
 }
 
 
