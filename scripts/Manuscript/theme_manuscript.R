@@ -371,11 +371,15 @@ ratioGrid <- function(df, holdouts,
                       metrics = c(nAP = 'nAP', boyce = 'Boyce index',
                                   cox_slope = 'Cox slope', cox_intercept = 'Cox intercept'),
                       xlim = c(1, 50),
-                      clip = list(cox_slope = c(0, 2), cox_intercept = c(-1, 1))) {
+                      clip = list(cox_slope = c(0, 2), cox_intercept = c(-1, 1)),
+                      ideal = c(nAP = 1, boyce = 1, cox_slope = 1, cox_intercept = 0)) {
   df <- df[df$tree %in% names(holdouts), , drop = FALSE]
   df$holdout    <- factor(holdouts[as.character(df$tree)], levels = holdouts)
   df$Resolution <- factor(df$resolution)
-  if ('nAP' %in% names(metrics)) df$nAP <- nAP(df$pr_auc, df$PAratio)
+  ## nAP from the own-holdout prevalence (1/(1+ratio)). Callers scoring against a fixed test
+  ## set with a known prevalence (e.g. the 2026 field eval) can pre-compute df$nAP from that
+  ## prevalence; a supplied nAP column is kept as-is rather than overwritten.
+  if ('nAP' %in% names(metrics) && !'nAP' %in% names(df)) df$nAP <- nAP(df$pr_auc, df$PAratio)
 
   ## Hide out-of-window points so that row's free_y zooms to the bulk (facet_grid +
   ## free_y can't take a per-row coord_cartesian). For each clipped metric, count how
@@ -401,7 +405,6 @@ ratioGrid <- function(df, holdouts,
                               names_to = 'metric', values_to = 'value')
   long$metric <- factor(metrics[long$metric], levels = metrics)
 
-  ideal <- c(nAP = 1, boyce = 1, cox_slope = 1, cox_intercept = 0)
   refs <- data.frame(metric = factor(metrics, levels = metrics),
                      yint = unname(ideal[names(metrics)]))
   refs <- refs[!is.na(refs$yint), , drop = FALSE]
