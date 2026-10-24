@@ -40,12 +40,19 @@ aoaSurfaces <- function(model, rast_dat, fname, results_root, LPD = TRUE, overwr
     as.data.frame(a[layers])
   }
 
-  message('Writing Area of Applicability surfaces (', paste(layers, collapse = ', '), ') to raster')
   pout <- file.path(results_root, 'suitability_maps')
+  surf_path <- file.path(pout, paste0(fname, '-AOA-surfaces.tif'))
+  # Honour overwrite = FALSE for the surfaces too (not just the trainDI read above): skip the
+  # expensive predict/write when they already exist rather than letting terra error on them.
+  if(file.exists(surf_path) && !overwrite){
+    message('AOA surfaces already exist; skipping (overwrite = FALSE): ', surf_path)
+    return(invisible(tdi))
+  }
+  message('Writing Area of Applicability surfaces (', paste(layers, collapse = ', '), ') to raster')
   surf <- terra::predict(
     rast_dat, model = model, fun = AOAfun, tdi = tdi, LPD = LPD, layers = layers,
     cores = 1, cpkgs = 'CAST', na.rm = TRUE,
-    filename = file.path(pout, paste0(fname, '-AOA-surfaces.tif')),
+    filename = surf_path,
     wopt = list(names = layers), overwrite = overwrite)
   # the single-layer binary AOA raster every downstream script reads (threshold masks,
   # patches, cost distances, maps) - unchanged in name and content
@@ -593,7 +600,12 @@ modeller <- function(x, resolution, iteration, se_prediction, p2proc, train_spli
   if(!exists('rf_model')){
     rf_model <- readRDS(paste0(results_root, '/models/', fname, '.rds'))
   }
-  aoaSurfaces(model, rast_dat, fname, results_root)
+  # Skip when the surfaces already exist (matches the Pr-raster guard above). Building them -
+  # trainDI + block-wise aoa() + LPD - is expensive, especially at 1/3 arc-second, so don't
+  # redo it on every resume/re-run. aoaSurfaces() also self-skips under overwrite = FALSE.
+  if(!file.exists(file.path(results_root, 'suitability_maps', paste0(fname, '-AOA-surfaces.tif')))){
+    aoaSurfaces(model, rast_dat, fname, results_root)
+  }
   
   ###############      STANDARD ERROR PREDICTION        ########################
   # SE predictions are memory-heavy; tile the raster, predict per tile, mosaic.
