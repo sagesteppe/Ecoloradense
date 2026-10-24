@@ -5,13 +5,21 @@
 ## <tree>/tables/, mirroring modeller()'s fit-time eval schema (long form:
 ## metric/estimator/estimate/std_error, plus resolution/iteration columns).
 ##
-## Writes two files per model, so a 270 m near-population subset is scored alongside the
-## full point set the same way digitize_evaluate_2026_groundtruth.R does:
-##   <tree>/tables/<model>-2026gt.csv       - all 2026 gt points
-##   <tree>/tables/<model>-2026gt-270m.csv  - points within 270 m of a known occurrence
+## Writes four files per model, crossing a 270 m near-population distance filter with a
+## presence-referenced interpolation filter (gt points inside the model's applicability
+## domain under CAST::aoa() with a PRESENCE-only reference cloud - the extrapolation subset
+## is the same model asked a question it has no training signal for, so scoring on the
+## interp subset isolates "model knew enough to answer"):
+##   <tree>/tables/<model>-2026gt.csv              - all gt points
+##   <tree>/tables/<model>-2026gt-270m.csv         - gt points within 270 m of a known occ
+##   <tree>/tables/<model>-2026gt-interp.csv       - gt points in-domain (Interpolation)
+##   <tree>/tables/<model>-2026gt-270m-interp.csv  - both filters applied
 ##
-## Skips any (tree, model) whose both output CSVs already exist, so an interrupted run
-## resumes cleanly.
+## Skips any (tree, model) whose four output CSVs already exist, so an interrupted run
+## resumes cleanly. The interp AOA call needs the caret `train` object in modelsTune/
+## (not the ranger model used for probability predictions), via presenceTrainDI() in
+## suitability_functions.R; a model missing from modelsTune/ has its two interp CSVs
+## written with NA metrics and n = 0.
 ##
 ## Usage (working directory scripts/):
 ##   Rscript Second_groundtruth/evaluate_2026_pertree.R                   # all 4 trees
@@ -23,10 +31,11 @@ suppressPackageStartupMessages({
   library(terra)
   library(tidyverse)
   library(ranger)
+  library(CAST)
 })
 
 p2proj <- Find(dir.exists, c('/media/steppe/hdd/EriogonumColoradenseTaxonomy', '~/Documents/Ecoloradense'))
-source(file.path(p2proj, 'scripts', 'functions.R'))  # rastReader(), presenceScores()
+source(file.path(p2proj, 'scripts', 'functions.R'))  # rastReader(), presenceScores(), presenceTrainDI()
 p2proc <- file.path(p2proj, 'data', 'spatial', 'processed')
 
 default_trees <- c('Results_LMPO_iter1a_high_pa',
@@ -81,11 +90,10 @@ get_covs <- function(res_tag){
   get(res_tag, envir = point_covs, inherits = FALSE)
 }
 
-## 3. Score one model, within an optional distance-to-known-occurrence filter ----------
+## 3. Score the gt subset selected by `keep`, in modeller()'s long-form eval schema ----
 
-score_model <- function(rf_model, covs, keep_dist, res_tag, iter){
-  pred <- predict(rf_model, data = covs, type = 'response')$predictions[, '1']
-  keep <- keep_dist & !is.na(pred) & !is.na(gt$Presence)
+score_subset <- function(pred, keep, res_tag, iter){
+  keep <- keep & !is.na(pred) & !is.na(gt$Presence)
   if(sum(keep) == 0 || length(unique(gt$Presence[keep])) < 2)
     return(tibble(metric = 'pr_auc', estimator = 'binary',
                   estimate = NA_real_, std_error = NA_real_,
@@ -93,6 +101,22 @@ score_model <- function(rf_model, covs, keep_dist, res_tag, iter){
   scores <- presenceScores(truth = gt$Presence[keep], prob = pred[keep])
   scores$metrics |>
     mutate(resolution = res_tag, iteration = iter, n = sum(keep))
+}
+
+## Classify every gt point as in-domain (Interpolation) under a presence-referenced AOA
+## built from the caret `train` object in modelsTune/. Returns a logical vector of length
+## nrow(gt); NA where the caret model is missing or AOA can't be computed, propagated as
+## FALSE into the interp subset so those models score as n = 0 interp rather than erroring.
+classify_interp <- function(tree, model_id, covs){
+  caret_path <- file.path(p2proj, tree, 'modelsTune', paste0(model_id, '.rds'))
+  if(!file.exists(caret_path)) return(rep(NA, nrow(gt)))
+  m <- readRDS(caret_path)
+  tdi <- tryCatch(presenceTrainDI(m, LPD = FALSE), error = function(e) NULL)
+  if(is.null(tdi)) return(rep(NA, nrow(gt)))
+  nd <- covs[, tdi$variables, drop = FALSE]
+  a <- tryCatch(CAST::aoa(nd, trainDI = tdi, verbose = FALSE), error = function(e) NULL)
+  if(is.null(a)) return(rep(NA, nrow(gt)))
+  as.logical(a$AOA)
 }
 
 ## 4. Walk each tree, write per-model CSVs ---------------------------------------------
@@ -108,21 +132,35 @@ for(tree in trees){
   for(i in seq_along(model_files)){
     f <- model_files[i]
     model_id <- sub('\\.rds$', '', basename(f))
-    out_all  <- file.path(tables_dir, paste0(model_id, '-2026gt.csv'))
-    out_270  <- file.path(tables_dir, paste0(model_id, '-2026gt-270m.csv'))
-    if(file.exists(out_all) && file.exists(out_270)) next
+    out_all        <- file.path(tables_dir, paste0(model_id, '-2026gt.csv'))
+    out_270        <- file.path(tables_dir, paste0(model_id, '-2026gt-270m.csv'))
+    out_interp     <- file.path(tables_dir, paste0(model_id, '-2026gt-interp.csv'))
+    out_270_interp <- file.path(tables_dir, paste0(model_id, '-2026gt-270m-interp.csv'))
+    if(all(file.exists(c(out_all, out_270, out_interp, out_270_interp)))) next
 
     res_tag <- parse_resolution(model_id)
     iter    <- parse_iteration(model_id)
     covs    <- get_covs(res_tag)
     rf      <- readRDS(f)
+    pred    <- predict(rf, data = covs, type = 'response')$predictions[, '1']
 
     if(!file.exists(out_all))
-      write.csv(score_model(rf, covs, rep(TRUE, nrow(gt)), res_tag, iter),
+      write.csv(score_subset(pred, rep(TRUE, nrow(gt)), res_tag, iter),
                 out_all, row.names = FALSE)
     if(!file.exists(out_270))
-      write.csv(score_model(rf, covs, gt$dist_known_occ <= 270, res_tag, iter),
+      write.csv(score_subset(pred, gt$dist_known_occ <= 270, res_tag, iter),
                 out_270, row.names = FALSE)
+
+    if(!file.exists(out_interp) || !file.exists(out_270_interp)){
+      interp <- classify_interp(tree, model_id, covs)
+      interp_keep <- !is.na(interp) & interp
+      if(!file.exists(out_interp))
+        write.csv(score_subset(pred, interp_keep, res_tag, iter),
+                  out_interp, row.names = FALSE)
+      if(!file.exists(out_270_interp))
+        write.csv(score_subset(pred, interp_keep & gt$dist_known_occ <= 270, res_tag, iter),
+                  out_270_interp, row.names = FALSE)
+    }
 
     if(i %% 25 == 0 || i == length(model_files))
       message('  ', i, ' / ', length(model_files))
