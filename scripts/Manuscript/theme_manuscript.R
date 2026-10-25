@@ -372,10 +372,17 @@ ratioGrid <- function(df, holdouts,
                                   cox_slope = 'Cox slope', cox_intercept = 'Cox intercept'),
                       xlim = c(1, 50),
                       clip = list(cox_slope = c(0, 2), cox_intercept = c(-1, 1)),
-                      ideal = c(nAP = 1, boyce = 1, cox_slope = 1, cox_intercept = 0)) {
+                      ideal = c(nAP = 1, boyce = 1, cox_slope = 1, cox_intercept = 0),
+                      color_by = 'resolution', shape_by = 'resolution') {
   df <- df[df$tree %in% names(holdouts), , drop = FALSE]
-  df$holdout    <- factor(holdouts[as.character(df$tree)], levels = holdouts)
-  df$Resolution <- factor(df$resolution)
+  df$holdout <- factor(holdouts[as.character(df$tree)], levels = holdouts)
+  ## colour and shape are configurable (default both = resolution, the original look). A
+  ## pre-set factor is kept as-is so callers can order e.g. the AOA domains near -> far -> out.
+  as_fac    <- function(x) if (is.factor(x)) x else factor(x)
+  df$.color <- as_fac(df[[color_by]])
+  df$.shape <- as_fac(df[[shape_by]])
+  color_lab <- tools::toTitleCase(gsub('_', ' ', color_by))
+  shape_lab <- tools::toTitleCase(gsub('_', ' ', shape_by))
   ## nAP from the own-holdout prevalence (1/(1+ratio)). Callers scoring against a fixed test
   ## set with a known prevalence (e.g. the 2026 field eval) can pre-compute df$nAP from that
   ## prevalence; a supplied nAP column is kept as-is rather than overwritten.
@@ -410,13 +417,13 @@ ratioGrid <- function(df, holdouts,
   refs <- refs[!is.na(refs$yint), , drop = FALSE]
 
   p <- ggplot2::ggplot(long, ggplot2::aes(PAratio, value,
-                                     color = Resolution, shape = Resolution)) +
+                                     color = .color, shape = .shape)) +
     ggplot2::geom_hline(data = refs, ggplot2::aes(yintercept = yint),
                         inherit.aes = FALSE, linetype = '31',
                         linewidth = 0.3, colour = 'grey55') +
-    ## default-method smooth per resolution group; CI ribbon at 1/4 the default 0.4 alpha.
+    ## default-method smooth per colour group; CI ribbon at 1/4 the default 0.4 alpha.
     ## Drawn before the points so the raw replicates sit on top.
-    ggplot2::geom_smooth(ggplot2::aes(fill = Resolution), alpha = 0.1, linewidth = 0.6) +
+    ggplot2::geom_smooth(ggplot2::aes(fill = .color, group = .color), alpha = 0.3, linewidth = 0.6) +
     ggplot2::geom_point(size = 1.5, alpha = 0.85)
 
   if (!is.null(ann) && nrow(ann)) {
@@ -429,8 +436,9 @@ ratioGrid <- function(df, holdouts,
   p +
     ggplot2::facet_grid(metric ~ holdout, scales = 'free_y', switch = 'y') +
     ggplot2::scale_x_continuous(limits = xlim, breaks = c(1, 10, 20, 30, 40, 50)) +
+    ggplot2::scale_shape(na.translate = FALSE) +  # drop the smooth layer's empty NA shape key
     ggplot2::labs(x = 'Presence:absence ratio', y = NULL,
-                  color = 'Resolution', shape = 'Resolution') +
+                  color = color_lab, fill = color_lab, shape = shape_lab) +
     theme_manuscript() +
     ggplot2::theme(strip.placement = 'outside')
 }

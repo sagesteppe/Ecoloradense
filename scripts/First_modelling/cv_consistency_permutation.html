@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.6.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Reed Benkendorf">
+<meta name="dcterms.date" content="2026-10-24">
+
+<title>Do CV strategies differ in model-to-model consistency?</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="cv_consistency_permutation_files/libs/clipboard/clipboard.min.js"></script>
+<script src="cv_consistency_permutation_files/libs/quarto-html/quarto.js"></script>
+<script src="cv_consistency_permutation_files/libs/quarto-html/popper.min.js"></script>
+<script src="cv_consistency_permutation_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="cv_consistency_permutation_files/libs/quarto-html/anchor.min.js"></script>
+<link href="cv_consistency_permutation_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="cv_consistency_permutation_files/libs/quarto-html/quarto-syntax-highlighting-01c78b5cd655e4cd89133cf59d535862.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="cv_consistency_permutation_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="cv_consistency_permutation_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="cv_consistency_permutation_files/libs/bootstrap/bootstrap-abd341879a89d1f9b1903c44ebba7eff.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="cv_consistency_permutation_files/libs/pagedtable-1.1/css/pagedtable.css" rel="stylesheet">
+<script src="cv_consistency_permutation_files/libs/pagedtable-1.1/js/pagedtable.js"></script>
+
+
+</head>
+
+<body>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#build-the-per-fit-table" id="toc-build-the-per-fit-table" class="nav-link active" data-scroll-target="#build-the-per-fit-table">Build the per-fit table</a></li>
+  <li><a href="#how-much-replication-exists-read-this-first" id="toc-how-much-replication-exists-read-this-first" class="nav-link" data-scroll-target="#how-much-replication-exists-read-this-first">How much replication exists? (read this first)</a></li>
+  <li><a href="#cell-level-dispersion" id="toc-cell-level-dispersion" class="nav-link" data-scroll-target="#cell-level-dispersion">Cell-level dispersion</a></li>
+  <li><a href="#permutation-test-omnibus" id="toc-permutation-test-omnibus" class="nav-link" data-scroll-target="#permutation-test-omnibus">Permutation test — omnibus</a></li>
+  <li><a href="#permutation-test-is-random-the-least-consistent" id="toc-permutation-test-is-random-the-least-consistent" class="nav-link" data-scroll-target="#permutation-test-is-random-the-least-consistent">Permutation test — is <em>random</em> the least consistent?</a></li>
+  <li><a href="#secondary-overall-pooled-spread-descriptive-only" id="toc-secondary-overall-pooled-spread-descriptive-only" class="nav-link" data-scroll-target="#secondary-overall-pooled-spread-descriptive-only">Secondary: overall pooled spread (descriptive only)</a></li>
+  <li><a href="#caveats" id="toc-caveats" class="nav-link" data-scroll-target="#caveats">Caveats</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Do CV strategies differ in model-to-model <em>consistency</em>?</h1>
+<p class="subtitle lead">Permutation test of replicate dispersion across holdout strategies</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Reed Benkendorf </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">October 24, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<blockquote class="blockquote">
+<p><strong>Question.</strong> Eyeballing the refinement grids, the <em>random</em> (classic) holdout looks like its per-model precision scatters more widely than the spatial strategies — i.e.&nbsp;random is the least <em>consistent</em> replicate-to-replicate. Is that spread genuinely larger, or an artifact of random simply having more fits spread across the whole PA-ratio sweep?</p>
+<p><strong>Design.</strong> “Consistency” is spread <strong>at matched conditions</strong>. The ratio sweep and resolution move the metric around for real reasons, so we never compare raw pooled spread. Instead:</p>
+<ol type="1">
+<li>A <strong>cell</strong> = one <code>(tree, resolution, PAratio, distOrder)</code> combination. Within a cell the only thing that varies is the <strong>seed</strong> (the replicate).</li>
+<li>Each cell with <code>&gt;= min_reps</code> seeds yields one <strong>dispersion</strong> value (SD or MAD across seeds).</li>
+<li>Those cell-level dispersions, tagged by CV strategy, are the data. A <strong>permutation test</strong> shuffles the strategy labels across cells to ask whether random’s typical within-cell spread is larger than chance.</li>
+</ol>
+<p>This is re-runnable: as LMPO / spatial-mapping / finer-resolution fits land, rerun and the spatial strategies gain scoreable cells. The replication table below shows how thin each strategy currently is.</p>
+</blockquote>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span>opts_chunk<span class="sc">$</span><span class="fu">set</span>(<span class="at">message =</span> <span class="cn">FALSE</span>, <span class="at">warning =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(params<span class="sc">$</span>seed)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>PROJ <span class="ot">&lt;-</span> <span class="st">"/home/sagesteppe/Documents/Ecoloradense"</span>   <span class="co"># adjust per machine</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>cv_lab <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">Results_random_iter1a_high_pa        =</span> <span class="st">"classic/random"</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>            <span class="at">Results_spatialknn_iter1a_high_pa     =</span> <span class="st">"spatial kNN"</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>            <span class="at">Results_spatialmapping_iter1a_high_pa =</span> <span class="st">"spatial mapping"</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>            <span class="at">Results_LMPO_iter1a_high_pa           =</span> <span class="st">"LMPO"</span>)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>RES <span class="ot">&lt;-</span> params<span class="sc">$</span>resolution</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<section id="build-the-per-fit-table" class="level2">
+<h2 class="anchored" data-anchor-id="build-the-per-fit-table">Build the per-fit table</h2>
+<p>One row per fitted model, carrying the chosen <code>metric</code>. <code>own</code> reads the model’s own test-split metrics; <code>gt</code> reads the 2026 field ground truth and pools the two interpolation distance bins (<code>&lt;=270m</code>, <code>&gt;270m</code>) by point count. nAP = (PR-AUC − prevalence)/(1 − prevalence), with the own-split prevalence taken from the PA ratio and the GT prevalence from the field subset.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>pa_prev <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {                         <span class="co"># "1:1.023" -&gt; prevalence 1/(1+1.023)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  r <span class="ot">&lt;-</span> <span class="fu">suppressWarnings</span>(<span class="fu">as.numeric</span>(<span class="fu">sub</span>(<span class="st">"^1:"</span>, <span class="st">""</span>, x))); <span class="fu">ifelse</span>(<span class="fu">is.na</span>(r), <span class="cn">NA</span>, <span class="dv">1</span> <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> r))</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>per_fit <span class="ot">&lt;-</span> <span class="cf">if</span> (params<span class="sc">$</span>source <span class="sc">==</span> <span class="st">"own"</span>) {</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">read.csv</span>(<span class="fu">file.path</span>(PROJ, <span class="st">"results_summary/all_fit_metrics.csv"</span>), <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(tree <span class="sc">%in%</span> <span class="fu">names</span>(cv_lab), resolution <span class="sc">==</span> RES) <span class="sc">|&gt;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">prevalence =</span> <span class="fu">pa_prev</span>(PAratio),</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>           <span class="at">nAP =</span> (pr_auc <span class="sc">-</span> prevalence) <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">-</span> prevalence)) <span class="sc">|&gt;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(fname, tree, resolution, PAratio, distOrder, seed,</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>           pr_auc, roc_auc, cox_slope, cox_intercept, nAP)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">read.csv</span>(<span class="fu">file.path</span>(PROJ, <span class="st">"results_summary/all_fit_2026gt.csv"</span>), <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(tree <span class="sc">%in%</span> <span class="fu">names</span>(cv_lab), resolution <span class="sc">==</span> RES, <span class="fu">grepl</span>(<span class="st">"^Interp"</span>, domain)) <span class="sc">|&gt;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(fname, tree, resolution, PAratio, distOrder, seed) <span class="sc">|&gt;</span>   <span class="co"># pool the 2 interp bins</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarise</span>(<span class="at">pr_auc        =</span> <span class="fu">weighted.mean</span>(pr_auc, n),</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>              <span class="at">roc_auc       =</span> <span class="fu">weighted.mean</span>(roc_auc, n),</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>              <span class="at">cox_slope     =</span> <span class="fu">weighted.mean</span>(cox_slope, n),</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>              <span class="at">cox_intercept =</span> <span class="fu">weighted.mean</span>(cox_intercept, n),</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>              <span class="at">prevalence    =</span> <span class="fu">weighted.mean</span>(prevalence, n), <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">nAP =</span> (pr_auc <span class="sc">-</span> prevalence) <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">-</span> prevalence))</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(params<span class="sc">$</span>metric <span class="sc">%in%</span> <span class="fu">names</span>(per_fit))</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>per_fit<span class="sc">$</span>value <span class="ot">&lt;-</span> per_fit[[params<span class="sc">$</span>metric]]</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>per_fit<span class="sc">$</span>cv    <span class="ot">&lt;-</span> <span class="fu">factor</span>(cv_lab[per_fit<span class="sc">$</span>tree], <span class="at">levels =</span> cv_lab)</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>per_fit       <span class="ot">&lt;-</span> per_fit[<span class="sc">!</span><span class="fu">is.na</span>(per_fit<span class="sc">$</span>value), ]</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"source=%s  metric=%s  resolution=%s  -&gt; %d fits</span><span class="sc">\n</span><span class="st">"</span>,</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>            params<span class="sc">$</span>source, params<span class="sc">$</span>metric, RES, <span class="fu">nrow</span>(per_fit)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>source=own  metric=pr_auc  resolution=3arc  -&gt; 392 fits</code></pre>
+</div>
+</div>
+</section>
+<section id="how-much-replication-exists-read-this-first" class="level2">
+<h2 class="anchored" data-anchor-id="how-much-replication-exists-read-this-first">How much replication exists? (read this first)</h2>
+<p>The permutation test can only use cells with <code>&gt;= min_reps</code> seeds. If a strategy has almost no such cells, it simply can’t be compared yet — that is the week-of-compute reality, not a result.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>cells <span class="ot">&lt;-</span> per_fit <span class="sc">|&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(cv, resolution, PAratio, distOrder) <span class="sc">|&gt;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">reps =</span> <span class="fu">n</span>(), <span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>avail <span class="ot">&lt;-</span> cells <span class="sc">|&gt;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(cv) <span class="sc">|&gt;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">total_cells   =</span> <span class="fu">n</span>(),</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>            <span class="at">scoreable      =</span> <span class="fu">sum</span>(reps <span class="sc">&gt;=</span> params<span class="sc">$</span>min_reps),</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>            <span class="at">max_reps       =</span> <span class="fu">max</span>(reps),</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>            <span class="at">median_reps    =</span> <span class="fu">median</span>(reps), <span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(avail, <span class="at">caption =</span> <span class="fu">sprintf</span>(<span class="st">"Cells per strategy at %s (scoreable = &gt;= %d seeds)"</span>,</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>                                      RES, params<span class="sc">$</span>min_reps))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<caption>Cells per strategy at 3arc (scoreable = &gt;= 2 seeds)</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;">cv</th>
+<th style="text-align: right;">total_cells</th>
+<th style="text-align: right;">scoreable</th>
+<th style="text-align: right;">max_reps</th>
+<th style="text-align: right;">median_reps</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">classic/random</td>
+<td style="text-align: right;">21</td>
+<td style="text-align: right;">21</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">10</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">spatial kNN</td>
+<td style="text-align: right;">21</td>
+<td style="text-align: right;">21</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">6</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">spatial mapping</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">LMPO</td>
+<td style="text-align: right;">21</td>
+<td style="text-align: right;">21</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">3</td>
+</tr>
+</tbody>
+</table>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(cells, <span class="fu">aes</span>(PAratio, cv, <span class="at">fill =</span> reps)) <span class="sc">+</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_tile</span>(<span class="at">color =</span> <span class="st">"grey90"</span>) <span class="sc">+</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(<span class="fu">aes</span>(<span class="at">label =</span> reps), <span class="at">size =</span> <span class="fl">2.6</span>) <span class="sc">+</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_gradient</span>(<span class="at">low =</span> <span class="st">"#eef3ff"</span>, <span class="at">high =</span> <span class="st">"#2c5fa8"</span>, <span class="at">name =</span> <span class="st">"seeds"</span>) <span class="sc">+</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Replicate seeds per condition"</span>, <span class="at">x =</span> <span class="st">"PA ratio"</span>, <span class="at">y =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">10</span>) <span class="sc">+</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">90</span>, <span class="at">vjust =</span> <span class="fl">0.5</span>, <span class="at">hjust =</span> <span class="dv">1</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="cv_consistency_permutation_files/figure-html/replication-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="cell-level-dispersion" class="level2">
+<h2 class="anchored" data-anchor-id="cell-level-dispersion">Cell-level dispersion</h2>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>disp_fun <span class="ot">&lt;-</span> <span class="cf">if</span> (params<span class="sc">$</span>dispersion <span class="sc">==</span> <span class="st">"mad"</span>) <span class="cf">function</span>(x) <span class="fu">mad</span>(x) <span class="cf">else</span> <span class="cf">function</span>(x) <span class="fu">sd</span>(x)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>cell_disp <span class="ot">&lt;-</span> per_fit <span class="sc">|&gt;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(cv, resolution, PAratio, distOrder) <span class="sc">|&gt;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">n</span>() <span class="sc">&gt;=</span> params<span class="sc">$</span>min_reps) <span class="sc">|&gt;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">reps =</span> <span class="fu">n</span>(), <span class="at">disp =</span> <span class="fu">disp_fun</span>(value), <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">is.finite</span>(disp))</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>usable <span class="ot">&lt;-</span> cell_disp <span class="sc">|&gt;</span> <span class="fu">group_by</span>(cv) <span class="sc">|&gt;</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">cells =</span> <span class="fu">n</span>(), <span class="at">median_disp =</span> <span class="fu">round</span>(<span class="fu">median</span>(disp), <span class="dv">4</span>),</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>            <span class="at">mean_disp =</span> <span class="fu">round</span>(<span class="fu">mean</span>(disp), <span class="dv">4</span>), <span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(usable, <span class="at">caption =</span> <span class="fu">sprintf</span>(<span class="st">"Scoreable cells and typical within-cell %s of %s"</span>,</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>                                       <span class="fu">toupper</span>(params<span class="sc">$</span>dispersion), params<span class="sc">$</span>metric))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<caption>Scoreable cells and typical within-cell SD of pr_auc</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;">cv</th>
+<th style="text-align: right;">cells</th>
+<th style="text-align: right;">median_disp</th>
+<th style="text-align: right;">mean_disp</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">classic/random</td>
+<td style="text-align: right;">21</td>
+<td style="text-align: right;">0.0556</td>
+<td style="text-align: right;">0.0538</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">spatial kNN</td>
+<td style="text-align: right;">21</td>
+<td style="text-align: right;">0.0738</td>
+<td style="text-align: right;">0.0681</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">spatial mapping</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">0.0043</td>
+<td style="text-align: right;">0.0053</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">LMPO</td>
+<td style="text-align: right;">21</td>
+<td style="text-align: right;">0.0044</td>
+<td style="text-align: right;">0.0057</td>
+</tr>
+</tbody>
+</table>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(cell_disp, <span class="fu">aes</span>(cv, disp)) <span class="sc">+</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_boxplot</span>(<span class="at">outlier.shape =</span> <span class="cn">NA</span>, <span class="at">fill =</span> <span class="st">"grey95"</span>) <span class="sc">+</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_jitter</span>(<span class="at">width =</span> <span class="fl">0.12</span>, <span class="at">height =</span> <span class="dv">0</span>, <span class="at">alpha =</span> <span class="fl">0.5</span>, <span class="fu">aes</span>(<span class="at">size =</span> reps)) <span class="sc">+</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_size_continuous</span>(<span class="at">range =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fl">3.5</span>)) <span class="sc">+</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="fu">sprintf</span>(<span class="st">"Within-condition replicate %s of %s (%s)"</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>                       <span class="fu">toupper</span>(params<span class="sc">$</span>dispersion), params<span class="sc">$</span>metric, RES),</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">subtitle =</span> <span class="st">"each point = one (ratio x distOrder) cell; higher = less consistent"</span>,</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="fu">sprintf</span>(<span class="st">"%s(%s) across seeds"</span>, <span class="fu">toupper</span>(params<span class="sc">$</span>dispersion), params<span class="sc">$</span>metric)) <span class="sc">+</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">11</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="cv_consistency_permutation_files/figure-html/dispersion-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="permutation-test-omnibus" class="level2">
+<h2 class="anchored" data-anchor-id="permutation-test-omnibus">Permutation test — omnibus</h2>
+<p>Null hypothesis: within-cell dispersion is exchangeable across CV strategies (labels carry no information). Test statistic: the Kruskal–Wallis <code>H</code> on the cell-level dispersions (rank-based, so it does not assume normal dispersions). We shuffle the strategy labels across cells <code>B</code> times and compare.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>grp_ok <span class="ot">&lt;-</span> cell_disp <span class="sc">|&gt;</span> <span class="fu">count</span>(cv) <span class="sc">|&gt;</span> <span class="fu">filter</span>(n <span class="sc">&gt;=</span> <span class="dv">2</span>) <span class="sc">|&gt;</span> <span class="fu">pull</span>(cv)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>cd <span class="ot">&lt;-</span> cell_disp <span class="sc">|&gt;</span> <span class="fu">filter</span>(cv <span class="sc">%in%</span> grp_ok) <span class="sc">|&gt;</span> <span class="fu">mutate</span>(<span class="at">cv =</span> <span class="fu">droplevels</span>(cv))</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">nlevels</span>(cd<span class="sc">$</span>cv) <span class="sc">&lt;</span> <span class="dv">2</span> <span class="sc">||</span> <span class="fu">nrow</span>(cd) <span class="sc">&lt;</span> <span class="dv">6</span>) {</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Not enough scoreable cells across &gt;=2 strategies yet — rerun once the grid fills.</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  kw_H <span class="ot">&lt;-</span> <span class="cf">function</span>(y, g) <span class="fu">unname</span>(<span class="fu">kruskal.test</span>(y, g)<span class="sc">$</span>statistic)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  obs  <span class="ot">&lt;-</span> <span class="fu">kw_H</span>(cd<span class="sc">$</span>disp, cd<span class="sc">$</span>cv)</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  perm <span class="ot">&lt;-</span> <span class="fu">replicate</span>(params<span class="sc">$</span>B, <span class="fu">kw_H</span>(cd<span class="sc">$</span>disp, <span class="fu">sample</span>(cd<span class="sc">$</span>cv)))</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  p    <span class="ot">&lt;-</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">sum</span>(perm <span class="sc">&gt;=</span> obs)) <span class="sc">/</span> (params<span class="sc">$</span>B <span class="sc">+</span> <span class="dv">1</span>)</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Omnibus KW H = %.2f over %d strategies, %d cells</span><span class="sc">\n</span><span class="st">"</span>,</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>              obs, <span class="fu">nlevels</span>(cd<span class="sc">$</span>cv), <span class="fu">nrow</span>(cd)))</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Permutation p = %.4g  (parametric KW p = %.4g)</span><span class="sc">\n</span><span class="st">"</span>,</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>              p, <span class="fu">kruskal.test</span>(cd<span class="sc">$</span>disp, cd<span class="sc">$</span>cv)<span class="sc">$</span>p.value))</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">hist</span>(perm, <span class="at">breaks =</span> <span class="dv">40</span>, <span class="at">col =</span> <span class="st">"grey85"</span>, <span class="at">border =</span> <span class="st">"white"</span>,</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>       <span class="at">main =</span> <span class="st">"Permutation null for KW H"</span>, <span class="at">xlab =</span> <span class="st">"H under shuffled labels"</span>)</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">abline</span>(<span class="at">v =</span> obs, <span class="at">col =</span> <span class="st">"firebrick"</span>, <span class="at">lwd =</span> <span class="dv">2</span>);</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Omnibus KW H = 47.21 over 4 strategies, 67 cells
+Permutation p = 0.0001  (parametric KW p = 3.132e-10)</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="cv_consistency_permutation_files/figure-html/perm-omnibus-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="permutation-test-is-random-the-least-consistent" class="level2">
+<h2 class="anchored" data-anchor-id="permutation-test-is-random-the-least-consistent">Permutation test — is <em>random</em> the least consistent?</h2>
+<p>Targeted one-sided contrast: observed statistic = median within-cell dispersion of <strong>random</strong> minus median of <strong>all other</strong> strategies pooled. Positive = random more variable. The null shuffles the random / not-random label across cells.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="st">"classic/random"</span> <span class="sc">%in%</span> <span class="fu">levels</span>(<span class="fu">droplevels</span>(cell_disp<span class="sc">$</span>cv)) <span class="sc">||</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sum</span>(cell_disp<span class="sc">$</span>cv <span class="sc">==</span> <span class="st">"classic/random"</span>) <span class="sc">&lt;</span> <span class="dv">2</span> <span class="sc">||</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sum</span>(cell_disp<span class="sc">$</span>cv <span class="sc">!=</span> <span class="st">"classic/random"</span>) <span class="sc">&lt;</span> <span class="dv">2</span>) {</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"Need &gt;=2 scoreable cells for random and &gt;=2 for the rest — not yet.</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  is_rand <span class="ot">&lt;-</span> cell_disp<span class="sc">$</span>cv <span class="sc">==</span> <span class="st">"classic/random"</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  stat <span class="ot">&lt;-</span> <span class="cf">function</span>(flag) <span class="fu">median</span>(cell_disp<span class="sc">$</span>disp[flag]) <span class="sc">-</span> <span class="fu">median</span>(cell_disp<span class="sc">$</span>disp[<span class="sc">!</span>flag])</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  obs  <span class="ot">&lt;-</span> <span class="fu">stat</span>(is_rand)</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  perm <span class="ot">&lt;-</span> <span class="fu">replicate</span>(params<span class="sc">$</span>B, <span class="fu">stat</span>(<span class="fu">sample</span>(is_rand)))</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  p_gt <span class="ot">&lt;-</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">sum</span>(perm <span class="sc">&gt;=</span> obs)) <span class="sc">/</span> (params<span class="sc">$</span>B <span class="sc">+</span> <span class="dv">1</span>)   <span class="co"># random MORE variable</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"median disp: random = %.4f, rest = %.4f, difference = %+.4f</span><span class="sc">\n</span><span class="st">"</span>,</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>              <span class="fu">median</span>(cell_disp<span class="sc">$</span>disp[is_rand]), <span class="fu">median</span>(cell_disp<span class="sc">$</span>disp[<span class="sc">!</span>is_rand]), obs))</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"one-sided permutation p (random MORE variable) = %.4g</span><span class="sc">\n</span><span class="st">"</span>, p_gt))</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  <span class="co"># pairwise random vs each other strategy</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">Pairwise (random vs each), one-sided permutation p that random is more variable:</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (g <span class="cf">in</span> <span class="fu">setdiff</span>(<span class="fu">levels</span>(<span class="fu">droplevels</span>(cell_disp<span class="sc">$</span>cv)), <span class="st">"classic/random"</span>)) {</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    sub <span class="ot">&lt;-</span> cell_disp <span class="sc">|&gt;</span> <span class="fu">filter</span>(cv <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"classic/random"</span>, g))</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">sum</span>(sub<span class="sc">$</span>cv <span class="sc">==</span> g) <span class="sc">&lt;</span> <span class="dv">2</span>) { <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"  %-16s (too few cells)</span><span class="sc">\n</span><span class="st">"</span>, g)); <span class="cf">next</span> }</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>    fr  <span class="ot">&lt;-</span> sub<span class="sc">$</span>cv <span class="sc">==</span> <span class="st">"classic/random"</span></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>    st  <span class="ot">&lt;-</span> <span class="cf">function</span>(f) <span class="fu">median</span>(sub<span class="sc">$</span>disp[f]) <span class="sc">-</span> <span class="fu">median</span>(sub<span class="sc">$</span>disp[<span class="sc">!</span>f])</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>    o   <span class="ot">&lt;-</span> <span class="fu">st</span>(fr); pp <span class="ot">&lt;-</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">sum</span>(<span class="fu">replicate</span>(params<span class="sc">$</span>B, <span class="fu">st</span>(<span class="fu">sample</span>(fr))) <span class="sc">&gt;=</span> o)) <span class="sc">/</span> (params<span class="sc">$</span>B <span class="sc">+</span> <span class="dv">1</span>)</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"  %-16s diff=%+.4f  p=%.4g  (n_random=%d, n_%s=%d)</span><span class="sc">\n</span><span class="st">"</span>,</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>                g, o, pp, <span class="fu">sum</span>(fr), g, <span class="fu">sum</span>(<span class="sc">!</span>fr)))</span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>median disp: random = 0.0556, rest = 0.0115, difference = +0.0440
+one-sided permutation p (random MORE variable) = 0.0007
+
+Pairwise (random vs each), one-sided permutation p that random is more variable:
+  spatial kNN      diff=-0.0183  p=0.9581  (n_random=21, n_spatial kNN=21)
+  spatial mapping  diff=+0.0512  p=0.0012  (n_random=21, n_spatial mapping=4)
+  LMPO             diff=+0.0511  p=0.0001  (n_random=21, n_LMPO=21)</code></pre>
+</div>
+</div>
+</section>
+<section id="secondary-overall-pooled-spread-descriptive-only" class="level2">
+<h2 class="anchored" data-anchor-id="secondary-overall-pooled-spread-descriptive-only">Secondary: overall pooled spread (descriptive only)</h2>
+<p>This is what the eye catches in the grids — total spread of each strategy’s models, <strong>including</strong> the ratio sweep. Fligner–Killeen is a robust test of equal variance, but across the <em>raw</em> values it conflates genuine inconsistency with the sweep, so treat it as a description, not the test.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>per_fit <span class="sc">|&gt;</span> <span class="fu">group_by</span>(cv) <span class="sc">|&gt;</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">n =</span> <span class="fu">n</span>(), <span class="at">sd =</span> <span class="fu">round</span>(<span class="fu">sd</span>(value), <span class="dv">4</span>), <span class="at">iqr =</span> <span class="fu">round</span>(<span class="fu">IQR</span>(value), <span class="dv">4</span>),</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>            <span class="at">mad =</span> <span class="fu">round</span>(<span class="fu">mad</span>(value), <span class="dv">4</span>), <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="at">caption =</span> <span class="fu">sprintf</span>(<span class="st">"Pooled spread of %s (NOT condition-matched)"</span>, params<span class="sc">$</span>metric))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<caption>Pooled spread of pr_auc (NOT condition-matched)</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;">cv</th>
+<th style="text-align: right;">n</th>
+<th style="text-align: right;">sd</th>
+<th style="text-align: right;">iqr</th>
+<th style="text-align: right;">mad</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">classic/random</td>
+<td style="text-align: right;">210</td>
+<td style="text-align: right;">0.0559</td>
+<td style="text-align: right;">0.0788</td>
+<td style="text-align: right;">0.0573</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">spatial kNN</td>
+<td style="text-align: right;">105</td>
+<td style="text-align: right;">0.1777</td>
+<td style="text-align: right;">0.2810</td>
+<td style="text-align: right;">0.1753</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">spatial mapping</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">0.0071</td>
+<td style="text-align: right;">0.0092</td>
+<td style="text-align: right;">0.0070</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">LMPO</td>
+<td style="text-align: right;">63</td>
+<td style="text-align: right;">0.0080</td>
+<td style="text-align: right;">0.0087</td>
+<td style="text-align: right;">0.0071</td>
+</tr>
+</tbody>
+</table>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">nlevels</span>(<span class="fu">droplevels</span>(per_fit<span class="sc">$</span>cv)) <span class="sc">&gt;=</span> <span class="dv">2</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="fu">fligner.test</span>(value <span class="sc">~</span> <span class="fu">droplevels</span>(cv), <span class="at">data =</span> per_fit))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+    Fligner-Killeen test of homogeneity of variances
+
+data:  value by droplevels(cv)
+Fligner-Killeen:med chi-squared = 200.5, df = 3, p-value &lt; 2.2e-16</code></pre>
+</div>
+</div>
+</section>
+<section id="caveats" class="level2">
+<h2 class="anchored" data-anchor-id="caveats">Caveats</h2>
+<ul>
+<li><strong>Replication gates everything.</strong> Until a strategy has several <code>&gt;= min_reps</code> cells, it cannot enter the test. Rerun as fits land; the availability table tracks progress.</li>
+<li><strong>Own vs GT.</strong> <code>source: own</code> tests consistency of each model’s self-assessment; <code>source: gt</code> tests consistency of true field (interpolation) performance. They can disagree — the own-holdout confound ([[cv-comparison-own-holdout-confound]]) means a strategy can be self-consistent yet inconsistent against the field, or vice versa.</li>
+<li><strong>Cells are the unit.</strong> Permuting labels across cells (not individual fits) respects that seeds within a cell are not independent draws.</li>
+<li><strong>Dispersion choice.</strong> <code>sd</code> is the natural “precision” spread; <code>mad</code> is robust to a single wild replicate. If they disagree, a few outlier fits are driving <code>sd</code> — worth reporting both.</li>
+<li><strong>Metric scale.</strong> <code>cox_slope</code>/<code>cox_intercept</code> live on a different scale than <code>pr_auc</code>; compare dispersion only within one metric, never across. ```</li>
+</ul>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

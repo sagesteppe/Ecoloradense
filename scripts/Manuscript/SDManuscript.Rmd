@@ -663,34 +663,26 @@ ratioGrid(grid_metrics, holdouts = holdout_cols,
           ideal   = c(nAP = 1, roc_auc = 1, boyce = 1, cox_slope = 1, cox_intercept = 0))
 ```
 
-```{r Refinement Metric Grid 2026 Field Validation, out.width='100%', fig.width=12, fig.height=9}
-## Same grid, but scored against the EXTERNAL 2026 field ground truth (n = 283 presence/
-## absence points) instead of each fit's own train/test holdout - aggregate_2026gt_metrics.R
-## -> all_fit_2026gt.csv. nAP uses the real field prevalence from the file (not 1/(1+ratio)).
-## Boyce is unavailable on a presence/absence field set, so ROC-AUC takes that row (dashed
-## line = ideal 1, as elsewhere). Cox intercept is clipped wider here (field miscalibration
-## runs more extreme).
+
+```{r Refinement Metric Grid 2026 Field Validation by Domain, out.width='100%', fig.width=12, fig.height=9.5}
+## Scored against the EXTERNAL 2026 field ground truth, split by APPLICABILITY DOMAIN (colour):
+## interpolation <=270 m, interpolation >270 m, and extrapolation (outside the presence-
+## referenced AOA). aggregate_2026gt_metrics.R -> all_fit_2026gt.csv (one row per fit x domain,
+## each with its own field prevalence, so nAP is domain-specific). Resolution is the point
+## shape. Boyce is unavailable on a presence/absence field set, so ROC-AUC takes that row
+## (dashed line = ideal 1). Cox windows are wide because extrapolation flips sign - it
+## OVER-predicts (intercept > 0) while interpolation under-predicts. A paired Wilcoxon test
+## (interp <=270 vs >270, within fit) confirmed the 270 m cut differs, most in calibration.
 gt_metrics <- read.csv(file.path(PROJ_ROOT, 'results_summary', 'all_fit_2026gt.csv'))
 gt_metrics$nAP <- (gt_metrics$pr_auc - gt_metrics$prevalence) / (1 - gt_metrics$prevalence)
-ratioGrid(gt_metrics, holdouts = holdout_cols,
+gt_metrics$domain <- factor(gt_metrics$domain,
+  levels = c('Interp <=270m', 'Interp >270m', 'Extrapolation'),
+  labels = c('Interp ≤270 m', 'Interp >270 m', 'Extrapolation'))
+ratioGrid(gt_metrics, holdouts = holdout_cols, color_by = 'domain', shape_by = 'resolution',
           metrics = c(nAP = 'nAP (field)', roc_auc = 'ROC-AUC',
                       cox_slope = 'Cox slope', cox_intercept = 'Cox intercept'),
           ideal   = c(nAP = 1, roc_auc = 1, cox_slope = 1, cox_intercept = 0),
-          clip    = list(cox_slope = c(0, 1.5), cox_intercept = c(-3, 1)))
-```
-
-```{r Refinement Metric Grid 2026 Near-Population Validation, out.width='100%', fig.width=12, fig.height=9}
-## As above, but the 2026 field eval restricted to the NEAR-POPULATION domain: points within
-## 270 m of a known occurrence (aggregate_2026gt_metrics.R 270m -> all_fit_2026gt_270m.csv;
-## smaller n ~ 58, higher field prevalence). Same metrics/clip as the full-field grid. Here
-## every Cox intercept is negative - models underpredict occupancy even close to known sites.
-gt270_metrics <- read.csv(file.path(PROJ_ROOT, 'results_summary', 'all_fit_2026gt_270m.csv'))
-gt270_metrics$nAP <- (gt270_metrics$pr_auc - gt270_metrics$prevalence) / (1 - gt270_metrics$prevalence)
-ratioGrid(gt270_metrics, holdouts = holdout_cols,
-          metrics = c(nAP = 'nAP (field, 270m)', roc_auc = 'ROC-AUC',
-                      cox_slope = 'Cox slope', cox_intercept = 'Cox intercept'),
-          ideal   = c(nAP = 1, roc_auc = 1, cox_slope = 1, cox_intercept = 0),
-          clip    = list(cox_slope = c(0, 1.5), cox_intercept = c(-3, 1)))
+          clip    = list(cox_slope = c(-1, 1.5), cox_intercept = c(-3, 4)))
 ```
 
 ### 3.7 | Final Results

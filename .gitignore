@@ -96,3 +96,6 @@ data/Data4modelling/iter1-pa-highPA-reviewed.gpkg
 
 ## high-PA ratio testing outputs (highPA_grid.R and its scoring scripts)
 results_highPA*/
+
+# pre-Platt-calibration baseline snapshot (local delta comparison only, not for manuscript)
+results_summary/precalib_baseline_2026-10-24/

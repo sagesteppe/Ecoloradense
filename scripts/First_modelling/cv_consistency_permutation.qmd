@@ -1,0 +1,246 @@
+---
+title: "Do CV strategies differ in model-to-model *consistency*?"
+subtitle: "Permutation test of replicate dispersion across holdout strategies"
+author: "Reed Benkendorf"
+date: today
+format:
+  html:
+    toc: true
+    code-fold: true
+    df-print: paged
+params:
+  metric: "pr_auc"        # pr_auc | roc_auc | cox_slope | cox_intercept | nAP
+  resolution: "3arc"      # 3arc (~90 m) | 1arc (~30 m) | 1-3arc
+  source: "own"           # own  = model's own test holdout (all_fit_metrics.csv)
+                          # gt   = 2026 field ground truth, interpolation domain (all_fit_2026gt.csv)
+  min_reps: 2             # min seeds per (resolution x ratio x distOrder) cell to score its spread
+  dispersion: "sd"        # sd | mad   (per-cell spread statistic)
+  B: 9999                 # permutation resamples
+  seed: 1
+---
+
+> **Question.** Eyeballing the refinement grids, the *random* (classic) holdout looks like its
+> per-model precision scatters more widely than the spatial strategies — i.e. random is the
+> least *consistent* replicate-to-replicate. Is that spread genuinely larger, or an artifact of
+> random simply having more fits spread across the whole PA-ratio sweep?
+>
+> **Design.** "Consistency" is spread **at matched conditions**. The ratio sweep and resolution
+> move the metric around for real reasons, so we never compare raw pooled spread. Instead:
+>
+> 1. A **cell** = one `(tree, resolution, PAratio, distOrder)` combination. Within a cell the only
+>    thing that varies is the **seed** (the replicate).
+> 2. Each cell with `>= min_reps` seeds yields one **dispersion** value (SD or MAD across seeds).
+> 3. Those cell-level dispersions, tagged by CV strategy, are the data. A **permutation test**
+>    shuffles the strategy labels across cells to ask whether random's typical within-cell spread
+>    is larger than chance.
+>
+> This is re-runnable: as LMPO / spatial-mapping / finer-resolution fits land, rerun and the
+> spatial strategies gain scoreable cells. The replication table below shows how thin each
+> strategy currently is.
+
+```{r setup}
+#| message: false
+#| warning: false
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+set.seed(params$seed)
+
+PROJ <- "/home/sagesteppe/Documents/Ecoloradense"   # adjust per machine
+cv_lab <- c(Results_random_iter1a_high_pa        = "classic/random",
+            Results_spatialknn_iter1a_high_pa     = "spatial kNN",
+            Results_spatialmapping_iter1a_high_pa = "spatial mapping",
+            Results_LMPO_iter1a_high_pa           = "LMPO")
+RES <- params$resolution
+```
+
+## Build the per-fit table
+
+One row per fitted model, carrying the chosen `metric`. `own` reads the model's own
+test-split metrics; `gt` reads the 2026 field ground truth and pools the two interpolation
+distance bins (`<=270m`, `>270m`) by point count. nAP = (PR-AUC − prevalence)/(1 − prevalence),
+with the own-split prevalence taken from the PA ratio and the GT prevalence from the field subset.
+
+```{r build}
+pa_prev <- function(x) {                         # "1:1.023" -> prevalence 1/(1+1.023)
+  r <- suppressWarnings(as.numeric(sub("^1:", "", x))); ifelse(is.na(r), NA, 1 / (1 + r))
+}
+
+per_fit <- if (params$source == "own") {
+  read.csv(file.path(PROJ, "results_summary/all_fit_metrics.csv"), stringsAsFactors = FALSE) |>
+    filter(tree %in% names(cv_lab), resolution == RES) |>
+    mutate(prevalence = pa_prev(PAratio),
+           nAP = (pr_auc - prevalence) / (1 - prevalence)) |>
+    select(fname, tree, resolution, PAratio, distOrder, seed,
+           pr_auc, roc_auc, cox_slope, cox_intercept, nAP)
+} else {
+  read.csv(file.path(PROJ, "results_summary/all_fit_2026gt.csv"), stringsAsFactors = FALSE) |>
+    filter(tree %in% names(cv_lab), resolution == RES, grepl("^Interp", domain)) |>
+    group_by(fname, tree, resolution, PAratio, distOrder, seed) |>   # pool the 2 interp bins
+    summarise(pr_auc        = weighted.mean(pr_auc, n),
+              roc_auc       = weighted.mean(roc_auc, n),
+              cox_slope     = weighted.mean(cox_slope, n),
+              cox_intercept = weighted.mean(cox_intercept, n),
+              prevalence    = weighted.mean(prevalence, n), .groups = "drop") |>
+    mutate(nAP = (pr_auc - prevalence) / (1 - prevalence))
+}
+
+stopifnot(params$metric %in% names(per_fit))
+per_fit$value <- per_fit[[params$metric]]
+per_fit$cv    <- factor(cv_lab[per_fit$tree], levels = cv_lab)
+per_fit       <- per_fit[!is.na(per_fit$value), ]
+cat(sprintf("source=%s  metric=%s  resolution=%s  -> %d fits\n",
+            params$source, params$metric, RES, nrow(per_fit)))
+```
+
+## How much replication exists? (read this first)
+
+The permutation test can only use cells with `>= min_reps` seeds. If a strategy has almost no
+such cells, it simply can't be compared yet — that is the week-of-compute reality, not a result.
+
+```{r replication}
+cells <- per_fit |>
+  group_by(cv, resolution, PAratio, distOrder) |>
+  summarise(reps = n(), .groups = "drop")
+
+avail <- cells |>
+  group_by(cv) |>
+  summarise(total_cells   = n(),
+            scoreable      = sum(reps >= params$min_reps),
+            max_reps       = max(reps),
+            median_reps    = median(reps), .groups = "drop")
+knitr::kable(avail, caption = sprintf("Cells per strategy at %s (scoreable = >= %d seeds)",
+                                      RES, params$min_reps))
+
+ggplot(cells, aes(PAratio, cv, fill = reps)) +
+  geom_tile(color = "grey90") +
+  geom_text(aes(label = reps), size = 2.6) +
+  scale_fill_gradient(low = "#eef3ff", high = "#2c5fa8", name = "seeds") +
+  labs(title = "Replicate seeds per condition", x = "PA ratio", y = NULL) +
+  theme_minimal(base_size = 10) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+## Cell-level dispersion
+
+```{r dispersion}
+disp_fun <- if (params$dispersion == "mad") function(x) mad(x) else function(x) sd(x)
+
+cell_disp <- per_fit |>
+  group_by(cv, resolution, PAratio, distOrder) |>
+  filter(n() >= params$min_reps) |>
+  summarise(reps = n(), disp = disp_fun(value), .groups = "drop") |>
+  filter(is.finite(disp))
+
+usable <- cell_disp |> group_by(cv) |>
+  summarise(cells = n(), median_disp = round(median(disp), 4),
+            mean_disp = round(mean(disp), 4), .groups = "drop")
+knitr::kable(usable, caption = sprintf("Scoreable cells and typical within-cell %s of %s",
+                                       toupper(params$dispersion), params$metric))
+
+ggplot(cell_disp, aes(cv, disp)) +
+  geom_boxplot(outlier.shape = NA, fill = "grey95") +
+  geom_jitter(width = 0.12, height = 0, alpha = 0.5, aes(size = reps)) +
+  scale_size_continuous(range = c(1, 3.5)) +
+  labs(title = sprintf("Within-condition replicate %s of %s (%s)",
+                       toupper(params$dispersion), params$metric, RES),
+       subtitle = "each point = one (ratio x distOrder) cell; higher = less consistent",
+       x = NULL, y = sprintf("%s(%s) across seeds", toupper(params$dispersion), params$metric)) +
+  theme_minimal(base_size = 11)
+```
+
+## Permutation test — omnibus
+
+Null hypothesis: within-cell dispersion is exchangeable across CV strategies (labels carry no
+information). Test statistic: the Kruskal–Wallis `H` on the cell-level dispersions (rank-based,
+so it does not assume normal dispersions). We shuffle the strategy labels across cells `B` times
+and compare.
+
+```{r perm-omnibus}
+grp_ok <- cell_disp |> count(cv) |> filter(n >= 2) |> pull(cv)
+cd <- cell_disp |> filter(cv %in% grp_ok) |> mutate(cv = droplevels(cv))
+
+if (nlevels(cd$cv) < 2 || nrow(cd) < 6) {
+  cat("Not enough scoreable cells across >=2 strategies yet — rerun once the grid fills.\n")
+} else {
+  kw_H <- function(y, g) unname(kruskal.test(y, g)$statistic)
+  obs  <- kw_H(cd$disp, cd$cv)
+  perm <- replicate(params$B, kw_H(cd$disp, sample(cd$cv)))
+  p    <- (1 + sum(perm >= obs)) / (params$B + 1)
+  cat(sprintf("Omnibus KW H = %.2f over %d strategies, %d cells\n",
+              obs, nlevels(cd$cv), nrow(cd)))
+  cat(sprintf("Permutation p = %.4g  (parametric KW p = %.4g)\n",
+              p, kruskal.test(cd$disp, cd$cv)$p.value))
+  hist(perm, breaks = 40, col = "grey85", border = "white",
+       main = "Permutation null for KW H", xlab = "H under shuffled labels")
+  abline(v = obs, col = "firebrick", lwd = 2);
+}
+```
+
+## Permutation test — is *random* the least consistent?
+
+Targeted one-sided contrast: observed statistic = median within-cell dispersion of **random**
+minus median of **all other** strategies pooled. Positive = random more variable. The null
+shuffles the random / not-random label across cells.
+
+```{r perm-random}
+if (!"classic/random" %in% levels(droplevels(cell_disp$cv)) ||
+    sum(cell_disp$cv == "classic/random") < 2 ||
+    sum(cell_disp$cv != "classic/random") < 2) {
+  cat("Need >=2 scoreable cells for random and >=2 for the rest — not yet.\n")
+} else {
+  is_rand <- cell_disp$cv == "classic/random"
+  stat <- function(flag) median(cell_disp$disp[flag]) - median(cell_disp$disp[!flag])
+  obs  <- stat(is_rand)
+  perm <- replicate(params$B, stat(sample(is_rand)))
+  p_gt <- (1 + sum(perm >= obs)) / (params$B + 1)   # random MORE variable
+  cat(sprintf("median disp: random = %.4f, rest = %.4f, difference = %+.4f\n",
+              median(cell_disp$disp[is_rand]), median(cell_disp$disp[!is_rand]), obs))
+  cat(sprintf("one-sided permutation p (random MORE variable) = %.4g\n", p_gt))
+
+  # pairwise random vs each other strategy
+  cat("\nPairwise (random vs each), one-sided permutation p that random is more variable:\n")
+  for (g in setdiff(levels(droplevels(cell_disp$cv)), "classic/random")) {
+    sub <- cell_disp |> filter(cv %in% c("classic/random", g))
+    if (sum(sub$cv == g) < 2) { cat(sprintf("  %-16s (too few cells)\n", g)); next }
+    fr  <- sub$cv == "classic/random"
+    st  <- function(f) median(sub$disp[f]) - median(sub$disp[!f])
+    o   <- st(fr); pp <- (1 + sum(replicate(params$B, st(sample(fr))) >= o)) / (params$B + 1)
+    cat(sprintf("  %-16s diff=%+.4f  p=%.4g  (n_random=%d, n_%s=%d)\n",
+                g, o, pp, sum(fr), g, sum(!fr)))
+  }
+}
+```
+
+## Secondary: overall pooled spread (descriptive only)
+
+This is what the eye catches in the grids — total spread of each strategy's models, **including**
+the ratio sweep. Fligner–Killeen is a robust test of equal variance, but across the *raw* values
+it conflates genuine inconsistency with the sweep, so treat it as a description, not the test.
+
+```{r overall}
+per_fit |> group_by(cv) |>
+  summarise(n = n(), sd = round(sd(value), 4), iqr = round(IQR(value), 4),
+            mad = round(mad(value), 4), .groups = "drop") |>
+  knitr::kable(caption = sprintf("Pooled spread of %s (NOT condition-matched)", params$metric))
+
+if (nlevels(droplevels(per_fit$cv)) >= 2)
+  print(fligner.test(value ~ droplevels(cv), data = per_fit))
+```
+
+## Caveats
+
+- **Replication gates everything.** Until a strategy has several `>= min_reps` cells, it cannot
+  enter the test. Rerun as fits land; the availability table tracks progress.
+- **Own vs GT.** `source: own` tests consistency of each model's self-assessment; `source: gt`
+  tests consistency of true field (interpolation) performance. They can disagree — the own-holdout
+  confound ([[cv-comparison-own-holdout-confound]]) means a strategy can be self-consistent yet
+  inconsistent against the field, or vice versa.
+- **Cells are the unit.** Permuting labels across cells (not individual fits) respects that seeds
+  within a cell are not independent draws.
+- **Dispersion choice.** `sd` is the natural "precision" spread; `mad` is robust to a single wild
+  replicate. If they disagree, a few outlier fits are driving `sd` — worth reporting both.
+- **Metric scale.** `cox_slope`/`cox_intercept` live on a different scale than `pr_auc`; compare
+  dispersion only within one metric, never across.
+```
