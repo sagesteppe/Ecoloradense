@@ -21,6 +21,17 @@
 ##
 ## Skips any (tree, model) whose CSV already exists, so an interrupted run resumes cleanly.
 ##
+## PLATT CALIBRATION. If <tree>/modelsTune/<model>-platt.rds exists (see
+## First_modelling/backfill_platt.R), its $apply() is applied to the presence-class
+## probability BEFORE scoring, but ONLY in the Interpolation cells; Extrapolation stays
+## raw (calibration cannot rescue AOA-point predictions and we want the extrapolation
+## cell to continue to show the uncalibrated transfer failure). Each per-model CSV gains
+## a `calibration` column with values 'calibrated' (Interp cells when a -platt is loaded,
+## with a `calibrated_raw` twin row carrying the uncalibrated score) or 'raw' (everything
+## else), so the manuscript can plot both. Set env PLATT_RAW_ONLY=1 to skip the Platt
+## apply entirely (writes just the `raw` rows); clear existing CSVs first if you want to
+## re-score.
+##
 ## Usage (working directory scripts/):
 ##   Rscript Second_groundtruth/evaluate_2026_pertree.R                   # all 4 trees
 ##   Rscript Second_groundtruth/evaluate_2026_pertree.R Results_LMPO_iter1a_high_pa
@@ -92,10 +103,12 @@ get_covs <- function(res_tag){
 
 ## 3. Score one (SurfaceArea, Distance) subset in modeller()'s long-form eval schema ----
 
-score_subset <- function(pred, keep, res_tag, iter, surface_area, distance){
+score_subset <- function(pred, keep, res_tag, iter, surface_area, distance,
+                         calibration = 'raw'){
   keep <- keep & !is.na(pred) & !is.na(gt$Presence)
   base_cols <- list(resolution = res_tag, iteration = iter, n = sum(keep),
-                    SurfaceArea = surface_area, Distance = distance)
+                    SurfaceArea = surface_area, Distance = distance,
+                    calibration = calibration)
   if(sum(keep) == 0 || length(unique(gt$Presence[keep])) < 2)
     return(tibble(metric = 'pr_auc', estimator = 'binary',
                   estimate = NA_real_, std_error = NA_real_, !!!base_cols))
@@ -144,6 +157,18 @@ classify_interp <- function(tree, model_id, covs){
 
 ## 4. Walk each tree, one long CSV per model -------------------------------------------
 
+platt_raw_only <- isTRUE(nzchar(Sys.getenv('PLATT_RAW_ONLY')) &&
+                        Sys.getenv('PLATT_RAW_ONLY') != '0')
+
+load_platt_apply <- function(tree, model_id){
+  if(platt_raw_only) return(NULL)
+  p <- file.path(p2proj, tree, 'modelsTune', paste0(model_id, '-platt.rds'))
+  if(!file.exists(p)) return(NULL)
+  cal <- tryCatch(readRDS(p), error = function(e) NULL)
+  if(is.null(cal) || !is.function(cal$apply)) return(NULL)
+  cal$apply
+}
+
 for(tree in trees){
   models_dir <- file.path(p2proj, tree, 'models')
   tables_dir <- file.path(p2proj, tree, 'tables')
@@ -166,14 +191,26 @@ for(tree in trees){
 
     interp <- classify_interp(tree, model_id, covs)   # TRUE / FALSE / NA
     is_near <- gt$dist_known_occ <= 270
-    cells <- list(
+
+    platt_apply <- load_platt_apply(tree, model_id)
+    pred_cal <- if(is.null(platt_apply)) pred else platt_apply(pred)
+
+    interp_cells <- list(
       list(mask = !is.na(interp) &  interp & is_near,  sa = 'Interpolation', d = '<=270m'),
-      list(mask = !is.na(interp) &  interp & !is_near, sa = 'Interpolation', d = '>270m'),
-      list(mask = !is.na(interp) & !interp,            sa = 'Extrapolation', d = 'all')
+      list(mask = !is.na(interp) &  interp & !is_near, sa = 'Interpolation', d = '>270m')
     )
-    rows <- map_dfr(cells, function(c)
-      score_subset(pred, c$mask, res_tag, iter, c$sa, c$d))
-    write.csv(rows, out, row.names = FALSE)
+    extrap_cell <- list(mask = !is.na(interp) & !interp,
+                        sa = 'Extrapolation', d = 'all')
+
+    # raw rows always (every cell).
+    rows_raw <- map_dfr(c(interp_cells, list(extrap_cell)), function(c)
+      score_subset(pred, c$mask, res_tag, iter, c$sa, c$d, calibration = 'raw'))
+    # calibrated rows only for interpolation, only when a -platt is loaded.
+    rows_cal <- if(is.null(platt_apply)) NULL else
+      map_dfr(interp_cells, function(c)
+        score_subset(pred_cal, c$mask, res_tag, iter, c$sa, c$d,
+                     calibration = 'calibrated'))
+    write.csv(dplyr::bind_rows(rows_raw, rows_cal), out, row.names = FALSE)
 
     if(i %% 25 == 0 || i == length(model_files))
       message('  ', i, ' / ', length(model_files))
