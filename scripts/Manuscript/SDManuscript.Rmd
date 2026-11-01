@@ -612,15 +612,6 @@ kable(ctx, format = 'latex', booktabs = TRUE, linesep = '',
   kable_styling(latex_options = c('striped', 'hold_position'))
 ```
 
-
-'1-3arc'
-'1arc'
-'3arc'
-
-cornell_77 = c("#f07537", "#f18e26", "#14a0aa", "#923c7d", "#c15d57", "#67678f",
-                 "#45829d", "#f16646", "#d33677", "#9d985e", "#ff820c"),
-
-
 Estimating plant density has two distinct purposes 1) modelling the census size of known populations (interpolation census) and 2) predicting the population size at unknown, or populations without count data (extrapolation census). 
 
 - **Interpolation census.** Density is predicted *within* the sampled domain, so the whole model suite is admissible (Table \@ref(tab:count-model-table)). Here we take the best field-validated surface -- the gradient-boosted XGBoost Tweedie for the presence/absence-aware count surface -- while the Bayesian hurdle and negative-binomial models supply posterior **credible intervals** on the population total, the uncertainty quantity a census most needs. Estimates are precise and their intervals narrow.
@@ -654,13 +645,20 @@ The wombling approach shows that estimates at the XX-percentile led to more accu
 grid_metrics <- read.csv(file.path(PROJ_ROOT, 'results_summary', 'all_fit_metrics.csv'))
 holdout_cols <- c(
   Results_random_iter1a_high_pa         = 'Classic split\n(20/80 random, occ-stratified)',
-  Results_spatialknn_iter1a_high_pa     = 'Spatial kNN\n(kNNDM CV)',
   Results_spatialmapping_iter1a_high_pa = 'Spatial mapping\n(spatial CV)',
-  Results_LMPO_iter1a_high_pa           = 'LMPO\n(LMPO CV)')
-ratioGrid(grid_metrics, holdouts = holdout_cols,
+  Results_LMPO_iter1a_high_pa           = 'Leave Multiple (sub-)Populations Out\n(LMPO CV)')
+ratioGrid(grid_metrics, holdouts = holdout_cols, xlim = c(1, 30),
           metrics = c(nAP = 'nAP', roc_auc = 'ROC-AUC', boyce = 'Boyce index',
                       cox_slope = 'Cox slope', cox_intercept = 'Cox intercept'),
-          ideal   = c(nAP = 1, roc_auc = 1, boyce = 1, cox_slope = 1, cox_intercept = 0))
+          ideal   = c(nAP = 1, roc_auc = 1, boyce = 1, cox_slope = 1, cox_intercept = 0),
+          clip    = list(boyce = c(0.25, 1), cox_slope = c(0, 1.5), cox_intercept = c(-1, 1)),
+          palette = resolution_cols,
+          ## per-series lm(value ~ log10 ratio); fit_pos bottom-anchors each panel's annotation.
+          fit_pos = list(
+            nAP = c(1, 0.35), roc_auc = c(10, 0.75), boyce = c(10, 0.3),
+            cox_slope = c(1, 1.2), cox_intercept = c(1, 0.7))
+            ) +
+          labs(title = 'Cross Validation Strategies Evaluated on `held out` Test Data.')
 ```
 
 
@@ -674,15 +672,30 @@ ratioGrid(grid_metrics, holdouts = holdout_cols,
 ## OVER-predicts (intercept > 0) while interpolation under-predicts. A paired Wilcoxon test
 ## (interp <=270 vs >270, within fit) confirmed the 270 m cut differs, most in calibration.
 gt_metrics <- read.csv(file.path(PROJ_ROOT, 'results_summary', 'all_fit_2026gt.csv'))
+## Calibration lives per domain: interpolation carries both raw and Platt-calibrated rows
+## (Platt is applied inside the AOA only), extrapolation only raw. Show CALIBRATED interpolation
+## against the (necessarily raw) extrapolation - one row per fit x domain. nAP/ROC-AUC are
+## unchanged by Platt (monotone); the calibration shows in Cox slope/intercept.
+gt_metrics <- gt_metrics[gt_metrics$calibration == 'calibrated' |
+                         gt_metrics$domain == 'Extrapolation', ]
 gt_metrics$nAP <- (gt_metrics$pr_auc - gt_metrics$prevalence) / (1 - gt_metrics$prevalence)
 gt_metrics$domain <- factor(gt_metrics$domain,
   levels = c('Interp <=270m', 'Interp >270m', 'Extrapolation'),
   labels = c('Interp ≤270 m', 'Interp >270 m', 'Extrapolation'))
-ratioGrid(gt_metrics, holdouts = holdout_cols, color_by = 'domain', shape_by = 'resolution',
-          metrics = c(nAP = 'nAP (field)', roc_auc = 'ROC-AUC',
-                      cox_slope = 'Cox slope', cox_intercept = 'Cox intercept'),
+ratioGrid(gt_metrics, holdouts = holdout_cols, xlim = c(1, 30), color_by = 'domain', shape_by = 'resolution',
+          fit_exclude = 'Extrapolation',   # fit/annotate the interp domains only, not extrap
+          fade = 'Extrapolation',          # de-emphasise the extrapolation points (alpha 0.4)
+          palette = domain_cols,
+          metrics = c(
+            nAP = 'nAP (field)', roc_auc = 'ROC-AUC',
+            cox_slope = 'Cox slope', cox_intercept = 'Cox intercept'),
           ideal   = c(nAP = 1, roc_auc = 1, cox_slope = 1, cox_intercept = 0),
-          clip    = list(cox_slope = c(-1, 1.5), cox_intercept = c(-3, 4)))
+          clip    = list(nAP = c(0,1), roc_auc = c(0.4, 1), cox_slope = c(-0.5, 1.5), cox_intercept = c(-2, 2)),
+          fit_pos = list(
+            nAP = c(1, 0.85), roc_auc = c(1, 0.85),
+            cox_slope = c(1, -0.3), cox_intercept = c(1, 1.5))
+            ) +
+          labs(title = 'Cross Validation Strategies Evaluated on Ground Truth Data.')
 ```
 
 ### 3.7 | Final Results

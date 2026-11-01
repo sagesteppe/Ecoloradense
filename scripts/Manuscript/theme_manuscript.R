@@ -367,13 +367,25 @@ ratioSensitivity <- function(df, y = 'nAP', ratio = 'PAratio', holdout = 'tree',
 ##   xlim      x-axis (ratio) limits
 
 
+## shared resolution palette (pass to ratioGrid(palette=) when colour = resolution)
+resolution_cols <- c('1-3arc' = '#fc8d62', '1arc' = '#66c2a5', '3arc' = '#8da0cb')
+
+## shared AOA-domain palette (pass to ratioGrid(palette=) when colour = domain); keys match the
+## factor labels set in the GT chunk. Extrapolation keeps its faded alpha via fade=.
+domain_cols <- c('Interp ≤270 m' = '#1b9e77',  # interp < 270 m
+                 'Interp >270 m'     = '#d95f02',  # interp >= 270 m
+                 'Extrapolation'     = '#7570b3')  # extrapolation
+
 ratioGrid <- function(df, holdouts,
                       metrics = c(nAP = 'nAP', boyce = 'Boyce index',
                                   cox_slope = 'Cox slope', cox_intercept = 'Cox intercept'),
                       xlim = c(1, 50),
                       clip = list(cox_slope = c(0, 2), cox_intercept = c(-1, 1)),
                       ideal = c(nAP = 1, boyce = 1, cox_slope = 1, cox_intercept = 0),
-                      color_by = 'resolution', shape_by = 'resolution') {
+                      color_by = 'resolution', shape_by = 'resolution',
+                      fit_degree = 1, annotate_fit = TRUE, fit_exclude = NULL,
+                      fit_pos = NULL, palette = NULL, fade = NULL, fade_alpha = 0.4,
+                      jitter = 0.3) {
   df <- df[df$tree %in% names(holdouts), , drop = FALSE]
   df$holdout <- factor(holdouts[as.character(df$tree)], levels = holdouts)
   ## colour and shape are configurable (default both = resolution, the original look). A
@@ -411,20 +423,98 @@ ratioGrid <- function(df, holdouts,
   long <- tidyr::pivot_longer(df, dplyr::all_of(names(metrics)),
                               names_to = 'metric', values_to = 'value')
   long$metric <- factor(metrics[long$metric], levels = metrics)
+  ## per-series point alpha: series named in `fade` are drawn faded (e.g. extrapolation), the
+  ## rest at the normal 0.85. scale_alpha_identity() uses these values straight, no legend.
+  long$.alpha <- ifelse(as.character(long$.color) %in% fade, fade_alpha, 0.85)
+  ## draw order by resolution: 3arc at the bottom, then 1arc, then 1-3arc on top (geom_point
+  ## paints in row order, so later rows sit on top). Unknown resolutions sort last (topmost).
+  if ('resolution' %in% names(long))
+    long <- long[order(match(long$resolution, c('3arc', '1arc', '1-3arc'))), , drop = FALSE]
 
   refs <- data.frame(metric = factor(metrics, levels = metrics),
                      yint = unname(ideal[names(metrics)]))
   refs <- refs[!is.na(refs$yint), , drop = FALSE]
 
+  ## ---- per-series fit of value ~ poly(log10(ratio), fit_degree) --------------------
+  ## One lm per (metric x holdout x colour series), fit on the clipped values (out-of-window
+  ## points are already NA, so wild outliers don't drag the line). The fitted curve + 95% CI
+  ## are drawn to match the printed coefficients exactly (so no geom_smooth). Series in
+  ## fit_exclude (e.g. the extrapolation domain) are plotted as points but neither fit nor
+  ## annotated. Needs >= degree+2 points and degree+1 distinct ratios, else the series is skipped.
+  fit_series <- function(d) {
+    d <- d[is.finite(d$value) & is.finite(d$PAratio) & d$PAratio > 0, , drop = FALSE]
+    if (nrow(d) < fit_degree + 2 || dplyr::n_distinct(d$PAratio) < fit_degree + 1) return(NULL)
+    d$lr <- log10(d$PAratio)
+    stats::lm(value ~ poly(lr, fit_degree, raw = TRUE), data = d)
+  }
+  nested <- long |>
+    dplyr::filter(!is.na(value), !(.color %in% fit_exclude)) |>
+    tidyr::nest(data = -c(metric, holdout, .color)) |>
+    dplyr::mutate(fit = purrr::map(data, fit_series)) |>
+    dplyr::filter(!purrr::map_lgl(fit, is.null))
+
+  pred_df <- coef_df <- NULL
+  if (nrow(nested)) {
+    pred_df <- nested |>
+      dplyr::mutate(pred = purrr::map2(data, fit, function(d, f) {
+        rng <- range(d$PAratio); nx <- 10^seq(log10(rng[1]), log10(rng[2]), length.out = 60)
+        pr  <- stats::predict(f, newdata = data.frame(lr = log10(nx)), se.fit = TRUE)
+        data.frame(PAratio = nx, value = pr$fit,
+                   ymin = pr$fit - 1.96 * pr$se.fit, ymax = pr$fit + 1.96 * pr$se.fit)
+      })) |>
+      dplyr::select(metric, holdout, .color, pred) |>
+      tidyr::unnest(pred)
+
+    fmt_lab <- function(f) {
+      est <- stats::coef(f); ci <- suppressMessages(stats::confint(f))
+      if (fit_degree == 1)
+        sprintf('int %.2f  slope %+.2f [%+.2f, %+.2f]', est[1], est[2], ci[2, 1], ci[2, 2])
+      else
+        sprintf('int %.2f  b1 %+.2f [%+.2f,%+.2f]  b2 %+.2f [%+.2f,%+.2f]',
+                est[1], est[2], ci[2, 1], ci[2, 2], est[3], ci[3, 1], ci[3, 2])
+    }
+    yr <- long |> dplyr::group_by(metric, holdout) |>
+      dplyr::summarise(ytop = max(value, na.rm = TRUE),
+                       ybot = min(value, na.rm = TRUE), .groups = 'drop')
+    ## one multi-line label per panel: every series' terms joined with '\n', ordered by series.
+    ## Line spacing is then just the label's lineheight - no per-series y arithmetic.
+    coef_df <- nested |>
+      dplyr::mutate(lab1 = purrr::map_chr(fit, fmt_lab)) |>
+      dplyr::arrange(metric, holdout, .color) |>
+      dplyr::group_by(metric, holdout) |>
+      dplyr::summarise(lab = paste(lab1, collapse = '\n'), .groups = 'drop') |>
+      dplyr::left_join(yr, by = c('metric', 'holdout')) |>
+      dplyr::mutate(key = names(metrics)[match(as.character(metric), metrics)])
+    ## placement: fit_pos[[metric key]] = c(x, y) bottom-anchors the box (vjust 0); metrics with
+    ## no entry fall back to auto top-left (vjust 1). One anchor per panel - the box holds all series.
+    pos_tbl <- if (!is.null(fit_pos) && length(fit_pos))
+      do.call(rbind, lapply(names(fit_pos), function(k)
+        data.frame(key = k, px = fit_pos[[k]][1], py = fit_pos[[k]][2])))
+    else data.frame(key = character(), px = numeric(), py = numeric())
+    coef_df <- coef_df |>
+      dplyr::left_join(pos_tbl, by = 'key') |>
+      dplyr::mutate(
+        x  = ifelse(!is.na(px), px, xlim[1]),
+        y  = ifelse(!is.na(px), py, ytop - 0.04 * (ytop - ybot)),
+        vj = ifelse(!is.na(px), 0, 1))
+  }
+
   p <- ggplot2::ggplot(long, ggplot2::aes(PAratio, value,
                                      color = .color, shape = .shape)) +
     ggplot2::geom_hline(data = refs, ggplot2::aes(yintercept = yint),
                         inherit.aes = FALSE, linetype = '31',
-                        linewidth = 0.3, colour = 'grey55') +
-    ## default-method smooth per colour group; CI ribbon at 1/4 the default 0.4 alpha.
-    ## Drawn before the points so the raw replicates sit on top.
-    ggplot2::geom_smooth(ggplot2::aes(fill = .color, group = .color), alpha = 0.3, linewidth = 0.6) +
-    ggplot2::geom_point(size = 1.5, alpha = 0.85)
+                        linewidth = 0.3, colour = 'grey55')
+  if (!is.null(pred_df)) {
+    p <- p +
+      ggplot2::geom_ribbon(data = pred_df, inherit.aes = FALSE,
+                           ggplot2::aes(PAratio, ymin = ymin, ymax = ymax,
+                                        fill = .color, group = .color), alpha = 0.18) +
+      ggplot2::geom_line(data = pred_df, inherit.aes = FALSE,
+                         ggplot2::aes(PAratio, value, color = .color, group = .color),
+                         linewidth = 0.6)
+  }
+  p <- p + ggplot2::geom_point(ggplot2::aes(alpha = .alpha), size = 1.5,
+                               position = ggplot2::position_jitter(width = jitter, height = 0, seed = 1))
 
   if (!is.null(ann) && nrow(ann)) {
     p <- p + ggplot2::geom_text(
@@ -433,12 +523,29 @@ ratioGrid <- function(df, holdouts,
       hjust = 1, vjust = 1.3, size = 2.7, colour = 'grey35')
   }
 
-  p +
+  ## one multi-line coefficient box per panel, black text on a mostly-opaque white label.
+  ## lineheight controls the spacing between series lines.
+  if (annotate_fit && !is.null(coef_df) && nrow(coef_df)) {
+    p <- p + ggplot2::geom_label(
+      data = coef_df, inherit.aes = FALSE,
+      ggplot2::aes(x = x, y = y, label = lab, vjust = vj),
+      hjust = 0, size = 2.5, color = 'black', fill = '#ffffff', alpha = 0.8,
+      label.size = 0, label.padding = ggplot2::unit(0.15, 'lines'), lineheight = 0.9)
+  }
+
+  p <- p +
     ggplot2::facet_grid(metric ~ holdout, scales = 'free_y', switch = 'y') +
     ggplot2::scale_x_continuous(limits = xlim, breaks = c(1, 10, 20, 30, 40, 50)) +
     ggplot2::scale_shape(na.translate = FALSE) +  # drop the smooth layer's empty NA shape key
+    ggplot2::scale_alpha_identity() +             # .alpha column is the literal point alpha
+    ggplot2::guides(fill = 'none') +              # ribbon shares the colour legend; hide its own
     ggplot2::labs(x = 'Presence:absence ratio', y = NULL,
                   color = color_lab, fill = color_lab, shape = shape_lab) +
     theme_manuscript() +
     ggplot2::theme(strip.placement = 'outside')
+  ## optional manual palette shared by points, fitted lines and ribbons (keyed on the colour series)
+  if (!is.null(palette))
+    p <- p + ggplot2::scale_color_manual(values = palette) +
+             ggplot2::scale_fill_manual(values = palette)
+  p
 }

@@ -12,8 +12,14 @@
 ## nAP is computed per domain against the real prevalence rather than 1/(1+ratio). Boyce is
 ## absent (needs presence/background, not the field P/A set).
 ##
-## One row per (fit x domain), columns:
-##   tree, resolution, iteration, PAratio, distOrder, seed, fname, domain, n,
+## main's Platt work tags each metric row with a `calibration` column (raw / calibrated);
+## calibration is applied to interpolation only, so Extrapolation carries just `raw`. We emit
+## one row per (fit x domain x calibration): raw + calibrated for each interpolation domain,
+## raw only for extrapolation. pr_auc/roc_auc are identical raw-vs-calibrated (Platt is monotone);
+## the calibration effect lives in cox_slope / cox_intercept / brier.
+##
+## One row per (fit x domain x calibration), columns:
+##   tree, resolution, iteration, PAratio, distOrder, seed, fname, domain, calibration, n,
 ##   pr_auc, roc_auc, brier_class, brier_scaled, prevalence,
 ##   cox_intercept, cox_intercept_se, cox_slope, cox_slope_se
 ##
@@ -41,11 +47,11 @@ pull <- function(sub, name, col = 'estimate'){
   v <- sub[[col]][sub$metric == name]
   if(length(v) == 0) NA else v[1]
 }
-metric_row <- function(sub, pf, fname, root, label){
+metric_row <- function(sub, pf, fname, root, label, cal){
   data.frame(
     tree = basename(root), resolution = pf$resolution, iteration = pf$iteration,
     PAratio = pf$PAratio, distOrder = pf$distOrder, seed = pf$seed, fname = fname,
-    domain = label, n = pull(sub, 'pr_auc', 'n'),
+    domain = label, calibration = cal, n = pull(sub, 'pr_auc', 'n'),
     pr_auc = pull(sub, 'pr_auc'), roc_auc = pull(sub, 'roc_auc'),
     brier_class = pull(sub, 'brier_class'), brier_scaled = pull(sub, 'brier_scaled'),
     prevalence = pull(sub, 'prevalence'),
@@ -65,13 +71,19 @@ for(root in roots){
     met <- tryCatch(read.csv(csv, stringsAsFactors = FALSE), error = function(e) NULL)
     if(is.null(met) || !'metric' %in% names(met)) next
     if(all(c('SurfaceArea', 'Distance') %in% names(met))){
+      has_cal <- 'calibration' %in% names(met)
       for(d in domain_defs){
-        sub <- met[met$SurfaceArea == d$sa & met$Distance == d$dist, , drop = FALSE]
-        if(nrow(sub)) rows[[length(rows) + 1]] <- metric_row(sub, pf, fname, root, d$label)
+        base <- met[met$SurfaceArea == d$sa & met$Distance == d$dist, , drop = FALSE]
+        if(!nrow(base)) next
+        cals <- if(has_cal) unique(base$calibration) else 'raw'
+        for(cal in cals){
+          sub <- if(has_cal) base[base$calibration == cal, , drop = FALSE] else base
+          if(nrow(sub)) rows[[length(rows) + 1]] <- metric_row(sub, pf, fname, root, d$label, cal)
+        }
       }
     } else {
-      # older file without the AOA tags: one undifferentiated row
-      rows[[length(rows) + 1]] <- metric_row(met, pf, fname, root, 'all')
+      # older file without the AOA tags: one undifferentiated raw row
+      rows[[length(rows) + 1]] <- metric_row(met, pf, fname, root, 'all', 'raw')
     }
   }
 }
@@ -84,4 +96,4 @@ write.csv(out, out_path, row.names = FALSE)
 
 message(sprintf('wrote %d rows (fit x domain) across %d trees to %s',
                 nrow(out), dplyr::n_distinct(out$tree), out_path))
-print(dplyr::count(out, tree, domain, name = 'fits') |> as.data.frame())
+print(dplyr::count(out, tree, domain, calibration, name = 'fits') |> as.data.frame())
