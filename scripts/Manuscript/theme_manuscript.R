@@ -376,33 +376,24 @@ domain_cols <- c('Interp ≤270 m' = '#1b9e77',  # interp < 270 m
                  'Interp >270 m'     = '#d95f02',  # interp >= 270 m
                  'Extrapolation'     = '#7570b3')  # extrapolation
 
-ratioGrid <- function(df, holdouts,
-                      metrics = c(nAP = 'nAP', boyce = 'Boyce index',
-                                  cox_slope = 'Cox slope', cox_intercept = 'Cox intercept'),
-                      xlim = c(1, 50),
-                      clip = list(cox_slope = c(0, 2), cox_intercept = c(-1, 1)),
-                      ideal = c(nAP = 1, boyce = 1, cox_slope = 1, cox_intercept = 0),
-                      color_by = 'resolution', shape_by = 'resolution',
-                      fit_degree = 1, annotate_fit = TRUE, fit_exclude = NULL,
-                      fit_pos = NULL, palette = NULL, fade = NULL, fade_alpha = 0.4,
-                      jitter = 0.3) {
+## Shared prep for ratioGrid (the plot) and ratioFits (the coefficient table): filter to the
+## kept trees, build the colour/shape/linetype series, derive nAP, clip out-of-window values
+## to NA (returning per-panel omitted counts), pivot to long, and fit one
+## lm(value ~ poly(log10 ratio, degree)) per (metric x holdout x colour x linetype) series
+## (series in fit_exclude are dropped). Keeping this in one place is what guarantees the
+## printed coefficients match the drawn lines.
+ratioPrep <- function(df, holdouts, metrics,
+                      color_by = 'resolution', shape_by = 'resolution', linetype_by = NULL,
+                      clip = list(), fit_degree = 1, fit_exclude = NULL,
+                      fade = NULL, fade_alpha = 0.4) {
   df <- df[df$tree %in% names(holdouts), , drop = FALSE]
   df$holdout <- factor(holdouts[as.character(df$tree)], levels = holdouts)
-  ## colour and shape are configurable (default both = resolution, the original look). A
-  ## pre-set factor is kept as-is so callers can order e.g. the AOA domains near -> far -> out.
-  as_fac    <- function(x) if (is.factor(x)) x else factor(x)
-  df$.color <- as_fac(df[[color_by]])
-  df$.shape <- as_fac(df[[shape_by]])
-  color_lab <- tools::toTitleCase(gsub('_', ' ', color_by))
-  shape_lab <- tools::toTitleCase(gsub('_', ' ', shape_by))
-  ## nAP from the own-holdout prevalence (1/(1+ratio)). Callers scoring against a fixed test
-  ## set with a known prevalence (e.g. the 2026 field eval) can pre-compute df$nAP from that
-  ## prevalence; a supplied nAP column is kept as-is rather than overwritten.
+  as_fac <- function(x) if (is.factor(x)) x else factor(x)
+  df$.color    <- as_fac(df[[color_by]])
+  df$.shape    <- as_fac(df[[shape_by]])
+  df$.linetype <- if (!is.null(linetype_by)) as_fac(df[[linetype_by]]) else df$.color
   if ('nAP' %in% names(metrics) && !'nAP' %in% names(df)) df$nAP <- nAP(df$pr_auc, df$PAratio)
 
-  ## Hide out-of-window points so that row's free_y zooms to the bulk (facet_grid +
-  ## free_y can't take a per-row coord_cartesian). For each clipped metric, count how
-  ## many points per panel fall outside the window and annotate it, then set them NA.
   ann <- list()
   for (m in names(clip)) {
     if (!m %in% names(df)) next
@@ -410,10 +401,9 @@ ratioGrid <- function(df, holdouts,
     outside <- !is.na(df[[m]]) & (df[[m]] < lim[1] | df[[m]] > lim[2])
     if (m %in% names(metrics)) {
       cnt <- tapply(outside, df$holdout, sum)
-      ann[[m]] <- data.frame(
-        holdout = factor(names(cnt), levels = holdouts),
-        metric  = factor(metrics[[m]], levels = metrics),
-        n       = as.integer(cnt), ytext = lim[2])
+      ann[[m]] <- data.frame(holdout = factor(names(cnt), levels = holdouts),
+                             metric  = factor(metrics[[m]], levels = metrics),
+                             n = as.integer(cnt), ytext = lim[2])
     }
     df[[m]][outside] <- NA
   }
@@ -423,24 +413,11 @@ ratioGrid <- function(df, holdouts,
   long <- tidyr::pivot_longer(df, dplyr::all_of(names(metrics)),
                               names_to = 'metric', values_to = 'value')
   long$metric <- factor(metrics[long$metric], levels = metrics)
-  ## per-series point alpha: series named in `fade` are drawn faded (e.g. extrapolation), the
-  ## rest at the normal 0.85. scale_alpha_identity() uses these values straight, no legend.
-  long$.alpha <- ifelse(as.character(long$.color) %in% fade, fade_alpha, 0.85)
-  ## draw order by resolution: 3arc at the bottom, then 1arc, then 1-3arc on top (geom_point
-  ## paints in row order, so later rows sit on top). Unknown resolutions sort last (topmost).
+  long$.alpha <- ifelse(as.character(long$.color) %in% fade |
+                        as.character(long$.linetype) %in% fade, fade_alpha, 0.85)
   if ('resolution' %in% names(long))
     long <- long[order(match(long$resolution, c('3arc', '1arc', '1-3arc'))), , drop = FALSE]
 
-  refs <- data.frame(metric = factor(metrics, levels = metrics),
-                     yint = unname(ideal[names(metrics)]))
-  refs <- refs[!is.na(refs$yint), , drop = FALSE]
-
-  ## ---- per-series fit of value ~ poly(log10(ratio), fit_degree) --------------------
-  ## One lm per (metric x holdout x colour series), fit on the clipped values (out-of-window
-  ## points are already NA, so wild outliers don't drag the line). The fitted curve + 95% CI
-  ## are drawn to match the printed coefficients exactly (so no geom_smooth). Series in
-  ## fit_exclude (e.g. the extrapolation domain) are plotted as points but neither fit nor
-  ## annotated. Needs >= degree+2 points and degree+1 distinct ratios, else the series is skipped.
   fit_series <- function(d) {
     d <- d[is.finite(d$value) & is.finite(d$PAratio) & d$PAratio > 0, , drop = FALSE]
     if (nrow(d) < fit_degree + 2 || dplyr::n_distinct(d$PAratio) < fit_degree + 1) return(NULL)
@@ -448,10 +425,70 @@ ratioGrid <- function(df, holdouts,
     stats::lm(value ~ poly(lr, fit_degree, raw = TRUE), data = d)
   }
   nested <- long |>
-    dplyr::filter(!is.na(value), !(.color %in% fit_exclude)) |>
-    tidyr::nest(data = -c(metric, holdout, .color)) |>
+    dplyr::filter(!is.na(value), !(.color %in% fit_exclude), !(.linetype %in% fit_exclude)) |>
+    tidyr::nest(data = -c(metric, holdout, .color, .linetype)) |>
     dplyr::mutate(fit = purrr::map(data, fit_series)) |>
     dplyr::filter(!purrr::map_lgl(fit, is.null))
+
+  list(long = long, ann = ann, nested = nested)
+}
+
+## Tidy coefficient table from the SAME fits ratioGrid draws (one lm per plotted series, via
+## ratioPrep). One row per fitted (metric x design x resolution [x domain]) series: intercept,
+## slope and the slope's 95% CI. Linear fits only (fit_degree 1). Pass the grid's
+## metrics/clip/fit_exclude/color_by/linetype_by so table and lines stay in lockstep.
+ratioFits <- function(df, holdouts, metrics,
+                      color_by = 'resolution', linetype_by = NULL,
+                      clip = list(), fit_degree = 1, fit_exclude = NULL, digits = 2) {
+  nested <- ratioPrep(df, holdouts, metrics, color_by = color_by, shape_by = color_by,
+                      linetype_by = linetype_by, clip = clip, fit_degree = fit_degree,
+                      fit_exclude = fit_exclude)$nested
+  if (!nrow(nested)) return(data.frame())
+  out <- nested |>
+    dplyr::mutate(co = purrr::map(fit, function(f) {
+      est <- stats::coef(f); ci <- suppressMessages(stats::confint(f))
+      data.frame(n = length(stats::residuals(f)),
+                 Intercept = round(unname(est[1]), digits),
+                 Slope     = round(unname(est[2]), digits),
+                 `Slope 95% CI` = sprintf('[%+.*f, %+.*f]', digits, ci[2, 1], digits, ci[2, 2]),
+                 check.names = FALSE)
+    })) |>
+    dplyr::mutate(Design = gsub('\n', ' ', as.character(holdout)),
+                  Metric = gsub('\n', ' ', as.character(metric)),
+                  Resolution = as.character(.color),
+                  Domain = as.character(.linetype)) |>
+    dplyr::select(Design, Metric, Resolution, Domain, co) |>
+    tidyr::unnest(co)
+  if (is.null(linetype_by)) out$Domain <- NULL
+  ord <- c('Metric', 'Design', 'Resolution', if (!is.null(linetype_by)) 'Domain')
+  out[do.call(order, out[ord]), , drop = FALSE]
+}
+
+ratioGrid <- function(df, holdouts,
+                      metrics = c(nAP = 'nAP', boyce = 'Boyce index',
+                                  cox_slope = 'Cox slope', cox_intercept = 'Cox intercept'),
+                      xlim = c(1, 50),
+                      clip = list(cox_slope = c(0, 2), cox_intercept = c(-1, 1)),
+                      ideal = c(nAP = 1, boyce = 1, cox_slope = 1, cox_intercept = 0),
+                      color_by = 'resolution', shape_by = 'resolution',
+                      linetype_by = NULL, linetypes = NULL,
+                      fit_degree = 1, annotate_fit = TRUE, fit_exclude = NULL,
+                      fit_pos = NULL, palette = NULL, fade = NULL, fade_alpha = 0.4,
+                      jitter = 0.3) {
+  color_lab    <- tools::toTitleCase(gsub('_', ' ', color_by))
+  shape_lab    <- tools::toTitleCase(gsub('_', ' ', shape_by))
+  linetype_lab <- if (!is.null(linetype_by)) tools::toTitleCase(gsub('_', ' ', linetype_by)) else NULL
+  ## prep + fits are shared with ratioFits() so the coefficient table matches the drawn lines.
+  prep   <- ratioPrep(df, holdouts, metrics, color_by = color_by, shape_by = shape_by,
+                      linetype_by = linetype_by, clip = clip, fit_degree = fit_degree,
+                      fit_exclude = fit_exclude, fade = fade, fade_alpha = fade_alpha)
+  long   <- prep$long
+  ann    <- prep$ann
+  nested <- prep$nested
+
+  refs <- data.frame(metric = factor(metrics, levels = metrics),
+                     yint = unname(ideal[names(metrics)]))
+  refs <- refs[!is.na(refs$yint), , drop = FALSE]
 
   pred_df <- coef_df <- NULL
   if (nrow(nested)) {
@@ -462,7 +499,7 @@ ratioGrid <- function(df, holdouts,
         data.frame(PAratio = nx, value = pr$fit,
                    ymin = pr$fit - 1.96 * pr$se.fit, ymax = pr$fit + 1.96 * pr$se.fit)
       })) |>
-      dplyr::select(metric, holdout, .color, pred) |>
+      dplyr::select(metric, holdout, .color, .linetype, pred) |>
       tidyr::unnest(pred)
 
     fmt_lab <- function(f) {
@@ -478,9 +515,13 @@ ratioGrid <- function(df, holdouts,
                        ybot = min(value, na.rm = TRUE), .groups = 'drop')
     ## one multi-line label per panel: every series' terms joined with '\n', ordered by series.
     ## Line spacing is then just the label's lineheight - no per-series y arithmetic.
+    ## one coef line per fitted series; when a linetype series is in play (e.g. the 6
+    ## resolution x domain groups) each line is tagged with its colour + linetype so the
+    ## stacked box is readable.
     coef_df <- nested |>
-      dplyr::mutate(lab1 = purrr::map_chr(fit, fmt_lab)) |>
-      dplyr::arrange(metric, holdout, .color) |>
+      dplyr::mutate(lab1 = if (is.null(linetype_by)) purrr::map_chr(fit, fmt_lab)
+                           else paste0(.color, ' ', .linetype, ': ', purrr::map_chr(fit, fmt_lab))) |>
+      dplyr::arrange(metric, holdout, .color, .linetype) |>
       dplyr::group_by(metric, holdout) |>
       dplyr::summarise(lab = paste(lab1, collapse = '\n'), .groups = 'drop') |>
       dplyr::left_join(yr, by = c('metric', 'holdout')) |>
@@ -507,11 +548,14 @@ ratioGrid <- function(df, holdouts,
   if (!is.null(pred_df)) {
     p <- p +
       ggplot2::geom_ribbon(data = pred_df, inherit.aes = FALSE,
-                           ggplot2::aes(PAratio, ymin = ymin, ymax = ymax,
-                                        fill = .color, group = .color), alpha = 0.18) +
-      ggplot2::geom_line(data = pred_df, inherit.aes = FALSE,
-                         ggplot2::aes(PAratio, value, color = .color, group = .color),
-                         linewidth = 0.6)
+                           ggplot2::aes(PAratio, ymin = ymin, ymax = ymax, fill = .color,
+                                        group = interaction(.color, .linetype)), alpha = 0.18)
+    line_aes <- if (is.null(linetype_by))
+      ggplot2::aes(PAratio, value, color = .color, group = interaction(.color, .linetype))
+    else
+      ggplot2::aes(PAratio, value, color = .color, linetype = .linetype,
+                   group = interaction(.color, .linetype))
+    p <- p + ggplot2::geom_line(data = pred_df, inherit.aes = FALSE, line_aes, linewidth = 0.6)
   }
   p <- p + ggplot2::geom_point(ggplot2::aes(alpha = .alpha), size = 1.5,
                                position = ggplot2::position_jitter(width = jitter, height = 0, seed = 1))
@@ -540,12 +584,16 @@ ratioGrid <- function(df, holdouts,
     ggplot2::scale_alpha_identity() +             # .alpha column is the literal point alpha
     ggplot2::guides(fill = 'none') +              # ribbon shares the colour legend; hide its own
     ggplot2::labs(x = 'Presence:absence ratio', y = NULL,
-                  color = color_lab, fill = color_lab, shape = shape_lab) +
+                  color = color_lab, fill = color_lab, shape = shape_lab,
+                  linetype = linetype_lab) +
     theme_manuscript() +
     ggplot2::theme(strip.placement = 'outside')
   ## optional manual palette shared by points, fitted lines and ribbons (keyed on the colour series)
   if (!is.null(palette))
     p <- p + ggplot2::scale_color_manual(values = palette) +
              ggplot2::scale_fill_manual(values = palette)
+  ## optional manual linetype scale for the linetype series (e.g. interp <=270m dashed, >270m solid)
+  if (!is.null(linetype_by) && !is.null(linetypes))
+    p <- p + ggplot2::scale_linetype_manual(values = linetypes, na.translate = FALSE)
   p
 }

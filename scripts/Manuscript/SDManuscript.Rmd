@@ -277,6 +277,7 @@ PR-AUC conveys the model's ability to discriminate suitable habitat, but is prev
 For model calibration we report the Cox calibration intercept and slope [@cox1958two; @steyerberg2014towards].
 The intercept measures overall bias: negative when predictions are too high, positive when too low, and zero when unbiased.
 The slope measures confidence: below one the model is overconfident (predictions too extreme), above one underconfident, and one when correctly scaled.
+We recalibrate predictions (Platt scaling) within the AOA only: because the calibrator is fit on in-sample data it does not transfer to extrapolation, and applying it to spatially held-out folds inflates the slope above one in proportion to how far they extrapolate (median slope 0.87 $\rightarrow$ 0.97 under a random split, but 0.90 $\rightarrow$ 1.95 under leave-populations-out); holdout metrics are therefore reported uncalibrated.
 
 We further report performance across three prediction domains defined by the area of applicability (AOA) and distance to known populations: (1) inside the AOA and within 270m of a known population, (2) inside the AOA but > 270m, and (3) outside the AOA (extrapolated niche).
 Domain (1) is occupiable, dispersal-accessible habitat the training data characterised, and errors here indicate a failure of the model.
@@ -647,18 +648,27 @@ holdout_cols <- c(
   Results_random_iter1a_high_pa         = 'Classic split\n(20/80 random, occ-stratified)',
   Results_spatialmapping_iter1a_high_pa = 'Spatial mapping\n(spatial CV)',
   Results_LMPO_iter1a_high_pa           = 'Leave Multiple (sub-)Populations Out\n(LMPO CV)')
+## per-series lm(value ~ log10 ratio) coefficients are tabulated below (annotate_fit = FALSE).
+holdout_grid_metrics <- c(nAP = 'nAP', roc_auc = 'ROC-AUC', boyce = 'Boyce index',
+                          cox_slope = 'Cox Slope (Raw)', cox_intercept = 'Cox intercept')
+holdout_grid_clip    <- list(boyce = c(0.25, 1), cox_slope = c(0, 1.5), cox_intercept = c(-1, 1))
 ratioGrid(grid_metrics, holdouts = holdout_cols, xlim = c(1, 30),
-          metrics = c(nAP = 'nAP', roc_auc = 'ROC-AUC', boyce = 'Boyce index',
-                      cox_slope = 'Cox slope', cox_intercept = 'Cox intercept'),
+          metrics = holdout_grid_metrics,
           ideal   = c(nAP = 1, roc_auc = 1, boyce = 1, cox_slope = 1, cox_intercept = 0),
-          clip    = list(boyce = c(0.25, 1), cox_slope = c(0, 1.5), cox_intercept = c(-1, 1)),
-          palette = resolution_cols,
-          ## per-series lm(value ~ log10 ratio); fit_pos bottom-anchors each panel's annotation.
-          fit_pos = list(
-            nAP = c(1, 0.35), roc_auc = c(10, 0.75), boyce = c(10, 0.3),
-            cox_slope = c(1, 1.2), cox_intercept = c(1, 0.7))
-            ) +
+          clip    = holdout_grid_clip,
+          palette = resolution_cols, annotate_fit = FALSE) +
           labs(title = 'Cross Validation Strategies Evaluated on `held out` Test Data.')
+```
+
+```{r Refinement Metric Grid by Holdout Coefficients}
+## Per-series lm(metric ~ log10 PA-ratio) coefficients for the grid above - the fitted lines
+## drawn there, reported as a table (one row per metric x CV design x resolution). Shares the
+## same metrics/clip via ratioFits(), so the numbers match the plotted lines exactly.
+knitr::kable(
+  ratioFits(grid_metrics, holdouts = holdout_cols,
+            metrics = holdout_grid_metrics, clip = holdout_grid_clip),
+  caption = 'Fitted PA-ratio trend (intercept, slope, 95\\% CI) per metric, CV design and resolution, held-out test data.',
+  booktabs = TRUE, longtable = TRUE)
 ```
 
 
@@ -682,20 +692,34 @@ gt_metrics$nAP <- (gt_metrics$pr_auc - gt_metrics$prevalence) / (1 - gt_metrics$
 gt_metrics$domain <- factor(gt_metrics$domain,
   levels = c('Interp <=270m', 'Interp >270m', 'Extrapolation'),
   labels = c('Interp ≤270 m', 'Interp >270 m', 'Extrapolation'))
-ratioGrid(gt_metrics, holdouts = holdout_cols, xlim = c(1, 30), color_by = 'domain', shape_by = 'resolution',
-          fit_exclude = 'Extrapolation',   # fit/annotate the interp domains only, not extrap
+## colour = resolution; interp domain = linetype. Coefficients for the 6 resolution x interp-
+## domain groups are tabulated below (annotate_fit = FALSE).
+gt_grid_metrics <- c(nAP = 'nAP (field)', roc_auc = 'ROC-AUC',
+                     cox_slope = 'Cox Slope\n(Platt Calibration)', cox_intercept = 'Cox intercept')
+gt_grid_clip    <- list(nAP = c(0,1), roc_auc = c(0.4, 1), cox_slope = c(-0.5, 1.5), cox_intercept = c(-2, 2))
+ratioGrid(gt_metrics, holdouts = holdout_cols, xlim = c(1, 30),
+          color_by = 'resolution', shape_by = 'resolution', linetype_by = 'domain',
+          linetypes = c('Interp ≤270 m' = 'dashed', 'Interp >270 m' = 'solid',
+                        'Extrapolation' = 'dotted'),
+          fit_exclude = 'Extrapolation',   # fit the 6 resolution x interp-domain groups only
           fade = 'Extrapolation',          # de-emphasise the extrapolation points (alpha 0.4)
-          palette = domain_cols,
-          metrics = c(
-            nAP = 'nAP (field)', roc_auc = 'ROC-AUC',
-            cox_slope = 'Cox slope', cox_intercept = 'Cox intercept'),
+          palette = resolution_cols, annotate_fit = FALSE,
+          metrics = gt_grid_metrics,
           ideal   = c(nAP = 1, roc_auc = 1, cox_slope = 1, cox_intercept = 0),
-          clip    = list(nAP = c(0,1), roc_auc = c(0.4, 1), cox_slope = c(-0.5, 1.5), cox_intercept = c(-2, 2)),
-          fit_pos = list(
-            nAP = c(1, 0.85), roc_auc = c(1, 0.85),
-            cox_slope = c(1, -0.3), cox_intercept = c(1, 1.5))
-            ) +
+          clip    = gt_grid_clip) +
           labs(title = 'Cross Validation Strategies Evaluated on Ground Truth Data.')
+```
+
+```{r Refinement Metric Grid 2026 Field Validation Coefficients}
+## Per-series lm(metric ~ log10 PA-ratio) coefficients for the GT grid above - one row per
+## metric x CV design x resolution x interp domain (the 6 fitted groups per panel;
+## extrapolation is excluded, matching the plot). Via ratioFits(), so numbers match the lines.
+knitr::kable(
+  ratioFits(gt_metrics, holdouts = holdout_cols,
+            color_by = 'resolution', linetype_by = 'domain',
+            metrics = gt_grid_metrics, clip = gt_grid_clip, fit_exclude = 'Extrapolation'),
+  caption = 'Fitted PA-ratio trend (intercept, slope, 95\\% CI) per metric, CV design, resolution and interpolation domain, 2026 field ground truth (Platt-calibrated interpolation).',
+  booktabs = TRUE, longtable = TRUE)
 ```
 
 ### 3.7 | Final Results

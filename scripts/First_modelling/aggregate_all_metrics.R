@@ -15,8 +15,18 @@ source('functions.R')
 roots <- list.dirs(PROJ_ROOT, recursive = FALSE)
 roots <- roots[grepl('^[Rr]esults(_|$)', basename(roots))]
 
-pull_metric <- function(met, name, col = 'estimate'){
-  v <- met[[col]][met$metric == name]
+## Pull one metric's value. `prefer` selects a `calibration` variant when the table carries
+## that column (backfill_metrics.R writes both 'raw' and, where a -platt.rds exists,
+## 'calibrated' rows for the scale-dependent metrics). When the preferred variant is absent
+## for this fit (e.g. legacy tables with no calibration column, or no Platt map), it falls
+## back to the first matching row (raw).
+pull_metric <- function(met, name, col = 'estimate', prefer = NULL){
+  sel <- met$metric == name
+  if(!is.null(prefer) && 'calibration' %in% names(met)){
+    cal <- sel & met$calibration == prefer
+    if(any(cal)) sel <- cal
+  }
+  v <- met[[col]][sel]
   if(length(v) == 0) NA else v[1]
 }
 
@@ -42,6 +52,11 @@ for(root in roots){
       roc_auc          = pull_metric(met, 'roc_auc'),
       brier_class      = pull_metric(met, 'brier_class'),
       boyce            = pull_metric(met, 'boyce'),
+      ## cox calibration: RAW on the holdout. The Platt map is fit on the training inner-CV
+      ## OOF, so it transfers badly to extrapolative holdouts (spatial/LMPO) and over-sharpens
+      ## the slope there - see memory 'platt-overcorrects-extrapolative-holdout'. Platt's real
+      ## benefit is a within-AOA deployment property, shown on the 2026 GT path, not here.
+      ## (Calibrated rows still live in the per-fit tables; pass prefer='calibrated' to use them.)
       cox_intercept    = pull_metric(met, 'cox_intercept'),
       cox_intercept_se = pull_metric(met, 'cox_intercept', 'std_error'),
       cox_slope        = pull_metric(met, 'cox_slope'),
