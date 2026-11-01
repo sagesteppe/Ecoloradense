@@ -151,6 +151,7 @@ subset_pts <- function(x, res, root, mode){
                        "90" = "3arc",
                        stop("Input to `res` invalid. Need be one of: 3, 10, 30, 90")
   )
+
   
   rasta <- terra::rast( # one raster is enough - all resolutions are co-aligned.
     file.path(root, paste0('dem_', res_string), 'dem.tif')

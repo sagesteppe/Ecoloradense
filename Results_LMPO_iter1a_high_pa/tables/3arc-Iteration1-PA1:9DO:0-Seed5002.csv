@@ -1,7 +1,10 @@
-"metric","estimator","estimate","std_error","resolution","iteration"
-"pr_auc","binary",0.713323690938106,NA,"3arc",1
-"roc_auc","binary",0.955538833998561,NA,"3arc",1
-"brier_class","binary",0.0440689931623932,NA,"3arc",1
-"boyce","continuous",0.825,NA,"3arc",1
-"cox_intercept","glm",0.0820546787112363,0.203021822862627,"3arc",1
-"cox_slope","glm",0.830662504093484,0.106291137815347,"3arc",1
+"metric","estimator","estimate","std_error","resolution","iteration","calibration"
+"pr_auc","binary",0.713323690938106,NA,"3arc",1,"raw"
+"roc_auc","binary",0.955538833998561,NA,"3arc",1,"raw"
+"brier_class","binary",0.0440689931623932,NA,"3arc",1,"raw"
+"boyce","continuous",0.825,NA,"3arc",1,"raw"
+"cox_intercept","glm",0.0820546787112363,0.203021822862627,"3arc",1,"raw"
+"cox_slope","glm",0.830662504093484,0.106291137815347,"3arc",1,"raw"
+"brier_class","binary",0.0501622508253552,NA,"3arc",1,"calibrated"
+"cox_intercept","glm",-0.346425128829161,0.158076747808859,"3arc",1,"calibrated"
+"cox_slope","glm",2.05003850013258,0.262312849804776,"3arc",1,"calibrated"

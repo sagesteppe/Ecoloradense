@@ -5,10 +5,17 @@
 ##   boyce          ecospat::ecospat.boyce (test absences as background)
 ##   cox_intercept, cox_slope  via coxCalibration() in functions.R
 ##
-## For each tables/{fname}.csv, the script finds which of those metrics are missing,
-## reloads models/{fname}.rds and test_data/{fname}.csv, predicts probabilities ONCE,
-## computes only the missing metrics, and appends those rows to the CSV. Fits whose
-## CSVs are already complete are skipped, so the script is safe to rerun.
+## PLATT. Rows gain a `calibration` column with values 'raw' and (when
+## modelsTune/<fname>-platt.rds exists) 'calibrated'. Boyce and the yardstick AUCs are
+## monotone-rank invariant under Platt and so get a single 'raw' row - no calibrated
+## twin. brier_class, cox_intercept, cox_slope are scale-dependent and get both. Existing
+## rows without a `calibration` column are treated as calibration = 'raw' on first touch.
+##
+## For each tables/{fname}.csv, the script finds which (metric, calibration) rows are
+## missing, reloads models/<fname>.rds and test_data/<fname>.csv, predicts probabilities
+## ONCE (and once more through platt$apply if -platt.rds exists), computes only the
+## missing rows, and appends them to the CSV. Fits whose CSVs are already complete are
+## skipped, so the script is safe to rerun.
 ##
 ## Run with wd = scripts/:
 ##   Rscript First_modelling/backfill_metrics.R                 # all result trees
@@ -31,7 +38,10 @@ if(length(args) == 0){
 }
 if(length(roots) == 0) stop('no results_* trees found under ', PROJ_ROOT)
 
-KNOWN <- c('brier_class', 'boyce', 'cox_intercept', 'cox_slope')
+KNOWN     <- c('brier_class', 'boyce', 'cox_intercept', 'cox_slope')
+# metrics whose VALUE depends on the probability scale (Platt-sensitive). boyce and the
+# yardstick AUCs are monotone-rank invariant under Platt, so they get only a 'raw' row.
+SCALE_DEP <- c('brier_class', 'cox_intercept', 'cox_slope')
 
 predict_probs <- function(rf_model, Test){
   # type = 'response' + probability = TRUE gives the P(class=1) column at a fraction
@@ -90,8 +100,18 @@ for(root in roots){
     if(is.null(met) || !'metric' %in% names(met)){
       tot['failed'] <- tot['failed'] + 1L; next
     }
-    missing <- setdiff(KNOWN, unique(met$metric))
-    if(length(missing) == 0){
+    # Normalise: pre-Platt CSVs have no `calibration` column; those rows are raw.
+    if(!'calibration' %in% names(met)) met$calibration <- 'raw'
+    met$calibration[is.na(met$calibration) | met$calibration == ''] <- 'raw'
+
+    platt_path <- file.path(root, 'modelsTune', paste0(fname, '-platt.rds'))
+    has_platt  <- file.exists(platt_path)
+
+    present_raw <- unique(met$metric[met$calibration == 'raw'])
+    present_cal <- unique(met$metric[met$calibration == 'calibrated'])
+    missing_raw <- setdiff(KNOWN, present_raw)
+    missing_cal <- if(has_platt) setdiff(SCALE_DEP, present_cal) else character()
+    if(length(missing_raw) == 0 && length(missing_cal) == 0){
       tot['no_missing'] <- tot['no_missing'] + 1L; next
     }
 
@@ -107,16 +127,23 @@ for(root in roots){
       if(names(te)[1] %in% c('X', '')) te <- te[, -1, drop = FALSE]
       te$Occurrence <- as.factor(te$Occurrence)
       p <- predict_probs(rf, te)
-      compute_all(p, te$Occurrence)
+      raw_rows <- compute_all(p, te$Occurrence)
+      raw_rows <- raw_rows[raw_rows$metric %in% missing_raw, , drop = FALSE]
+      if(nrow(raw_rows)) raw_rows$calibration <- 'raw'
+
+      cal_rows <- NULL
+      if(length(missing_cal)){
+        platt   <- readRDS(platt_path)
+        p_cal   <- platt$apply(p)
+        all_cal <- compute_all(p_cal, te$Occurrence)
+        cal_rows <- all_cal[all_cal$metric %in% missing_cal, , drop = FALSE]
+        if(nrow(cal_rows)) cal_rows$calibration <- 'calibrated'
+      }
+      rbind(raw_rows, cal_rows)
     }, error = function(e){
       message('  ', fname, ': ', conditionMessage(e)); NULL
     })
-    if(is.null(new_rows)){
-      tot['failed'] <- tot['failed'] + 1L; next
-    }
-
-    new_rows <- new_rows[new_rows$metric %in% missing, , drop = FALSE]
-    if(!nrow(new_rows)){
+    if(is.null(new_rows) || !nrow(new_rows)){
       tot['failed'] <- tot['failed'] + 1L; next
     }
 
