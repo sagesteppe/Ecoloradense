@@ -474,7 +474,7 @@ ratioGrid <- function(df, holdouts,
                       linetype_by = NULL, linetypes = NULL,
                       fit_degree = 1, annotate_fit = TRUE, fit_exclude = NULL,
                       fit_pos = NULL, palette = NULL, fade = NULL, fade_alpha = 0.4,
-                      jitter = 0.3) {
+                      stars = NULL, sel_scores = NULL, sel_annot = NULL, jitter = 0.3) {
   color_lab    <- tools::toTitleCase(gsub('_', ' ', color_by))
   shape_lab    <- tools::toTitleCase(gsub('_', ' ', shape_by))
   linetype_lab <- if (!is.null(linetype_by)) tools::toTitleCase(gsub('_', ' ', linetype_by)) else NULL
@@ -490,7 +490,7 @@ ratioGrid <- function(df, holdouts,
                      yint = unname(ideal[names(metrics)]))
   refs <- refs[!is.na(refs$yint), , drop = FALSE]
 
-  pred_df <- coef_df <- NULL
+  pred_df <- coef_df <- star_df <- NULL
   if (nrow(nested)) {
     pred_df <- nested |>
       dplyr::mutate(pred = purrr::map2(data, fit, function(d, f) {
@@ -502,10 +502,40 @@ ratioGrid <- function(df, holdouts,
       dplyr::select(metric, holdout, .color, .linetype, pred) |>
       tidyr::unnest(pred)
 
+    ## selected-ratio markers (one X per metric panel per series). `stars` gives the chosen PA
+    ## ratio (x). y is the EXACT selected model's observed value when sel_scores is supplied (so
+    ## the X sits on the '// Selected' number); otherwise y = predict(fit, log10 ratio), i.e. the
+    ## fitted line at that ratio.
+    if (!is.null(stars)) {
+      st <- stars[stars$tree %in% names(holdouts) & !is.na(stars$ratio), , drop = FALSE]
+      if (nrow(st)) {
+        if (!is.null(sel_scores)) {
+          ss <- sel_scores[sel_scores$tree %in% names(holdouts) &
+                           sel_scores$metric %in% names(metrics), , drop = FALSE]
+          sj <- merge(ss, st[, c('tree', 'resolution', 'ratio')], by = c('tree', 'resolution'))
+          if (nrow(sj))
+            star_df <- data.frame(
+              metric  = factor(metrics[as.character(sj$metric)], levels = metrics),
+              holdout = factor(holdouts[as.character(sj$tree)], levels = holdouts),
+              .color  = factor(as.character(sj$resolution), levels = levels(long$.color)),
+              PAratio = sj$ratio, value = sj$value)
+        } else {
+          st$holdout <- factor(holdouts[as.character(st$tree)], levels = holdouts)
+          st$.scolor <- as.character(st$resolution)
+          star_df <- nested |>
+            dplyr::mutate(.scolor = as.character(.color)) |>
+            dplyr::inner_join(st[, c('holdout', '.scolor', 'ratio')], by = c('holdout', '.scolor')) |>
+            dplyr::mutate(value = purrr::map2_dbl(fit, ratio, function(f, r)
+                            as.numeric(stats::predict(f, newdata = data.frame(lr = log10(r)))))) |>
+            dplyr::transmute(metric, holdout, .color, .linetype, PAratio = ratio, value)
+        }
+      }
+    }
+
     fmt_lab <- function(f) {
       est <- stats::coef(f); ci <- suppressMessages(stats::confint(f))
       if (fit_degree == 1)
-        sprintf('int %.2f  slope %+.2f [%+.2f, %+.2f]', est[1], est[2], ci[2, 1], ci[2, 2])
+        sprintf('int %.2f, slope %+.2f [%+.2f, %+.2f]', est[1], est[2], ci[2, 1], ci[2, 2])
       else
         sprintf('int %.2f  b1 %+.2f [%+.2f,%+.2f]  b2 %+.2f [%+.2f,%+.2f]',
                 est[1], est[2], ci[2, 1], ci[2, 2], est[3], ci[3, 1], ci[3, 2])
@@ -518,9 +548,28 @@ ratioGrid <- function(df, holdouts,
     ## one coef line per fitted series; when a linetype series is in play (e.g. the 6
     ## resolution x domain groups) each line is tagged with its colour + linetype so the
     ## stacked box is readable.
-    coef_df <- nested |>
-      dplyr::mutate(lab1 = if (is.null(linetype_by)) purrr::map_chr(fit, fmt_lab)
-                           else paste0(.color, ' ', .linetype, ': ', purrr::map_chr(fit, fmt_lab))) |>
+    ## selected-model score per series, appended to each coef line as '// Selected: ZZ'.
+    ## sel_scores carries the EXACT selected replicate's observed metric value: a data.frame of
+    ## tree (-> holdout), resolution (-> .color), metric (a name in `metrics`) and value.
+    sel_val <- NULL
+    if (!is.null(sel_scores)) {
+      ss <- sel_scores[sel_scores$tree %in% names(holdouts) &
+                       sel_scores$metric %in% names(metrics), , drop = FALSE]
+      if (nrow(ss))
+        sel_val <- data.frame(
+          metric  = factor(metrics[as.character(ss$metric)], levels = metrics),
+          holdout = factor(holdouts[as.character(ss$tree)], levels = holdouts),
+          .color  = factor(as.character(ss$resolution), levels = levels(long$.color)),
+          .sel    = ss$value)
+    }
+    coef_df <- dplyr::mutate(nested, base = purrr::map_chr(fit, fmt_lab))
+    coef_df <- if (!is.null(sel_val))
+      dplyr::left_join(coef_df, sel_val, by = c('metric', 'holdout', '.color'))
+    else dplyr::mutate(coef_df, .sel = NA_real_)
+    coef_df <- coef_df |>
+      dplyr::mutate(lab1 = paste0(
+        if (is.null(linetype_by)) base else paste0(.color, ' ', .linetype, ': ', base),
+        ifelse(is.na(.sel), '', sprintf('  // Selected: %.2f', .sel)))) |>
       dplyr::arrange(metric, holdout, .color, .linetype) |>
       dplyr::group_by(metric, holdout) |>
       dplyr::summarise(lab = paste(lab1, collapse = '\n'), .groups = 'drop') |>
@@ -540,6 +589,49 @@ ratioGrid <- function(df, holdouts,
         vj = ifelse(!is.na(px), 0, 1))
   }
 
+  ## optional selected-model annotation (one line per resolution): the holdout 'test' score
+  ## rolled in from the first grid alongside the selected model's observed ground-truth values
+  ## in each interpolation domain -> 'test: .., <270: .., >270: ..'. sel_annot is a data.frame
+  ## of tree (-> holdout), resolution (-> colour/order), metric (a name in `metrics`), and the
+  ## three values `test`, `lt` (<=270 m) and `gt` (>270 m). Placed via fit_pos like coef boxes.
+  annot2 <- NULL
+  if (!is.null(sel_annot)) {
+    sa <- sel_annot[sel_annot$tree %in% names(holdouts) &
+                    sel_annot$metric %in% names(metrics), , drop = FALSE]
+    if (nrow(sa)) {
+      ## value + optional [min-max] across all replicates at the selected ratio
+      getcol <- function(nm) if (nm %in% names(sa)) sa[[nm]] else rep(NA_real_, nrow(sa))
+      f2 <- function(v, lo, hi) ifelse(is.na(v), '--',
+              ifelse(is.na(lo) | is.na(hi), sprintf('%.2f', v),
+                     sprintf('%.2f [%.2f-%.2f]', v, lo, hi)))
+      sa$.metric  <- factor(metrics[as.character(sa$metric)], levels = metrics)
+      sa$.holdout <- factor(holdouts[as.character(sa$tree)], levels = holdouts)
+      sa$.ord     <- match(as.character(sa$resolution), levels(long$.color))
+      sa$line     <- paste0(
+        sub('arc$', '', sa$resolution),
+        '  test: ', f2(sa$test, getcol('test_lo'), getcol('test_hi')),
+        ', <270: ', f2(sa$lt,   getcol('lt_lo'),   getcol('lt_hi')),
+        ', >270: ', f2(sa$gt,   getcol('gt_lo'),   getcol('gt_hi')))
+      yr2 <- long |> dplyr::group_by(metric, holdout) |>
+        dplyr::summarise(ytop = max(value, na.rm = TRUE),
+                         ybot = min(value, na.rm = TRUE), .groups = 'drop')
+      pos2 <- if (!is.null(fit_pos) && length(fit_pos))
+        do.call(rbind, lapply(names(fit_pos), function(k)
+          data.frame(key = k, px = fit_pos[[k]][1], py = fit_pos[[k]][2])))
+      else data.frame(key = character(), px = numeric(), py = numeric())
+      annot2 <- sa |>
+        dplyr::arrange(.metric, .holdout, .ord) |>
+        dplyr::group_by(metric = .metric, holdout = .holdout) |>
+        dplyr::summarise(lab = paste(line, collapse = '\n'), .groups = 'drop') |>
+        dplyr::left_join(yr2, by = c('metric', 'holdout')) |>
+        dplyr::mutate(key = names(metrics)[match(as.character(metric), metrics)]) |>
+        dplyr::left_join(pos2, by = 'key') |>
+        dplyr::mutate(x  = ifelse(!is.na(px), px, xlim[1]),
+                      y  = ifelse(!is.na(px), py, ytop - 0.04 * (ytop - ybot)),
+                      vj = ifelse(!is.na(px), 0, 1))
+    }
+  }
+
   p <- ggplot2::ggplot(long, ggplot2::aes(PAratio, value,
                                      color = .color, shape = .shape)) +
     ggplot2::geom_hline(data = refs, ggplot2::aes(yintercept = yint),
@@ -557,6 +649,14 @@ ratioGrid <- function(df, holdouts,
                    group = interaction(.color, .linetype))
     p <- p + ggplot2::geom_line(data = pred_df, inherit.aes = FALSE, line_aes, linewidth = 0.6)
   }
+  ## selected-ratio marker (black cross, shape 4) - drawn BEFORE the points so they sit on top
+  if (!is.null(star_df) && nrow(star_df)) {
+    p <- p + ggplot2::geom_point(
+      data = star_df, inherit.aes = FALSE,
+      ggplot2::aes(PAratio, value),
+      shape = 4, colour = 'black', size = 3, stroke = 0.9, show.legend = FALSE)
+  }
+
   p <- p + ggplot2::geom_point(ggplot2::aes(alpha = .alpha), size = 1.5,
                                position = ggplot2::position_jitter(width = jitter, height = 0, seed = 1))
 
@@ -576,11 +676,21 @@ ratioGrid <- function(df, holdouts,
       hjust = 0, size = 2.5, color = 'black', fill = '#ffffff', alpha = 0.8,
       label.size = 0, label.padding = ggplot2::unit(0.15, 'lines'), lineheight = 0.9)
   }
+  ## selected-model annotation box (test / <270 / >270 per resolution)
+  if (!is.null(annot2) && nrow(annot2)) {
+    p <- p + ggplot2::geom_label(
+      data = annot2, inherit.aes = FALSE,
+      ggplot2::aes(x = x, y = y, label = lab, vjust = vj),
+      hjust = 0, size = 2.0, color = 'black', fill = '#ffffff', alpha = 0.8,
+      label.size = 0, label.padding = ggplot2::unit(0.15, 'lines'), lineheight = 0.9)
+  }
 
   p <- p +
     ggplot2::facet_grid(metric ~ holdout, scales = 'free_y', switch = 'y') +
     ggplot2::scale_x_continuous(limits = xlim, breaks = c(1, 10, 20, 30, 40, 50)) +
-    ggplot2::scale_shape(na.translate = FALSE) +  # drop the smooth layer's empty NA shape key
+    ## hollow-centre glyphs per resolution (0 square, 1 circle, 2 triangle)
+    ggplot2::scale_shape_manual(values = c('1-3arc' = 1, '1arc' = 2, '3arc' = 0),
+                                na.translate = FALSE) +
     ggplot2::scale_alpha_identity() +             # .alpha column is the literal point alpha
     ggplot2::guides(fill = 'none') +              # ribbon shares the colour legend; hide its own
     ggplot2::labs(x = 'Presence:absence ratio', y = NULL,

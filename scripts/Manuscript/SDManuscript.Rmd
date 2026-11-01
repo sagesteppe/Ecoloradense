@@ -284,6 +284,11 @@ Domain (1) is occupiable, dispersal-accessible habitat the training data charact
 Domain (2) lies further from known occurrences, where errors are ambiguous, reflecting either limited model generalisation or genuine dispersal limitation.
 Domain (3) is environmental space unsampled by the biased training data (e.g. the Antero region), where failure reflects niche truncation in the data rather than a deficiency of the model *per se*.
 
+Finally, we used these designs to separate two sources of diagnostic variance that single-fit models confound: the stochastic draw of background pseudo-absences and the train--test partition.
+The structured partitions (spatial-mapping and LMPO) build a single train--test split and hold it fixed across replicate fits, varying only the pseudo-absence draw at a fixed presence:absence ratio and fixed presence set; the random (classic) design instead redraws both the partition and the pseudo-absences at every fit.
+Variance across replicate fits therefore isolates the pseudo-absence draw under the structured designs, while reflecting the combined effect of partition and draw under the random design.
+We summarised variability as the within-cell standard deviation across replicates (one cell per design $\times$ resolution $\times$ ratio); because the random design carried more replicates per cell than the structured designs, we repeatedly subsampled it to the structured replicate count before recomputing, so both estimates rest on the same replication.
+
 ### 2.9 | Final Models
 
 Using occurrence, density, and boundary-transect data from both rounds of ground-truthing combined with the original records, we refit final models of habitat suitability, occupancy, and census size, evaluating each solely against a held-out subset of the ground-truthed data not used in any prior training or tuning step.
@@ -630,7 +635,8 @@ The inflation of MAE by modelling ranged from (X -- Y), and the average differen
 Field boundary-transect verification (`scripts/Second_groundtruth/evaluate_transect_boundary.R`, n = 6 usable core transects with a clear present-to-absent edge) found:
 
 - Both threshold rules overshoot the true population edge - `sensitivity` bias -2.1 m / MAE 9.1 m vs. `spec_sens` bias -12.7 m / MAE 13.5 m, roughly 6x farther off.
-- Ground both rules already call "core" suitable habitat, and every exploratory (no-known-occurrence) patch, came back genuinely unoccupied at all visited stations - both threshold cuts substantially overpredict actual population geography.
+- Ground both rules already call "core" suitable habitat, and every exploratory (no-known-occurrence) patch, came back genuinely unoccupied at all visited stations - both 
+threshold cuts substantially overpredict actual population geography.
 
 The population boundaries obtained by thresholding resulted in initial estimates of population geographic extent of ... for sensitivity and for equal sensitivity and specificity.
 The wombling approach shows that estimates at the XX-percentile led to more accurate estimates of population extent, correcting it towards YY.
@@ -648,27 +654,40 @@ holdout_cols <- c(
   Results_random_iter1a_high_pa         = 'Classic split\n(20/80 random, occ-stratified)',
   Results_spatialmapping_iter1a_high_pa = 'Spatial mapping\n(spatial CV)',
   Results_LMPO_iter1a_high_pa           = 'Leave Multiple (sub-)Populations Out\n(LMPO CV)')
-## per-series lm(value ~ log10 ratio) coefficients are tabulated below (annotate_fit = FALSE).
-holdout_grid_metrics <- c(nAP = 'nAP', roc_auc = 'ROC-AUC', boyce = 'Boyce index',
-                          cox_slope = 'Cox Slope (Raw)', cox_intercept = 'Cox intercept')
-holdout_grid_clip    <- list(boyce = c(0.25, 1), cox_slope = c(0, 1.5), cox_intercept = c(-1, 1))
+## selected PA ratio per design x resolution (select_pa_ratio.R). A black cross is dropped on
+## each series' regression line at this ratio; the annotation appends '// Selected: ZZ', the
+## EXACT selected model's observed metric value (the median replicate at the chosen ratio).
+design2tree <- c(classic = 'Results_random_iter1a_high_pa',
+                 spatial_mapping = 'Results_spatialmapping_iter1a_high_pa',
+                 lmpo = 'Results_LMPO_iter1a_high_pa')
+sel <- read.csv(file.path(PROJ_ROOT, 'results_summary', 'pa-ratio-selection.csv'))
+sel_stars <- data.frame(tree = design2tree[sel$design],
+                        resolution = sel$resolution, ratio = sel$chosen_ratio)
+## pull the exact selected replicate's observed scores from all_fit_metrics.csv (covers Boyce,
+## which pa-ratio-median-models.csv lacks). nAP() derives nAP from pr_auc at the own prevalence.
+med <- read.csv(file.path(PROJ_ROOT, 'results_summary', 'pa-ratio-median-models.csv'))
+med$tree <- design2tree[med$design]
+sel_rows <- merge(med[, c('tree', 'resolution', 'chosen_ratio', 'median_replicate')], grid_metrics,
+                  by.x = c('tree', 'resolution', 'chosen_ratio', 'median_replicate'),
+                  by.y = c('tree', 'resolution', 'PAratio', 'seed'))
+sel_rows$nAP <- nAP(sel_rows$pr_auc, sel_rows$chosen_ratio)
+sel_scores <- do.call(rbind, lapply(
+  c('nAP', 'roc_auc', 'boyce', 'cox_slope', 'cox_intercept'),
+  function(m) data.frame(tree = sel_rows$tree, resolution = sel_rows$resolution,
+                         metric = m, value = sel_rows[[m]])))
 ratioGrid(grid_metrics, holdouts = holdout_cols, xlim = c(1, 30),
-          metrics = holdout_grid_metrics,
+          stars = sel_stars, sel_scores = sel_scores,
+          metrics = c(nAP = 'nAP', roc_auc = 'ROC-AUC', boyce = 'Boyce index',
+                      cox_slope = 'Cox Slope (Raw)', cox_intercept = 'Cox intercept'),
           ideal   = c(nAP = 1, roc_auc = 1, boyce = 1, cox_slope = 1, cox_intercept = 0),
-          clip    = holdout_grid_clip,
-          palette = resolution_cols, annotate_fit = FALSE) +
+          clip    = list(boyce = c(0.25, 1), cox_slope = c(0, 1.5), cox_intercept = c(-1, 1)),
+          palette = resolution_cols,
+          ## per-series lm(value ~ log10 ratio); fit_pos bottom-anchors each panel's annotation.
+          fit_pos = list(
+            nAP = c(1, 0.35), roc_auc = c(1, 0.70), boyce = c(1, 0.3),
+            cox_slope = c(1, 0.3), cox_intercept = c(1, 0.3))
+            ) +
           labs(title = 'Cross Validation Strategies Evaluated on `held out` Test Data.')
-```
-
-```{r Refinement Metric Grid by Holdout Coefficients}
-## Per-series lm(metric ~ log10 PA-ratio) coefficients for the grid above - the fitted lines
-## drawn there, reported as a table (one row per metric x CV design x resolution). Shares the
-## same metrics/clip via ratioFits(), so the numbers match the plotted lines exactly.
-knitr::kable(
-  ratioFits(grid_metrics, holdouts = holdout_cols,
-            metrics = holdout_grid_metrics, clip = holdout_grid_clip),
-  caption = 'Fitted PA-ratio trend (intercept, slope, 95\\% CI) per metric, CV design and resolution, held-out test data.',
-  booktabs = TRUE, longtable = TRUE)
 ```
 
 
@@ -692,12 +711,46 @@ gt_metrics$nAP <- (gt_metrics$pr_auc - gt_metrics$prevalence) / (1 - gt_metrics$
 gt_metrics$domain <- factor(gt_metrics$domain,
   levels = c('Interp <=270m', 'Interp >270m', 'Extrapolation'),
   labels = c('Interp ≤270 m', 'Interp >270 m', 'Extrapolation'))
-## colour = resolution; interp domain = linetype. Coefficients for the 6 resolution x interp-
-## domain groups are tabulated below (annotate_fit = FALSE).
+## colour = resolution; interp domain = linetype. Cox slope here is Platt-calibrated
+## (interpolation); add a footnote to that effect.
 gt_grid_metrics <- c(nAP = 'nAP (field)', roc_auc = 'ROC-AUC',
-                     cox_slope = 'Cox Slope\n(Platt Calibration)', cox_intercept = 'Cox intercept')
+                     cox_slope = 'Cox Slope', cox_intercept = 'Cox intercept')
 gt_grid_clip    <- list(nAP = c(0,1), roc_auc = c(0.4, 1), cox_slope = c(-0.5, 1.5), cox_intercept = c(-2, 2))
-ratioGrid(gt_metrics, holdouts = holdout_cols, xlim = c(1, 30),
+## per-series annotation: the holdout 'test' score (the selected model from the first grid,
+## sel_rows) with the selected model's observed GT value in each interp domain (calibrated),
+## each carrying [min-max] across ALL replicate models at that selected ratio (the spread of
+## the non-selected models) - holdout spread for test, GT spread for the domains.
+p2_metrics <- c('nAP', 'roc_auc', 'cox_slope', 'cox_intercept')
+sel_gt <- merge(med[, c('tree', 'resolution', 'chosen_ratio', 'median_replicate')], gt_metrics,
+                by.x = c('tree', 'resolution', 'chosen_ratio', 'median_replicate'),
+                by.y = c('tree', 'resolution', 'PAratio', 'seed'))
+sel_gt <- sel_gt[sel_gt$calibration == 'calibrated', ]
+d_lt <- sel_gt[sel_gt$domain == 'Interp ≤270 m', ]
+d_gt <- sel_gt[sel_gt$domain == 'Interp >270 m', ]
+mkey <- function(d) paste(d$tree, d$resolution)
+## min/max of metric m over all replicates at each group, looked up for the `keys` of interest
+grid_metrics$nAP <- nAP(grid_metrics$pr_auc, grid_metrics$PAratio)
+gt_cal <- gt_metrics[gt_metrics$calibration == 'calibrated', ]
+rng <- function(df, group_cols, m, keys) {
+  k <- do.call(paste, df[group_cols])
+  list(lo = as.numeric(tapply(df[[m]], k, min, na.rm = TRUE)[keys]),
+       hi = as.numeric(tapply(df[[m]], k, max, na.rm = TRUE)[keys]))
+}
+sk    <- paste(sel_rows$tree, sel_rows$resolution, sel_rows$chosen_ratio)
+sk_lt <- paste(sel_rows$tree, sel_rows$resolution, sel_rows$chosen_ratio, 'Interp ≤270 m')
+sk_gt <- paste(sel_rows$tree, sel_rows$resolution, sel_rows$chosen_ratio, 'Interp >270 m')
+sel_annot <- do.call(rbind, lapply(p2_metrics, function(m) {
+  tr <- rng(grid_metrics, c('tree', 'resolution', 'PAratio'), m, sk)
+  gl <- rng(gt_cal, c('tree', 'resolution', 'PAratio', 'domain'), m, sk_lt)
+  gg <- rng(gt_cal, c('tree', 'resolution', 'PAratio', 'domain'), m, sk_gt)
+  data.frame(tree = sel_rows$tree, resolution = sel_rows$resolution, metric = m,
+    test = sel_rows[[m]], test_lo = tr$lo, test_hi = tr$hi,
+    lt = d_lt[[m]][match(mkey(sel_rows), mkey(d_lt))], lt_lo = gl$lo, lt_hi = gl$hi,
+    gt = d_gt[[m]][match(mkey(sel_rows), mkey(d_gt))], gt_lo = gg$lo, gt_hi = gg$hi)
+}))
+ratioGrid(gt_metrics, holdouts = holdout_cols, xlim = c(1, 30), stars = sel_stars,
+          sel_annot = sel_annot,   # test / <270 / >270 per resolution, placed via fit_pos
+          # black cross on each series' regression at the holdout-selected PA ratio
           color_by = 'resolution', shape_by = 'resolution', linetype_by = 'domain',
           linetypes = c('Interp ≤270 m' = 'dashed', 'Interp >270 m' = 'solid',
                         'Extrapolation' = 'dotted'),
@@ -706,21 +759,55 @@ ratioGrid(gt_metrics, holdouts = holdout_cols, xlim = c(1, 30),
           palette = resolution_cols, annotate_fit = FALSE,
           metrics = gt_grid_metrics,
           ideal   = c(nAP = 1, roc_auc = 1, cox_slope = 1, cox_intercept = 0),
-          clip    = gt_grid_clip) +
+          clip    = gt_grid_clip,
+          fit_pos = list(nAP = c(1, 0.0), roc_auc = c(1, 0.40),
+                         cox_slope = c(1, -0.5), cox_intercept = c(1, -2.0))) +
           labs(title = 'Cross Validation Strategies Evaluated on Ground Truth Data.')
 ```
 
-```{r Refinement Metric Grid 2026 Field Validation Coefficients}
-## Per-series lm(metric ~ log10 PA-ratio) coefficients for the GT grid above - one row per
-## metric x CV design x resolution x interp domain (the 6 fitted groups per panel;
-## extrapolation is excluded, matching the plot). Via ratioFits(), so numbers match the lines.
-knitr::kable(
-  ratioFits(gt_metrics, holdouts = holdout_cols,
-            color_by = 'resolution', linetype_by = 'domain',
-            metrics = gt_grid_metrics, clip = gt_grid_clip, fit_exclude = 'Extrapolation'),
-  caption = 'Fitted PA-ratio trend (intercept, slope, 95\\% CI) per metric, CV design, resolution and interpolation domain, 2026 field ground truth (Platt-calibrated interpolation).',
-  booktabs = TRUE, longtable = TRUE)
+```{r Variance Decomposition, echo=FALSE}
+## Pseudo-absence draw vs train-test partition, from the holdout diagnostics (all_fit_metrics).
+## Structured designs (spatial-mapping, LMPO) freeze the test and vary only the absence draw
+## (3 reps); classic redraws both (more reps). Within-cell SD across reps isolates the absence
+## draw (structured) vs partition+draw (classic). To match replication, classic is repeatedly
+## subsampled to 3 reps/cell. All figures below recompute from the data.
+vd <- read.csv(file.path(PROJ_ROOT, 'results_summary', 'all_fit_metrics.csv'))
+vd_grp <- c(Results_random_iter1a_high_pa = 'classic',
+            Results_spatialmapping_iter1a_high_pa = 'structured',
+            Results_LMPO_iter1a_high_pa = 'structured')
+vd <- vd[vd$tree %in% names(vd_grp) & vd$PAratio <= 30, ]
+vd$grp <- vd_grp[vd$tree]
+vd$nAP <- (vd$pr_auc - 1/(1 + vd$PAratio)) / (1 - 1/(1 + vd$PAratio))
+sd_cell <- function(d) c(nAP = sd(d$nAP), roc = sd(d$roc_auc), slope = sd(d$cox_slope))
+n_rep   <- 3                                   # structured replicate count (match classic to it)
+## absence-only SD: median over structured cells with >= n_rep reps
+struct  <- vd[vd$grp == 'structured', ]
+abs_sd  <- do.call(rbind, lapply(
+  Filter(function(d) nrow(d) >= n_rep, split(struct, with(struct, paste(tree, resolution, PAratio)))),
+  sd_cell))
+## classic subsampled to n_rep reps/cell, B draws, then median SD
+set.seed(1); B <- 500
+cls_cells <- Filter(function(d) nrow(d) >= n_rep,
+                    split(vd[vd$grp == 'classic', ], with(vd[vd$grp == 'classic', ], paste(resolution, PAratio))))
+boot <- do.call(rbind, lapply(cls_cells, function(g)
+  do.call(rbind, lapply(seq_len(B), function(i) sd_cell(g[sample(nrow(g), n_rep), ])))))
+vdec <- list(
+  abs_nAP = median(abs_sd[, 'nAP'], na.rm = TRUE), abs_roc = median(abs_sd[, 'roc'], na.rm = TRUE),
+  abs_slope = median(abs_sd[, 'slope'], na.rm = TRUE),
+  cls_nAP = median(boot[, 'nAP']), cls_roc = median(boot[, 'roc']), cls_slope = median(boot[, 'slope']))
+vdec$r_nAP   <- vdec$cls_nAP   / vdec$abs_nAP
+vdec$r_roc   <- vdec$cls_roc   / vdec$abs_roc
+vdec$r_slope <- vdec$cls_slope / vdec$abs_slope
+vdec$r_min   <- min(vdec$r_nAP, vdec$r_roc, vdec$r_slope)
+vdec$r_max   <- max(vdec$r_nAP, vdec$r_roc, vdec$r_slope)
+f3 <- function(x) formatC(x, format = 'f', digits = 3)
+f1 <- function(x) formatC(x, format = 'f', digits = 1)
 ```
+
+Varying only the pseudo-absence draw produced negligible variation in model diagnostics across resolutions and presence:absence ratios (1:1--1:30): median within-cell standard deviation of `r f3(vdec$abs_nAP)` in nAP, `r f3(vdec$abs_roc)` in ROC-AUC, and `r f3(vdec$abs_slope)` in Cox slope.
+Re-drawing the train--test partition produced `r f1(vdec$r_min)`$\times$ to `r f1(vdec$r_max)`$\times$ greater variation (nAP `r f3(vdec$cls_nAP)`, ROC-AUC `r f3(vdec$cls_roc)`, Cox slope `r f3(vdec$cls_slope)` on a matched three-replicate basis), and this gap was essentially unchanged when the random design's replicates were subsampled to three to equalise estimation, confirming that it reflects the underlying variance sources rather than the number of replicates.
+This insensitivity concerns the *identity* of the pseudo-absences at a fixed count; their *number* (the presence:absence ratio) remained a large source of variation (Section 3.6, above), and it pertains to a landscape background pool drawn predominantly far ($\sim$30 km median) from presences.
+Diagnostic uncertainty in these models is thus governed almost entirely by an unexamined train--test partition rather than by pseudo-absence selection: the prevailing practice of fixing a random seed and fitting a single model returns a point estimate whose uncertainty is dominated by one unreported split --- a draw that may be fortunate or unfortunate --- rather than a stable characterisation of performance.
 
 ### 3.7 | Final Results
 

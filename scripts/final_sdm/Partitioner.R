@@ -43,10 +43,12 @@ partition_params <- function(
     pca_var_target = 0.90,
     min_split_n    = 12,
     extrap_frac    = 0.8,
+    split_tau      = 0,               # medoid looseness in the outer split (0 = exact argmin medoid,
+                                      # >0 = seeded soft draw toward the cluster centre; see kmed_pick)
     seed           = 1021) {
   list(resolution = resolution, connect_m = connect_m, superclust_m = superclust_m,
        train_target = train_target, k = k, purpose = purpose, pca_var_target = pca_var_target,
-       min_split_n = min_split_n, extrap_frac = extrap_frac, seed = seed)
+       min_split_n = min_split_n, extrap_frac = extrap_frac, split_tau = split_tau, seed = seed)
 }
 
 # ----------------------------------------------------------------------------
@@ -172,7 +174,7 @@ partition_knndm_dists <- function(P, clusters, extrap) {
 # ----------------------------------------------------------------------------
 # Step 4 - outer test/train split (soft train window, NNDM coverage)
 # ----------------------------------------------------------------------------
-partition_split <- function(x, spl, pcs, train_target, seed = 1) {
+partition_split <- function(x, spl, pcs, train_target, seed = 1, split_tau = 0) {
   set.seed(seed)
   xd <- sf::st_drop_geometry(x)
   mi <- match(as.character(xd$component), spl$component)
@@ -181,7 +183,15 @@ partition_split <- function(x, spl, pcs, train_target, seed = 1) {
   test_frac   <- 1 - mean(train_target)
   target_test <- round(N * test_frac)
 
-  # k-means-medoid sampler: representative (not extreme) spread over all env axes
+  # k-means-medoid sampler: representative (not extreme) spread over all env axes. One point per
+  # k-means cluster. split_tau controls how tightly it hugs the centroid:
+  #   tau = 0  -> the exact medoid (argmin distance) of each cluster = original behaviour. NB this
+  #               is deterministic GIVEN the clustering, but kmeans(nstart=5) itself draws on the
+  #               RNG, so reseeding can still shift the picks where the env data is not cleanly
+  #               separable - tau = 0 is "as before", not "seed-invariant".
+  #   tau > 0  -> a seeded soft draw, weight exp(-d2 / (tau * mean(d2))), so each seed yields a
+  #               different-but-still-central pick - the knob that reliably turns reseeding into
+  #               real outer-split variation. Larger tau = looser = more spread, less stringent.
   kmed_pick <- function(M, n_pick) {
     n <- nrow(M)
     if (n_pick >= n) return(seq_len(n))
@@ -190,8 +200,12 @@ partition_split <- function(x, spl, pcs, train_target, seed = 1) {
     km <- suppressWarnings(stats::kmeans(M, centers = n_pick, nstart = 5, iter.max = 50))
     vapply(seq_len(n_pick), function(k) {
       idx <- which(km$cluster == k)
-      idx[which.min(rowSums((M[idx, , drop = FALSE] -
-                             matrix(km$centers[k, ], length(idx), ncol(M), byrow = TRUE))^2))]
+      d2  <- rowSums((M[idx, , drop = FALSE] -
+                      matrix(km$centers[k, ], length(idx), ncol(M), byrow = TRUE))^2)
+      if (split_tau <= 0 || length(idx) == 1L)
+        idx[which.min(d2)]                       # exact medoid
+      else
+        idx[sample.int(length(idx), 1L, prob = exp(-d2 / (split_tau * mean(d2) + 1e-12)))]
     }, integer(1))
   }
 
@@ -460,7 +474,7 @@ build_partition <- function(x, bg, pcs, p, folds_fn = partition_folds) {   # p =
     cutree(hclust(as.dist(geo_d), method = "single"), h = p$superclust_m)[as.character(x$component)])
   env_d   <- partition_env_dist(x, pcs)
   spl     <- partition_splittable(x, pcs, p$purpose, p$min_split_n, p$extrap_frac)
-  split   <- partition_split(x, spl, pcs, p$train_target, p$seed)
+  split   <- partition_split(x, spl, pcs, p$train_target, p$seed, p$split_tau)
   folds   <- folds_fn(x, spl, pcs, split$train_id, p$k, p$seed)
   classes <- partition_classes(x, bg, split, folds, p$train_target, p$k, p$seed)
 
@@ -480,6 +494,6 @@ build_partition <- function(x, bg, pcs, p, folds_fn = partition_folds) {   # p =
     indx_exclude = classes$indx_exclude,  # nndm-style: held from training, not validated (extrap)
     test_ids     = classes$test_ids,
     meta = p[c("connect_m", "superclust_m", "train_target", "k", "purpose",
-               "pca_var_target", "min_split_n", "extrap_frac", "seed")]
+               "pca_var_target", "min_split_n", "extrap_frac", "split_tau", "seed")]
   )
 }
