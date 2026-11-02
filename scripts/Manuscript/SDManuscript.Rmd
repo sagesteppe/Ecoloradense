@@ -87,6 +87,7 @@ library(caret) # general data partitioning
 library(pROC)
 
 source(file.path(PROJ_ROOT, 'scripts', 'Manuscript', 'theme_manuscript.R'))
+source(file.path(PROJ_ROOT, 'scripts', 'Manuscript', 'manuscript_function_helpers.R'))
 ```
 
 # 1 | Introduction
@@ -264,30 +265,39 @@ A per-site cap of 15 transects (trimming exploratory transects first) and a no-c
 
 ### 2.8 | Model Refinement
 
-Additional species distribution models were fit using the iteration 0 and iteration 1 data, and tested using the second ground truth round of data. 
-They effectively represent refinements of modelling approaches not explored during the original iteration 1 phase, but that could be used for the final modelling process. 
-They largely resulted from a realisation during ground truthing that two separate processes are desired of SDMs; the first to map known occurrences, the second to map suitable habitat [@pili2025correcting].
+Additional species distribution models were fit using the iteration 0 and iteration 1 data, and indepedently tested using the second ground truth round of data. 
+They represent refinements of modelling approaches not explored during the original iteration 1 phase, but candidates for the final modelling process. 
+These refinements resulted from a realisation during ground truthing that two separate processes are desired of SDMs; the first to map known occurrences, the second to map suitable habitat [@pili2025correcting]. 
+They further aimed to address 1) biases in the presence data, 2) observed variance in the effects of test/trains splits on model holdout evaluation, and 3) better understanding model extrapolation.
 
-Additional SDM's were fit using a variety of alternative cross-validation approaches, such as leave-multiple populations out intended to produce the best maps for population discovery, and a spatial subsetting approach intended to produce the most accurate maps of known occupied habitat. 
-For overall model classification we report three complementary discrimination metrics: the Boyce index, ROC-AUC, and PR-AUC as well as nAP which makes it comparable across a range of presence to absence ratios. 
+The accuracy of models fit in iteration 1 using the random CV strategy, within the same presence absence ratio, were found to vary widely. 
+To determine whether models with similar accuracy, but higher precision, could be achieved two forms of  spatial cross validation were used. 
+The first (1) leave-multiple populations out (LMPO) aims to predict habitat for population discovery, and (2) a spatial subsetting approach (spatial mapping) aims to prediction known occupied habitat [DESCRIBED IN APPENDIX XX]. 
+Additional replicates (10 per classic split, 5 per spatial splits) were ran to determine whether this variation in accuracy stemmed from: 1) actual model performance as verified on independent test data (i.e. whether the different models are actually more performant), **2) different pseudo-absence records**, 3) or whether different presence records being in the test or train holds were responsible. 
+The first explanation was addressed using fixed effects modelling, using nPA on ground truthed data as a random function of heldout nPA, with effects for modelling strategies. 
+**the second**
+The third was addressed by comparing the variation in precision of the 10 classic splits to each of the 5 spatial strategies, which hold ...
+
+"The structured partitions (spatial-mapping and LMPO) build a single train--test split and hold it fixed across replicate fits, varying only the pseudo-absence draw at a fixed presence:absence ratio and fixed presence set; the random (classic) design instead redraws both the partition and the pseudo-absences at every fit.
+Variance across replicate fits therefore isolates the pseudo-absence draw under the structured designs, while reflecting the combined effect of partition and draw under the random design.
+We summarised variability as the within-cell standard deviation across replicates (one cell per design $\times$ resolution $\times$ ratio); because the random design carried more replicates per cell than the structured designs, we repeatedly subsampled it to the structured replicate count before recomputing, so both estimates rest on the same replication."
+
+For overall model classification we report three complementary discrimination metrics: the Boyce index, ROC-AUC, and normalized average precision (nAP) which corrects PR-AUC across different presence to absence ratios [@flach2015precision].
 The Boyce index measures presence-background rank-calibration, but is insensitive to monotone rescaling and understates prediction magnitude [@hirzel2006evaluating].
 ROC-AUC measures discrimination, but is prevalence-invariant and so inflated by background placement rather than count [@fawcett2006introduction; @lobo2008auc; @jimenezvalverde2012insights].
-PR-AUC conveys the model's ability to discriminate suitable habitat, but is prevalence-dependent, and is corrected across presence:absence ratios using nAP = (AP $-$ $\pi$)/(1 $-$ $\pi$) [@davis2006relationship; @flach2015precision; @saito2015precision; @sofaer2019area; @allouche2006assessing].
+nAP (AP $-$ $\pi$)/(1 $-$ $\pi$) allows comparison of PR-AUC, which conveys the model's ability to discriminate the positive class, across difference prevalences [@davis2006relationship; @saito2015precision; @sofaer2019area; @allouche2006assessing].
 
-For model calibration we report the Cox calibration intercept and slope [@cox1958two; @steyerberg2014towards].
-The intercept measures overall bias: negative when predictions are too high, positive when too low, and zero when unbiased.
-The slope measures confidence: below one the model is overconfident (predictions too extreme), above one underconfident, and one when correctly scaled.
-We recalibrate predictions (Platt scaling) within the AOA only: because the calibrator is fit on in-sample data it does not transfer to extrapolation, and applying it to spatially held-out folds inflates the slope above one in proportion to how far they extrapolate (median slope 0.87 $\rightarrow$ 0.97 under a random split, but 0.90 $\rightarrow$ 1.95 under leave-populations-out); holdout metrics are therefore reported uncalibrated.
+To better characterise biases in the models we report the Cox calibration intercept and slope [@cox1958two; @steyerberg2014towards]. 
+The Cox intercept measures overall bias; unbiased models have values near zero, while models which predict too highly have negative values, and models with predictions too low have positive values.
+The Cox slope measures confidence; a correctly scaled model has values near one, overconfident models (predictions too extreme) have values below one, and and underconfident models have values above one.
+To reduce bias in prediction confidence, model predictions within the AOA are recalibrated using Platt scaling [*CITE*]. 
+Platt scaling is only used within the AOA because the calibrator is fit on in-sample data, and is sensitive to extrapolation. 
+Cox slopes from model holdouts are reported raw, while areas within the AOA are reported after calibration.
 
-We further report performance across three prediction domains defined by the area of applicability (AOA) and distance to known populations: (1) inside the AOA and within 270m of a known population, (2) inside the AOA but > 270m, and (3) outside the AOA (extrapolated niche).
-Domain (1) is occupiable, dispersal-accessible habitat the training data characterised, and errors here indicate a failure of the model.
-Domain (2) lies further from known occurrences, where errors are ambiguous, reflecting either limited model generalisation or genuine dispersal limitation.
+We report performance across three prediction domains defined by the area of applicability (AOA) and distance to known populations: (1) inside the AOA and within 270m of a known population, (2) inside the AOA but > 270m, and (3) outside the AOA (extrapolated niche).
+Domain (1) is both within the models AOA and presumed reachable via dispersal, errors here are interpretable as inaccuracies of the model.
+Domain (2) while within the models AOA cannot be presumed reachable via dispersal, and errors are more difficult to trace directly to either model inaccuracy or dispersal liminations. 
 Domain (3) is environmental space unsampled by the biased training data (e.g. the Antero region), where failure reflects niche truncation in the data rather than a deficiency of the model *per se*.
-
-Finally, we used these designs to separate two sources of diagnostic variance that single-fit models confound: the stochastic draw of background pseudo-absences and the train--test partition.
-The structured partitions (spatial-mapping and LMPO) build a single train--test split and hold it fixed across replicate fits, varying only the pseudo-absence draw at a fixed presence:absence ratio and fixed presence set; the random (classic) design instead redraws both the partition and the pseudo-absences at every fit.
-Variance across replicate fits therefore isolates the pseudo-absence draw under the structured designs, while reflecting the combined effect of partition and draw under the random design.
-We summarised variability as the within-cell standard deviation across replicates (one cell per design $\times$ resolution $\times$ ratio); because the random design carried more replicates per cell than the structured designs, we repeatedly subsampled it to the structured replicate count before recomputing, so both estimates rest on the same replication.
 
 ### 2.9 | Final Models
 
@@ -389,19 +399,6 @@ paratio <- bind_rows(
   ) |>
     filter(ratio <= 4)
 
-## Occurrence/absence sample sizes per resolution, read directly from the
-## presence files each PA-ratio search was built on (absences here are only
-## each file's own baked-in absences - NOT the shared iter1 absence pool
-## that adaptive_PAratio_search() also draws from, since that pool
-## ('iter1-pa.gpkg') isn't available in this data checkout). Falls back to
-## 'XX' per-resolution when a presence file is missing (e.g. the 1/3
-## arc-second presence-iter1 file doesn't exist yet).
-sample_sizes <- function(res_key) {
-  f <- file.path(PROJ_ROOT,'data', 'Data4modelling', paste0(res_key, 'm-presence-iter1.gpkg'))
-  if (!file.exists(f)) return(c(occ = NA_integer_, abs = NA_integer_))
-  d <- sf::st_read(f, quiet = TRUE)
-  c(occ = sum(d$Presenc == 1, na.rm = TRUE), abs = sum(d$Presenc == 0, na.rm = TRUE))
-}
 sizes <- sapply(names(res_labels), sample_sizes)
 size_labels <- tibble(
   Resolution = factor(res_labels[names(res_labels)], levels = res_labels),
@@ -469,14 +466,14 @@ pop_q_cnts = f_pops |>
 
 bands <- read_csv(file.path(PROJ_ROOT,'results', 'tables', '2026-groundtruth-occupancy-bands.csv'),
                    show_col_types = FALSE)
-get_band <- function(b) { v <- bands$n_presences[bands$band == b]; if (length(v) == 1) v else 'XX' }
+
 n_extension <- get_band('extension (<270m)')
 n_subpop    <- get_band('sub-population (270-450m)')
 n_newpop    <- get_band('new population (>=450m)')
 
 occ_lrt <- read_csv(file.path(PROJ_ROOT,'results', 'tables', '2026-groundtruth-occupancy-glm-lrt.csv'),
                      show_col_types = FALSE)
-get_p <- function(term_lbl) { v <- occ_lrt$p_value[occ_lrt$term == term_lbl]; if (length(v) == 1) signif(v, 2) else 'XX' }
+
 p_E_given_R <- get_p('E (given R)')
 p_R_given_E <- get_p('R (given E)')
 p_E_alone   <- get_p('E (alone)')
@@ -507,54 +504,9 @@ cm_pred <- read_csv(file.path(PROJ_ROOT,'results', 'tables',
                               '1-3arc-Iteration1-PA1:1-2026groundtruth-predictions.csv'),
                     show_col_types = FALSE)
 
-cm_lab <- function(m) {
-  m <- str_replace(m, 'Constant: (High|Low)-phase training mean.*',   'Arithmetic mean')
-  m <- str_replace(m, 'Constant: (High|Low)-phase training median.*', 'Median')
-  m <- str_replace(m, 'GLM Poisson \\((High|Low)-phase\\): suitability only', 'GLM Poisson ~ suitability')
-  m <- str_replace(m, 'Spat[.]', '(Spatial CV)')
-  m <- str_replace(m, 'Ordinary kriging.*', 'Ordinary Kriging')          # drop '(raw count)'
-  m <- str_replace(m, 'IDW \\(gstat default, idp=2\\)', 'IDW (inverse-square)')
-  m <- str_replace(m, 'brms Hurdlenegbinomial', 'Hurdle NegBinomial')
-  m <- str_replace(m, 'brms Negbinomial', 'NegBinomial')
-  m
-}
-
 ## brms exists pooled only; brms Poisson omitted (non-convergent gp()).
 brms_keep <- c('brms Hurdlenegbinomial', 'brms Negbinomial')
-## One cell block: phase (High/Low) x domain (interp = plots within the sampled
-## range; extrap = the Antero site, 86 km out). Antero is low-elevation only, so
-## there is no high-elevation extrapolation block.
-cm_slice <- function(phase, domain) {
-  keep <- if (domain == 'extrap') function(s) s == 'Antero' else function(s) s != 'Antero'
-  pb <- cm_pred |> filter(ScoredBy == 'Phase B (per-phase)', Phase == phase, keep(Site))
-  pa <- cm_pred |> filter(ScoredBy == 'Phase A (pooled)', Phase == phase, keep(Site),
-                          Tier == '3 Spatial interpolation' | Model %in% brms_keep)
-  bind_rows(pb, pa) |>
-    filter(is.finite(AbsError)) |>   # per-phase baselines are NA on their off-phase plots; drop those
-    group_by(Model = cm_lab(Model)) |>
-    summarise(all = mean(AbsError), occ = mean(AbsError[Occupied]), .groups = 'drop')
-}
 
-cm_groups <- tibble::tribble(
-  ~Group,                         ~Model,
-  'Null models',                  'Arithmetic mean',
-  'Null models',                  'Median',
-  'Interpolation & GLM baseline', 'Ordinary Kriging',
-  'Interpolation & GLM baseline', 'IDW (inverse-square)',
-  'Interpolation & GLM baseline', 'kNN (within pop)',
-  'Interpolation & GLM baseline', 'kNN (across pop)',
-  'Interpolation & GLM baseline', 'GLM Poisson ~ suitability',
-  'Gradient-boosted trees',       'XGB Tweedie',
-  'Gradient-boosted trees',       'XGB Tweedie (Spatial CV)',
-  'Gradient-boosted trees',       'XGB Poisson',
-  'Gradient-boosted trees',       'XGB Poisson (Spatial CV)',
-  'Gradient-boosted trees',       'LGBM Poisson',
-  'Gradient-boosted trees',       'LGBM Poisson (Spatial CV)',
-  'Bayesian (brms)',              'Hurdle NegBinomial',
-  'Bayesian (brms)',              'NegBinomial'
-)
-
-cm_fix <- function(x) ifelse(is.finite(x) & x <= 1e6, round(x, 2), NA_real_)  # Inf/overflow -> '---'
 ih <- cm_slice('High', 'interp')
 il <- cm_slice('Low',  'interp')
 el <- cm_slice('Low',  'extrap')
@@ -571,8 +523,6 @@ cm_tab <- cm_groups |>
   filter(if_any(IH_all:EL_occ, ~ !is.na(.)))
 
 cm_n <- distinct(cm_pred, point_id, Phase, Occupied, Site)
-nn  <- function(ph, ant) sum(cm_n$Phase == ph & (cm_n$Site == 'Antero') == ant)
-nno <- function(ph, ant) sum(cm_n$Phase == ph & (cm_n$Site == 'Antero') == ant & cm_n$Occupied)
 
 grp <- rle(cm_tab$Group); grp_end <- cumsum(grp$lengths); grp_beg <- grp_end - grp$lengths + 1L
 
@@ -586,6 +536,7 @@ cm_kbl <- kable(select(cm_tab, -Group), format = 'latex', booktabs = TRUE, lines
       caption = 'Field-validated mean absolute error (MAE, plants per 3$\\times$3 m quadrat) of count models against the 2026 ground-truth plots. Models are scored within each elevation phase and split by prediction regime: \\textit{interpolation} (plots inside the sampled range) versus \\textit{extrapolation} (the Antero site, 86 km beyond it; low elevation only). \\textit{n} columns score all plots (zeros included), \\textit{occ.} columns occupied plots only; `---` marks the gp()-based Bayesian models, whose spatial term extrapolates unreliably beyond the sampled range, so out-of-domain errors are not reported.') |>
   add_header_above(c(' ' = 1, 'High elevation' = 2, 'Low elevation' = 2, 'Low elevation' = 2)) |>
   add_header_above(c(' ' = 1, 'Interpolation' = 4, 'Extrapolation' = 2))
+
 for (i in seq_along(grp$values))
   cm_kbl <- pack_rows(cm_kbl, grp$values[i], grp_beg[i], grp_end[i])
 cm_kbl |> kable_styling(latex_options = c('striped', 'hold_position'))
@@ -618,6 +569,8 @@ kable(ctx, format = 'latex', booktabs = TRUE, linesep = '',
   kable_styling(latex_options = c('striped', 'hold_position'))
 ```
 
+
+###### TODO turn notes into text.
 Estimating plant density has two distinct purposes 1) modelling the census size of known populations (interpolation census) and 2) predicting the population size at unknown, or populations without count data (extrapolation census). 
 
 - **Interpolation census.** Density is predicted *within* the sampled domain, so the whole model suite is admissible (Table \@ref(tab:count-model-table)). Here we take the best field-validated surface -- the gradient-boosted XGBoost Tweedie for the presence/absence-aware count surface -- while the Bayesian hurdle and negative-binomial models supply posterior **credible intervals** on the population total, the uncertainty quantity a census most needs. Estimates are precise and their intervals narrow.
@@ -626,29 +579,29 @@ Estimating plant density has two distinct purposes 1) modelling the census size 
 Predictive results were compared with n field visited plots (n = sample draw, n = opportunistic).
 The inflation of MAE by modelling ranged from (X -- Y), and the average difference between the spatial and non-spatial CV folds was XX, indicating that default spatial cross-validation folds slightly outperformed classical folds.
 
-### 3.5 | Population Boundaries (H4b)
-
-```{r Population Boundary Results}
-# TODO: results for modelling population boundaries.
+```{r}
+rm(ctx)
 ```
 
-Field boundary-transect verification (`scripts/Second_groundtruth/evaluate_transect_boundary.R`, n = 6 usable core transects with a clear present-to-absent edge) found:
+### 3.5 | Population Boundaries (H4b)
 
-- Both threshold rules overshoot the true population edge - `sensitivity` bias -2.1 m / MAE 9.1 m vs. `spec_sens` bias -12.7 m / MAE 13.5 m, roughly 6x farther off.
-- Ground both rules already call "core" suitable habitat, and every exploratory (no-known-occurrence) patch, came back genuinely unoccupied at all visited stations - both 
-threshold cuts substantially overpredict actual population geography.
-
-The population boundaries obtained by thresholding resulted in initial estimates of population geographic extent of ... for sensitivity and for equal sensitivity and specificity.
-The wombling approach shows that estimates at the XX-percentile led to more accurate estimates of population extent, correcting it towards YY.
+NOT ENOUGH DATA WILL BE REMOVED FROM MANUSCRIPT. 
 
 ### 3.6 | Ground Truth Based Model Refinement
 
+~~ Rough idea:
+ - determined in GT cycle that pr-AUC alone does not lead to best "on the ground model"
+  - also pr-auc maximized at low PA ratios; while user inspection found higher PA ratios more likely (from map results)
+    - use nAP to decrease the penalty of record prevalence on results. 
+ - added two forms to assess model bias and confidence. 
+ - maintained roc-auc to work on easy discrimination of non-suitable habitat
+
+ - Also found indications that test/train splits greatly changed model TEST accuracy results
+   - suspected this not related to ACTUAL performance. 
+    - isolated into pseudo-absence effects via seeds for LMPO and spatial mapping
+    - versus pure presence loading variation. 
+
 ```{r Refinement Metric Grid by Holdout, out.width='100%', fig.width=12, fig.height=11}
-## Five model-diagnostic metrics (rows) across the four model-refinement CV strategies
-## (columns, section 2.8), one point per replicate, over the full 1:50 presence:absence
-## ratio range. nAP, Boyce index, Cox slope and Cox intercept; dashed lines mark each
-## metric's ideal value. ratioGrid()/nAP() live in theme_manuscript.R; data from
-## aggregate_all_metrics.R (all_fit_metrics.csv). Replicates still accruing.
 grid_metrics <- read.csv(file.path(PROJ_ROOT, 'results_summary', 'all_fit_metrics.csv'))
 holdout_cols <- c(
   Results_random_iter1a_high_pa         = 'Classic split\n(20/80 random, occ-stratified)',
@@ -663,8 +616,10 @@ design2tree <- c(classic = 'Results_random_iter1a_high_pa',
 sel <- read.csv(file.path(PROJ_ROOT, 'results_summary', 'pa-ratio-selection.csv'))
 sel_stars <- data.frame(tree = design2tree[sel$design],
                         resolution = sel$resolution, ratio = sel$chosen_ratio)
+
 ## pull the exact selected replicate's observed scores from all_fit_metrics.csv (covers Boyce,
 ## which pa-ratio-median-models.csv lacks). nAP() derives nAP from pr_auc at the own prevalence.
+
 med <- read.csv(file.path(PROJ_ROOT, 'results_summary', 'pa-ratio-median-models.csv'))
 med$tree <- design2tree[med$design]
 sel_rows <- merge(med[, c('tree', 'resolution', 'chosen_ratio', 'median_replicate')], grid_metrics,
@@ -690,29 +645,19 @@ ratioGrid(grid_metrics, holdouts = holdout_cols, xlim = c(1, 30),
           labs(title = 'Cross Validation Strategies Evaluated on `held out` Test Data.')
 ```
 
-
 ```{r Refinement Metric Grid 2026 Field Validation by Domain, out.width='100%', fig.width=12, fig.height=9.5}
-## Scored against the EXTERNAL 2026 field ground truth, split by APPLICABILITY DOMAIN (colour):
-## interpolation <=270 m, interpolation >270 m, and extrapolation (outside the presence-
-## referenced AOA). aggregate_2026gt_metrics.R -> all_fit_2026gt.csv (one row per fit x domain,
-## each with its own field prevalence, so nAP is domain-specific). Resolution is the point
-## shape. Boyce is unavailable on a presence/absence field set, so ROC-AUC takes that row
-## (dashed line = ideal 1). Cox windows are wide because extrapolation flips sign - it
-## OVER-predicts (intercept > 0) while interpolation under-predicts. A paired Wilcoxon test
-## (interp <=270 vs >270, within fit) confirmed the 270 m cut differs, most in calibration.
+
 gt_metrics <- read.csv(file.path(PROJ_ROOT, 'results_summary', 'all_fit_2026gt.csv'))
 ## Calibration lives per domain: interpolation carries both raw and Platt-calibrated rows
 ## (Platt is applied inside the AOA only), extrapolation only raw. Show CALIBRATED interpolation
-## against the (necessarily raw) extrapolation - one row per fit x domain. nAP/ROC-AUC are
-## unchanged by Platt (monotone); the calibration shows in Cox slope/intercept.
+## against the (necessarily raw) extrapolation - one row per fit x domain. 
 gt_metrics <- gt_metrics[gt_metrics$calibration == 'calibrated' |
                          gt_metrics$domain == 'Extrapolation', ]
 gt_metrics$nAP <- (gt_metrics$pr_auc - gt_metrics$prevalence) / (1 - gt_metrics$prevalence)
 gt_metrics$domain <- factor(gt_metrics$domain,
   levels = c('Interp <=270m', 'Interp >270m', 'Extrapolation'),
   labels = c('Interp ≤270 m', 'Interp >270 m', 'Extrapolation'))
-## colour = resolution; interp domain = linetype. Cox slope here is Platt-calibrated
-## (interpolation); add a footnote to that effect.
+
 gt_grid_metrics <- c(nAP = 'nAP (field)', roc_auc = 'ROC-AUC',
                      cox_slope = 'Cox Slope', cox_intercept = 'Cox intercept')
 gt_grid_clip    <- list(nAP = c(0,1), roc_auc = c(0.4, 1), cox_slope = c(-0.5, 1.5), cox_intercept = c(-2, 2))
@@ -731,11 +676,7 @@ mkey <- function(d) paste(d$tree, d$resolution)
 ## min/max of metric m over all replicates at each group, looked up for the `keys` of interest
 grid_metrics$nAP <- nAP(grid_metrics$pr_auc, grid_metrics$PAratio)
 gt_cal <- gt_metrics[gt_metrics$calibration == 'calibrated', ]
-rng <- function(df, group_cols, m, keys) {
-  k <- do.call(paste, df[group_cols])
-  list(lo = as.numeric(tapply(df[[m]], k, min, na.rm = TRUE)[keys]),
-       hi = as.numeric(tapply(df[[m]], k, max, na.rm = TRUE)[keys]))
-}
+
 sk    <- paste(sel_rows$tree, sel_rows$resolution, sel_rows$chosen_ratio)
 sk_lt <- paste(sel_rows$tree, sel_rows$resolution, sel_rows$chosen_ratio, 'Interp ≤270 m')
 sk_gt <- paste(sel_rows$tree, sel_rows$resolution, sel_rows$chosen_ratio, 'Interp >270 m')
@@ -804,10 +745,49 @@ f3 <- function(x) formatC(x, format = 'f', digits = 3)
 f1 <- function(x) formatC(x, format = 'f', digits = 1)
 ```
 
+
+###### TODO turn notes into text. 
+
 Varying only the pseudo-absence draw produced negligible variation in model diagnostics across resolutions and presence:absence ratios (1:1--1:30): median within-cell standard deviation of `r f3(vdec$abs_nAP)` in nAP, `r f3(vdec$abs_roc)` in ROC-AUC, and `r f3(vdec$abs_slope)` in Cox slope.
 Re-drawing the train--test partition produced `r f1(vdec$r_min)`$\times$ to `r f1(vdec$r_max)`$\times$ greater variation (nAP `r f3(vdec$cls_nAP)`, ROC-AUC `r f3(vdec$cls_roc)`, Cox slope `r f3(vdec$cls_slope)` on a matched three-replicate basis), and this gap was essentially unchanged when the random design's replicates were subsampled to three to equalise estimation, confirming that it reflects the underlying variance sources rather than the number of replicates.
 This insensitivity concerns the *identity* of the pseudo-absences at a fixed count; their *number* (the presence:absence ratio) remained a large source of variation (Section 3.6, above), and it pertains to a landscape background pool drawn predominantly far ($\sim$30 km median) from presences.
 Diagnostic uncertainty in these models is thus governed almost entirely by an unexamined train--test partition rather than by pseudo-absence selection: the prevailing practice of fixing a random seed and fitting a single model returns a point estimate whose uncertainty is dominated by one unreported split --- a draw that may be fortunate or unfortunate --- rather than a stable characterisation of performance.
+
+```{r OOS to GT Regression, echo=FALSE}
+## Does holdout (out-of-sample) performance translate to on-the-ground accuracy?
+set.seed(27)
+oos_m <- read.csv(file.path(PROJ_ROOT, 'results_summary', 'all_fit_metrics.csv'))
+gt_m  <- read.csv(file.path(PROJ_ROOT, 'results_summary', 'all_fit_2026gt.csv'))
+oos_m$oos_nAP <- nAP(oos_m$pr_auc, oos_m$PAratio)  
+gt_m$gt_nAP   <- (gt_m$pr_auc - gt_m$prevalence) / (1 - gt_m$prevalence)
+
+reg_df <- merge(
+  gt_m[gt_m$calibration == 'raw' & gt_m$domain != 'Extrapolation' &
+       gt_m$tree != 'Results_spatialknn_iter1a_high_pa',
+       c('tree', 'fname', 'resolution', 'PAratio', 'domain', 'gt_nAP')],
+  oos_m[, c('tree', 'fname', 'oos_nAP')], by = c('tree', 'fname'))
+reg_df <- reg_df |> # one seed per config (test set is common)
+  dplyr::group_by(tree, resolution, PAratio, domain) |>
+  dplyr::slice_sample(n = 1) |>
+  dplyr::ungroup()
+oosgt <- lm(gt_nAP ~ oos_nAP + domain + resolution + tree, data = reg_df)
+ci    <- confint(oosgt)['oos_nAP', ]
+int_p <- anova(oosgt, update(oosgt, . ~ . + oos_nAP:tree))[2, 'Pr(>F)']
+results_txt <- sprintf(
+'Using a linear fixed-effects model (n = %d, R^2^ = %.2f, adjusted R^2^ = %.2f), we found strong evidence (partial R^2^ = %.2f, p = %s) of a positive, yet weak, relationship between the nAP of held-out test data and nAP of the independent ground-truth data (slope = %.2f, 95%% CI %.2f--%.2f). This model accounted for spatial resolution (partial R^2^ = %.2f, p = %s), prediction domain (partial R^2^ = %.2f, p = %s), and cross-validation strategy (partial R^2^ = %.2f, p = %s). The strength of this relationship did not differ among cross-validation strategies (interaction p = %.2f).',
+  nobs(oosgt), summary(oosgt)$r.squared, summary(oosgt)$adj.r.squared,
+  pr2_term(oosgt, 'oos_nAP'), fmt_p(pval_term(oosgt, 'oos_nAP')),
+  coef(oosgt)['oos_nAP'], ci[1], ci[2],
+  pr2_term(oosgt, 'resolution'), fmt_p(pval_term(oosgt, 'resolution')),
+  pr2_term(oosgt, 'domain'), fmt_p(pval_term(oosgt, 'domain')),
+  pr2_term(oosgt, 'tree'), fmt_p(pval_term(oosgt, 'tree')), int_p)
+```
+
+`r results_txt`
+
+```{r}
+rm(oos_m, gt_m, reg_df, oosgt, ci, int_p, results_txt, vd, vd_grp, sd_cell, n_rep, struct, abs_sd, cls_cells, boot, vdec, f3, f1)
+```
 
 ### 3.7 | Final Results
 
@@ -863,7 +843,10 @@ Be sure to mention --
 Methods to prevent the extrapolation of SDMs beyond there training data has been a major concern [thuiller2004effects]. 
 Here, by utilising areas of applicability, based on the presence data only, we show that AOA is only a fraction of an already small geographic domain. 
 Further, in the presence of strongly geographically biased data, it is able to highlight portions of the realized species distribution entirely.
-Hence these masks should always be created to refine the understanding of where a model may make inference too on the landscape.  
+Hence these masks should always be created to refine the understanding of where a model may make inference too on the landscape.
+
+As expected the relationship between evaluation metrics calculated on held out test data and independent performance are weak, indicating considerable variation in model performance is due to variation in test/train split partitions rather than actual model performance.
+
 ...
 This separates the two tasks SDMs are routinely asked to perform but which biased data force into a trade-off: mapping the known, occupied niche versus characterising the fundamental niche [@thuiller2004effects; @jimenezvalverde2012insights; @leeyaw2022biology]. The usual evidence for this trade-off is simulated (virtual species); here the 2026 field data let us observe it directly -- field-verified presences in predictor space the model scored unsuitable -- making the distinction between a biased model and an inadequate one empirically, rather than theoretically, visible.
 
@@ -889,6 +872,7 @@ Julia R. Benkendorf is thanked for editorial services.
 Rick Williams, Rosemary Smith, and John Powers, are thanked for uploading many iNaturalist observations that were used in modelling. 
 Scott F. Smith, and Matt Langemeier, are thanked for iNaturalist observations that greatly extended the niche of *E. coloradense*.
 Savanna Smith is thanked for verifying the placement of an undocumented population in the Gothic area.
+Claude from Anthropic is acknowledged for writing code for iter1a and onwards experiments. 
 
 ### Funding
 
