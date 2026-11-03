@@ -1,5 +1,5 @@
 ---
-title: "Using ecological niche modelling for population mapping, and census sizes estimations of a rare plant"
+title: "Using ecological niche modelling for population mapping and census sizes estimations of a rare plant"
 author: |
   Reed Clark Benkendorf$^{1,2}$, Jeremie B. Fant$^{1,2}$, Sophie Taddeo$^{3}$  
   $^{1}$ Chicago Botanic Garden, Glencoe, Illinois 60022, USA  
@@ -224,7 +224,6 @@ The modelling details followed the same process across spatial resolutions.
 Spatial data processing was largely performed in R [@rcoreteam2026r], using sf [@pebesma2018sf] and terra [@hijman2026terra], with modelling implemented with the tidymodels framework [@kuhn2020tidymodels].
 
 Records were thinned to the distance of a hypotenuse of a cell to avoid pseudo-replicates using spThin [@aeillo2015spthin].
-<!-- Benkendorf comment: this must be wrong... at least ~3.8x were generated for finest resolution. -->
 1.1 times as many background absence records as presence records were generated using the environmental distance from the sdm package [@naimi2016sdm].
 These records were manually reviewed, and six records in areas with possible presences were removed.
 After this, the records were randomly sampled to reduce the dataset to XX records.
@@ -247,7 +246,18 @@ Plant density (plants per 3 $\times$ 3 m quadrat) was modelled with a ladder of 
 Because low-elevation plots hold roughly sixfold more plants than high-elevation ones, models were fit and scored separately within each elevation phase.
 Within each phase, train and test sets were partitioned by data twinning on rescaled coordinates and counts [@vakayil2026twinning].
 
-The ladder ran from null baselines (the per-phase mean and median), through interpolators of the observed counts -- ordinary kriging [@pebesma2004gstat], inverse-square inverse-distance weighting, and $k$-nearest-neighbour averaging -- and a single-covariate Poisson GLM on habitat suitability, to fitted models: gradient-boosted trees (XGBoost with Poisson and Tweedie likelihoods, LightGBM with Poisson) [@chen2016xgboost; @ke2017lightgbm] and Bayesian hierarchical models (brms; Poisson, negative-binomial, and hurdle negative-binomial, each with population as a fixed effect and a Gaussian-process spatial term), the last of which yield posterior credible intervals on the population total [@burkner2017brms].
+We distinguish here three scenarios for turning the density surface into a census estimate, relying on the area of applicability (AOA) (discussed in Section 2.8), and whether census plots exist per each population. 
+The AOA includes areas within the environmental niche of the training data, while areas outside are considered extrapolation. 
+Populations with plot data, where we seek to estimate the populations census size, are to be described; while populations within the AOA without census data are to be predicted. 
+Under interpolation scenarios Bayesian hierarchical models are preferred as their posterior credible intervals effectively estimate uncertainty. 
+However, spatial basis terms (used in hierarchical models) can have difficulty describing unsampled areas, and for prediction alternative models such as machine learning models may be required; although calculating estimates of uncertainty for these is time consuming. 
+Outside the AOA (extrapolation), fitted models cannot be reliably applied, and estimates from simpler interpolators may remain valid for coarse, directional decisions.
+
+The ladder ran from 1) null baselines, 2) interpolations, 3) fitted bayesian hierarchical models and 4) gradient boosted tree models. 
+The nulls models were per-phase mean and median. 
+Interpolated models were ordinary kriging [@pebesma2004gstat], inverse-square inverse-distance weighting, and $k$-nearest-neighbour averaging, and a single-covariate Poisson GLM on habitat suitability. 
+The Bayesian hierarchical models (brms; Poisson, negative-binomial, and hurdle negative-binomial, each with population as a fixed effect and a Gaussian-process spatial term) [@burkner2017brms].
+The gradient-boosted trees were XGBoost with Poisson and Tweedie likelihoods, and LightGBM with Poisson likelihoods [@chen2016xgboost; @ke2017lightgbm].
 
 ```{r Prepate Data for Final Maps}
 
@@ -270,17 +280,14 @@ They represent refinements of modelling approaches not explored during the origi
 These refinements resulted from a realisation during ground truthing that two separate processes are desired of SDMs; the first to map known occurrences, the second to map suitable habitat [@pili2025correcting]. 
 They further aimed to address 1) biases in the presence data, 2) observed variance in the effects of test/trains splits on model holdout evaluation, and 3) better understanding model extrapolation.
 
-The accuracy of models fit in iteration 1 using the random CV strategy, within the same presence absence ratio, were found to vary widely. 
-To determine whether models with similar accuracy, but higher precision, could be achieved two forms of  spatial cross validation were used. 
-The first (1) leave-multiple populations out (LMPO) aims to predict habitat for population discovery, and (2) a spatial subsetting approach (spatial mapping) aims to prediction known occupied habitat [DESCRIBED IN APPENDIX XX]. 
-Additional replicates (10 per classic split, 5 per spatial splits) were ran to determine whether this variation in accuracy stemmed from: 1) actual model performance as verified on independent test data (i.e. whether the different models are actually more performant), **2) different pseudo-absence records**, 3) or whether different presence records being in the test or train holds were responsible. 
-The first explanation was addressed using fixed effects modelling, using nPA on ground truthed data as a random function of heldout nPA, with effects for modelling strategies. 
-**the second**
-The third was addressed by comparing the variation in precision of the 10 classic splits to each of the 5 spatial strategies, which hold ...
-
-"The structured partitions (spatial-mapping and LMPO) build a single train--test split and hold it fixed across replicate fits, varying only the pseudo-absence draw at a fixed presence:absence ratio and fixed presence set; the random (classic) design instead redraws both the partition and the pseudo-absences at every fit.
-Variance across replicate fits therefore isolates the pseudo-absence draw under the structured designs, while reflecting the combined effect of partition and draw under the random design.
-We summarised variability as the within-cell standard deviation across replicates (one cell per design $\times$ resolution $\times$ ratio); because the random design carried more replicates per cell than the structured designs, we repeatedly subsampled it to the structured replicate count before recomputing, so both estimates rest on the same replication."
+The accuracy of models fit in iteration 1 using the random CV strategy, at a fixed presence:absence ratio, varied widely in precision, with holdout scores varying by 10% between replicants.
+This variance was attributed to three possible sources: (1) the identity of the pseudo-absence draw, (2) the train–test partition (which presences fall in the test versus the training fold), and (3) genuine differences in model performance.
+To separate the first two sources, we introduced two spatial cross-validation strategies.
+Leave-multiple-populations-out (LMPO) targets prediction of habitat for population discovery, and a spatial subsetting approach (spatial mapping) targets prediction of known occupied habitat [DESCRIBED IN APPENDIX XX].
+These CV strategies allow using both the same single train–test split, and the same presences in each CV fold per replicate, varying only the pseudo-absence draw allowing us to address 1. 
+To address (2), the outer train–test split and the composition of each CV fold were allowed to vary across each PA ratio at five replicates for each spatial CV strategy. 
+These strategies have a degree of spatial constraint in their splits, which we hypothesised would reduce variation in holdout variance. 
+The third source, whether variation in accuracy was due to actual model performance was tested using fixed effects modelling of the iteration 1 classic CV strategy and results from (2), using nAP on ground truthed data as a function of heldout nAP, with effects for modelling strategies. 
 
 For overall model classification we report three complementary discrimination metrics: the Boyce index, ROC-AUC, and normalized average precision (nAP) which corrects PR-AUC across different presence to absence ratios [@flach2015precision].
 The Boyce index measures presence-background rank-calibration, but is insensitive to monotone rescaling and understates prediction magnitude [@hirzel2006evaluating].
@@ -305,7 +312,7 @@ Using occurrence, density, and boundary-transect data from both rounds of ground
 
 ## 3 | Results
 
-### 3.1 | Ground Verification (H1)
+### 3.1 | Ground Verification (H1)  // USES ONLY ITER0 and ITER1
 
 ```{r Best Model Groundtruthing Evaluation}
 ## Field-validated Pr-AUC of the best-performing model against the 2026
@@ -364,7 +371,7 @@ ggplot(heldout_field_mock, aes(y = y_num, x = PrAUC, color = Phase, group = inte
   theme_manuscript()
 ```
 
-### 3.2 | Comparison of Different Spatial Resolutions (H2)
+### 3.2 | Comparison of Different Spatial Resolutions (H2) // USES ONLY ITER0 and ITER1
 
 ```{r Predicted Probability of Occurrence Correlations, eval = F}
 
@@ -423,7 +430,7 @@ ggplot(paratio, aes(x = ratio_label, y = metric, color = Split, fill = Split, sh
   theme_manuscript()
 ```
 
-### 3.3 | Occurrence Dectection and Occupancy Based Field Sampling (H3)
+### 3.3 | Occurrence Dectection and Occupancy Based Field Sampling (H3) // USES ONLY ITER1
 
 ```{r Sub-population Detection Table}
 ## Occupancy ~ Euclidean distance (E) and the region-orthogonalized cost-distance
@@ -494,7 +501,7 @@ The model of occupancy on Euclidean distance and the cost-distance anomaly finds
 rm(quadrats, pop_q_cnts, hbrs, asc, quadrat_cnts, subpop_extensions, p_R_alone, p_E_alone, p_R_given_E, p_E_given_R, get_p, occ_lrt, n_extension, f_pops, fp)
 ```
 
-### 3.4 | Plant Density (H4a)
+### 3.4 | Plant Density (H4a) // USES ONLY ITER1
 
 ```{r count-model-table}
 ## Read ALL per-plot predictions (Antero kept - it is the extrapolation column).
@@ -569,9 +576,11 @@ kable(ctx, format = 'latex', booktabs = TRUE, linesep = '',
   kable_styling(latex_options = c('striped', 'hold_position'))
 ```
 
+<!-- SKELETON (3.4): definitions moved to Methods 2.6; prose below is a findings
+     scaffold with placeholders, pending the final density cut (not yet on fisk). -->
 
-###### TODO turn notes into text.
-Estimating plant density has two distinct purposes 1) modelling the census size of known populations (interpolation census) and 2) predicting the population size at unknown, or populations without count data (extrapolation census). 
+Our results indicate that while Bayesian approaches can produce valid credible intervals (but can they?) for descriptive census estimates, they cannot perform well under predictive applications. 
+Machine learning approaches, such as gradient boosted trees - here XGBoost and LGBM, perform well for prediction; however obtaining even confidence intervals are generally time intensive requiring bootstrapping. 
 
 - **Interpolation census.** Density is predicted *within* the sampled domain, so the whole model suite is admissible (Table \@ref(tab:count-model-table)). Here we take the best field-validated surface -- the gradient-boosted XGBoost Tweedie for the presence/absence-aware count surface -- while the Bayesian hurdle and negative-binomial models supply posterior **credible intervals** on the population total, the uncertainty quantity a census most needs. Estimates are precise and their intervals narrow.
 - **Extrapolation census (newly discovered or distant populations).** For populations beyond the sampled range (e.g. Antero, 86 km out) the `gp()`-based Bayesian surfaces extrapolate catastrophically and the interpolators have no nearby data to borrow from. Here we fall back to transferable estimators -- the per-phase arithmetic mean or covariate-only models, which cannot blow up -- and report correspondingly wider uncertainty. The Antero failure is the evidence that this fallback, not the interpolation surface, is the honest tool out of domain.
@@ -707,51 +716,48 @@ ratioGrid(gt_metrics, holdouts = holdout_cols, xlim = c(1, 30), stars = sel_star
 ```
 
 ```{r Variance Decomposition, echo=FALSE}
-## Pseudo-absence draw vs train-test partition, from the holdout diagnostics (all_fit_metrics).
-## Structured designs (spatial-mapping, LMPO) freeze the test and vary only the absence draw
-## (3 reps); classic redraws both (more reps). Within-cell SD across reps isolates the absence
-## draw (structured) vs partition+draw (classic). To match replication, classic is repeatedly
-## subsampled to 3 reps/cell. All figures below recompute from the data.
+## Pseudo-absence draw vs train-test partition, measured WITHIN the spatial
+## design (spatial-mapping, LMPO) so the partition structure is held constant
+## (no confound with random CV). Holdout diagnostics from all_fit_metrics.
+## Design per cell (strategy x resolution x PAratio): 5 partition replicates.
+## One replicate carries 3 PA-draw seeds with the partition + CV-fold presences
+## fixed; the other four carry 1 seed each with the partition varied.
+##   Source (1) PA draw   = within-cell SD across the 3 seeds of the 3-seed
+##                          replicate (computable now - in file).
+##   Source (2) partition = SD across the 5 partition replicates.
+##                          PENDING: the four 1-seed replicates are still
+##                          fitting and are not yet in the data file.
 vd <- read.csv(file.path(PROJ_ROOT, 'results_summary', 'all_fit_metrics.csv'))
-vd_grp <- c(Results_random_iter1a_high_pa = 'classic',
-            Results_spatialmapping_iter1a_high_pa = 'structured',
+vd_grp <- c(Results_spatialmapping_iter1a_high_pa = 'structured',
             Results_LMPO_iter1a_high_pa = 'structured')
 vd <- vd[vd$tree %in% names(vd_grp) & vd$PAratio <= 30, ]
 vd$grp <- vd_grp[vd$tree]
 vd$nAP <- (vd$pr_auc - 1/(1 + vd$PAratio)) / (1 - 1/(1 + vd$PAratio))
 sd_cell <- function(d) c(nAP = sd(d$nAP), roc = sd(d$roc_auc), slope = sd(d$cox_slope))
-n_rep   <- 3                                   # structured replicate count (match classic to it)
-## absence-only SD: median over structured cells with >= n_rep reps
-struct  <- vd[vd$grp == 'structured', ]
+n_seed  <- 3                                   # the fixed-partition replicate's PA-draw seeds
+## Source (1): within-cell SD across the 3 PA-draw seeds, median over cells.
 abs_sd  <- do.call(rbind, lapply(
-  Filter(function(d) nrow(d) >= n_rep, split(struct, with(struct, paste(tree, resolution, PAratio)))),
+  Filter(function(d) nrow(d) >= n_seed, split(vd, with(vd, paste(tree, resolution, PAratio)))),
   sd_cell))
-## classic subsampled to n_rep reps/cell, B draws, then median SD
-set.seed(1); B <- 500
-cls_cells <- Filter(function(d) nrow(d) >= n_rep,
-                    split(vd[vd$grp == 'classic', ], with(vd[vd$grp == 'classic', ], paste(resolution, PAratio))))
-boot <- do.call(rbind, lapply(cls_cells, function(g)
-  do.call(rbind, lapply(seq_len(B), function(i) sd_cell(g[sample(nrow(g), n_rep), ])))))
 vdec <- list(
   abs_nAP = median(abs_sd[, 'nAP'], na.rm = TRUE), abs_roc = median(abs_sd[, 'roc'], na.rm = TRUE),
-  abs_slope = median(abs_sd[, 'slope'], na.rm = TRUE),
-  cls_nAP = median(boot[, 'nAP']), cls_roc = median(boot[, 'roc']), cls_slope = median(boot[, 'slope']))
-vdec$r_nAP   <- vdec$cls_nAP   / vdec$abs_nAP
-vdec$r_roc   <- vdec$cls_roc   / vdec$abs_roc
-vdec$r_slope <- vdec$cls_slope / vdec$abs_slope
-vdec$r_min   <- min(vdec$r_nAP, vdec$r_roc, vdec$r_slope)
-vdec$r_max   <- max(vdec$r_nAP, vdec$r_roc, vdec$r_slope)
+  abs_slope = median(abs_sd[, 'slope'], na.rm = TRUE))
 f3 <- function(x) formatC(x, format = 'f', digits = 3)
-f1 <- function(x) formatC(x, format = 'f', digits = 1)
 ```
 
 
-###### TODO turn notes into text. 
+These CV strategies allow using both the same single train–test split, and the same presences in each CV fold per replicate, varying only the pseudo-absence draw allowing us to address 1. 
+To address (2), the outer train–test split and the composition of each CV fold were allowed to vary across each PA ratio at five replicates for each spatial CV strategy. 
 
-Varying only the pseudo-absence draw produced negligible variation in model diagnostics across resolutions and presence:absence ratios (1:1--1:30): median within-cell standard deviation of `r f3(vdec$abs_nAP)` in nAP, `r f3(vdec$abs_roc)` in ROC-AUC, and `r f3(vdec$abs_slope)` in Cox slope.
-Re-drawing the train--test partition produced `r f1(vdec$r_min)`$\times$ to `r f1(vdec$r_max)`$\times$ greater variation (nAP `r f3(vdec$cls_nAP)`, ROC-AUC `r f3(vdec$cls_roc)`, Cox slope `r f3(vdec$cls_slope)` on a matched three-replicate basis), and this gap was essentially unchanged when the random design's replicates were subsampled to three to equalise estimation, confirming that it reflects the underlying variance sources rather than the number of replicates.
+#### 3.6.1 The effect of psuedo-absences on model evaluation
+
+Holding the train--test split and the CV-fold presences fixed and varying only the pseudo-absence draw --- three draws per configuration, across both the LMPO and spatial-mapping strategies --- produced negligible variation in model diagnostics across resolutions and presence:absence ratios (1:1--1:30): median within-cell standard deviation of `r f3(vdec$abs_nAP)` in nAP, `r f3(vdec$abs_roc)` in ROC-AUC, and `r f3(vdec$abs_slope)` in Cox slope.
+<!-- TODO (pending the four 1-seed replicates, still fitting): report source (2),
+     the train--test partition variance measured as the SD across the five spatial
+     partition replicates, its ratio to the pseudo-absence-draw variance above, and
+     the overall conclusion that diagnostic uncertainty is governed by the unexamined
+     partition rather than by pseudo-absence selection. -->
 This insensitivity concerns the *identity* of the pseudo-absences at a fixed count; their *number* (the presence:absence ratio) remained a large source of variation (Section 3.6, above), and it pertains to a landscape background pool drawn predominantly far ($\sim$30 km median) from presences.
-Diagnostic uncertainty in these models is thus governed almost entirely by an unexamined train--test partition rather than by pseudo-absence selection: the prevailing practice of fixing a random seed and fitting a single model returns a point estimate whose uncertainty is dominated by one unreported split --- a draw that may be fortunate or unfortunate --- rather than a stable characterisation of performance.
 
 ```{r OOS to GT Regression, echo=FALSE}
 ## Does holdout (out-of-sample) performance translate to on-the-ground accuracy?
@@ -783,11 +789,16 @@ results_txt <- sprintf(
   pr2_term(oosgt, 'tree'), fmt_p(pval_term(oosgt, 'tree')), int_p)
 ```
 
+## 3.6.2 Whether different test and train hold outs actually affect model accuracy
+
 `r results_txt`
 
 ```{r}
-rm(oos_m, gt_m, reg_df, oosgt, ci, int_p, results_txt, vd, vd_grp, sd_cell, n_rep, struct, abs_sd, cls_cells, boot, vdec, f3, f1)
+rm(oos_m, gt_m, reg_df, oosgt, ci, int_p, results_txt, vd, vd_grp, sd_cell, n_seed, abs_sd, vdec, f3)
 ```
+
+### 3.6.2 The effect of different presences in train and test splits on model evaluation
+
 
 ### 3.7 | Final Results
 
