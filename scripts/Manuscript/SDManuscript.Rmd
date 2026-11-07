@@ -579,14 +579,11 @@ kable(ctx, format = 'latex', booktabs = TRUE, linesep = '',
 <!-- SKELETON (3.4): definitions moved to Methods 2.6; prose below is a findings
      scaffold with placeholders, pending the final density cut (not yet on fisk). -->
 
-Our results indicate that while Bayesian approaches can produce valid credible intervals (but can they?) for descriptive census estimates, they cannot perform well under predictive applications. 
-Machine learning approaches, such as gradient boosted trees - here XGBoost and LGBM, perform well for prediction; however obtaining even confidence intervals are generally time intensive requiring bootstrapping. 
-
-- **Interpolation census.** Density is predicted *within* the sampled domain, so the whole model suite is admissible (Table \@ref(tab:count-model-table)). Here we take the best field-validated surface -- the gradient-boosted XGBoost Tweedie for the presence/absence-aware count surface -- while the Bayesian hurdle and negative-binomial models supply posterior **credible intervals** on the population total, the uncertainty quantity a census most needs. Estimates are precise and their intervals narrow.
-- **Extrapolation census (newly discovered or distant populations).** For populations beyond the sampled range (e.g. Antero, 86 km out) the `gp()`-based Bayesian surfaces extrapolate catastrophically and the interpolators have no nearby data to borrow from. Here we fall back to transferable estimators -- the per-phase arithmetic mean or covariate-only models, which cannot blow up -- and report correspondingly wider uncertainty. The Antero failure is the evidence that this fallback, not the interpolation surface, is the honest tool out of domain.
-
-Predictive results were compared with n field visited plots (n = sample draw, n = opportunistic).
-The inflation of MAE by modelling ranged from (X -- Y), and the average difference between the spatial and non-spatial CV folds was XX, indicating that default spatial cross-validation folds slightly outperformed classical folds.
+Our results show that census estimation methods are roughly comparable across interpolation scenarios. 
+However, Bayesian and machine learning approaches allow for explicit modelling of non-zero count cells, making them an additional utility in total population sizes. 
+Bayesian models performed well in descriptive application within the aoa ((stats)).
+Machine learning models, particulary XX, performed ((stats)) for predictive tasks within the AOA. 
+Finally, extrapolation estimates may best be accomplished by using descriptive statistics outside the AOA. 
 
 ```{r}
 rm(ctx)
