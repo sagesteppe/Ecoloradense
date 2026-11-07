@@ -120,12 +120,17 @@ score_subset <- function(pred, keep, res_tag, iter, surface_area, distance,
 ## vectors lets decision-curve net benefit be recomputed OFFLINE across AOA domain x assumed
 ## prevalence (decisionCurve()'s `weights` arg) and aggregated pixel -> patch, with no HDD /
 ## re-prediction. `point_id` is the gt row index, so coordinates/patch keys join back from gt.
+## `DI` is the CAST dissimilarity index at that point and `DI_thresh` the AOA cutoff for the
+## fitted model, so DI / DI_thresh gives position relative to the AOA boundary (<=1 in, >1 out).
 point_subset <- function(pred, keep, res_tag, iter, surface_area, distance,
-                         calibration = 'raw'){
+                         calibration = 'raw', DI = NULL, DI_thresh = NA_real_){
   keep <- keep & !is.na(pred) & !is.na(gt$Presence)
   if(sum(keep) == 0) return(NULL)
   tibble(point_id = which(keep), Presence = gt$Presence[keep], prob = pred[keep],
-         dist_known_occ = gt$dist_known_occ[keep], resolution = res_tag, iteration = iter,
+         dist_known_occ = gt$dist_known_occ[keep],
+         DI = if(is.null(DI)) NA_real_ else DI[keep],
+         DI_thresh = DI_thresh,
+         resolution = res_tag, iteration = iter,
          SurfaceArea = surface_area, Distance = distance, calibration = calibration)
 }
 
@@ -140,32 +145,36 @@ warn_once <- function(kind, model_id, msg){
   assign(kind, TRUE, envir = interp_warned)
   message('  [interp ', kind, '] ', model_id, ': ', msg)
 }
+`%||%` <- function(a, b) if(is.null(a)) b else a
+
+## Returns list(AOA = logical, DI = numeric, DI_thresh = numeric) of length nrow(gt).
+## On failure all three carry NAs (AOA = NA, DI = NA, DI_thresh = NA_real_).
+na_aoa <- function() list(AOA = rep(NA, nrow(gt)), DI = rep(NA_real_, nrow(gt)),
+                          DI_thresh = NA_real_)
 classify_interp <- function(tree, model_id, covs){
   caret_path <- file.path(p2proj, tree, 'modelsTune', paste0(model_id, '.rds'))
   if(!file.exists(caret_path)){
-    warn_once('missing_caret', model_id, caret_path)
-    return(rep(NA, nrow(gt)))
+    warn_once('missing_caret', model_id, caret_path); return(na_aoa())
   }
   m <- readRDS(caret_path)
   tdi <- tryCatch(presenceTrainDI(m, LPD = FALSE), error = function(e) e)
   if(inherits(tdi, 'error')){
-    warn_once('presenceTrainDI_error', model_id, conditionMessage(tdi))
-    return(rep(NA, nrow(gt)))
+    warn_once('presenceTrainDI_error', model_id, conditionMessage(tdi)); return(na_aoa())
   }
   missing_vars <- setdiff(tdi$variables, names(covs))
   if(length(missing_vars)){
     warn_once('missing_vars', model_id,
               paste(length(missing_vars), 'tdi$variables missing from covs:',
                     paste(head(missing_vars, 5), collapse = ', ')))
-    return(rep(NA, nrow(gt)))
+    return(na_aoa())
   }
   nd <- covs[, tdi$variables, drop = FALSE]
   a <- tryCatch(CAST::aoa(nd, trainDI = tdi, verbose = FALSE), error = function(e) e)
   if(inherits(a, 'error')){
-    warn_once('aoa_error', model_id, conditionMessage(a))
-    return(rep(NA, nrow(gt)))
+    warn_once('aoa_error', model_id, conditionMessage(a)); return(na_aoa())
   }
-  as.logical(a$AOA)
+  list(AOA = as.logical(a$AOA), DI = as.numeric(a$DI),
+       DI_thresh = as.numeric(a$parameters$threshold %||% tdi$threshold))
 }
 
 ## 4. Walk each tree, one long CSV per model -------------------------------------------
@@ -203,8 +212,11 @@ for(tree in trees){
     rf      <- readRDS(f)
     pred    <- predict(rf, data = covs, type = 'response')$predictions[, '1']
 
-    interp <- classify_interp(tree, model_id, covs)   # TRUE / FALSE / NA
-    is_near <- gt$dist_known_occ <= 270
+    aoa_res   <- classify_interp(tree, model_id, covs)
+    interp    <- aoa_res$AOA         # TRUE / FALSE / NA
+    DI_vec    <- aoa_res$DI
+    DI_thresh <- aoa_res$DI_thresh
+    is_near   <- gt$dist_known_occ <= 270
 
     platt_apply <- load_platt_apply(tree, model_id)
     pred_cal <- if(is.null(platt_apply)) pred else platt_apply(pred)
@@ -228,10 +240,12 @@ for(tree in trees){
 
     # per-point vectors for offline DCA x AOA-domain x prevalence-sweep (same cells as above).
     pts_raw <- map_dfr(c(interp_cells, list(extrap_cell)), function(c)
-      point_subset(pred, c$mask, res_tag, iter, c$sa, c$d, calibration = 'raw'))
+      point_subset(pred, c$mask, res_tag, iter, c$sa, c$d, calibration = 'raw',
+                   DI = DI_vec, DI_thresh = DI_thresh))
     pts_cal <- if(is.null(platt_apply)) NULL else
       map_dfr(interp_cells, function(c)
-        point_subset(pred_cal, c$mask, res_tag, iter, c$sa, c$d, calibration = 'calibrated'))
+        point_subset(pred_cal, c$mask, res_tag, iter, c$sa, c$d, calibration = 'calibrated',
+                     DI = DI_vec, DI_thresh = DI_thresh))
     pts <- dplyr::bind_rows(pts_raw, pts_cal)
     if(nrow(pts)) pts <- dplyr::mutate(pts, tree = tree, model = model_id, .before = 1)
     write.csv(pts, out_pts, row.names = FALSE)
