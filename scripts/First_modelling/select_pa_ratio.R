@@ -22,8 +22,8 @@
 ##                 min-max scaled to [0, 1] ACROSS the candidate ratios within a
 ##                 (design, resolution) group, so one metric's wider spread can't dominate
 ##   composite   - the equal-weight mean of the four normalized distances (lower is better)
-##   one-SE rule - the SMALLEST ratio whose mean composite is within one standard error
-##                 (across replicates) of the best (lowest) mean composite
+##   5% rule     - the SMALLEST ratio whose mean composite is within rel_tol (5%) of the
+##                 best (lowest) mean composite, i.e. composite_mean <= best * (1 + rel_tol)
 ##   model       - the replicate at that ratio whose composite is closest to the median
 ##
 ## Usage (working directory scripts/): Rscript First_modelling/select_pa_ratio.R
@@ -40,11 +40,13 @@ cox_intercept_target <- 0
 weights            <- c(nAP = 1, roc = 1, slope = 1, intercept = 1)  # equal; edit to reweight
 fixed_prevalence   <- NA      # NA -> nAP uses the ratio-implied prevalence 1/(1+ratio);
                               # set 0.05 to score nAP at a fixed landscape prevalence instead
+rel_tol            <- 0.025    # selection tolerance: smallest ratio within 5% of the best
+                              # (lowest) mean composite is chosen
 
 design_cols <- c(
-  Results_random_iter1a_high_pa         = 'classic',
-  Results_spatialmapping_iter1a_high_pa = 'spatial_mapping',
-  Results_LMPO_iter1a_high_pa           = 'lmpo')
+  Results_random_iter1a_high_pa          = 'classic',
+  Results_spatialmapping_splittau_phase2 = 'spatial_mapping',
+  Results_LMPO_splittau_phase2           = 'lmpo')
 
 out_dir <- file.path(PROJ_ROOT, 'results_summary')
 
@@ -116,15 +118,14 @@ per_ratio <- reps |>
             cox_int_med    = median(cox_intercept, na.rm = TRUE),
             .groups = 'drop')
 
-## --- 3. selection: one-SE rule on the composite -----------------------------------------
-## best = lowest mean composite; the one-SE window is best + one SE, and the SMALLEST ratio
-## inside it is chosen (favour a leaner PA ratio when the composite is statistically tied).
+## --- 3. selection: 5% rule on the composite ---------------------------------------------
+## best = lowest mean composite; the window is best * (1 + rel_tol), and the SMALLEST ratio
+## inside it is chosen (favour a leaner PA ratio when the composite is within 5% of optimal).
 select_ratio <- function(d){
   best <- d[which.min(d$composite_mean), ]
-  best_se0 <- ifelse(is.na(best$composite_se), 0, best$composite_se)  # single replicate -> 0
-  within_1se <- filter(d, composite_mean <= best$composite_mean + best_se0)
+  within_tol <- filter(d, composite_mean <= best$composite_mean * (1 + rel_tol))
   tibble(best_ratio = best$ratio, best_composite = best$composite_mean, best_se = best$composite_se,
-         chosen_ratio = min(within_1se$ratio))
+         chosen_ratio = min(within_tol$ratio))
 }
 
 selection <- per_ratio |>
@@ -148,7 +149,7 @@ write.csv(selection,    file.path(out_dir, 'pa-ratio-selection.csv'),        row
 write.csv(median_model, file.path(out_dir, 'pa-ratio-median-models.csv'),    row.names = FALSE)
 
 options(width = 200)
-message('\n=== chosen PA ratio (one-SE rule on the equal-weight composite of 4 metrics) ===')
+message('\n=== chosen PA ratio (5% rule on the equal-weight composite of 4 metrics) ===')
 selection |>
   left_join(select(per_ratio, design, resolution, ratio, nAP_mean, roc_mean,
                    cox_slope_med, cox_int_med), by = c('design', 'resolution', 'chosen_ratio' = 'ratio')) |>

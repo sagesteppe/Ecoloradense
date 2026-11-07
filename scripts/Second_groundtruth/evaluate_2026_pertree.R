@@ -116,6 +116,19 @@ score_subset <- function(pred, keep, res_tag, iter, surface_area, distance,
   bind_cols(scores$metrics, as_tibble(base_cols))
 }
 
+## Per-point (truth, prob) for one subset, tagged with its AOA domain. Persisting these raw
+## vectors lets decision-curve net benefit be recomputed OFFLINE across AOA domain x assumed
+## prevalence (decisionCurve()'s `weights` arg) and aggregated pixel -> patch, with no HDD /
+## re-prediction. `point_id` is the gt row index, so coordinates/patch keys join back from gt.
+point_subset <- function(pred, keep, res_tag, iter, surface_area, distance,
+                         calibration = 'raw'){
+  keep <- keep & !is.na(pred) & !is.na(gt$Presence)
+  if(sum(keep) == 0) return(NULL)
+  tibble(point_id = which(keep), Presence = gt$Presence[keep], prob = pred[keep],
+         dist_known_occ = gt$dist_known_occ[keep], resolution = res_tag, iteration = iter,
+         SurfaceArea = surface_area, Distance = distance, calibration = calibration)
+}
+
 ## Classify every gt point as in-domain (Interpolation) under a presence-referenced AOA
 ## built from the caret `train` object in modelsTune/. Returns a logical vector of length
 ## nrow(gt); NA where the caret model is missing or AOA can't be computed. The first
@@ -180,8 +193,9 @@ for(tree in trees){
   for(i in seq_along(model_files)){
     f <- model_files[i]
     model_id <- sub('\\.rds$', '', basename(f))
-    out <- file.path(tables_dir, paste0(model_id, '-2026gt.csv'))
-    if(file.exists(out)) next
+    out     <- file.path(tables_dir, paste0(model_id, '-2026gt.csv'))
+    out_pts <- file.path(tables_dir, paste0(model_id, '-2026gt-points.csv'))
+    if(file.exists(out) && file.exists(out_pts)) next
 
     res_tag <- parse_resolution(model_id)
     iter    <- parse_iteration(model_id)
@@ -211,6 +225,16 @@ for(tree in trees){
         score_subset(pred_cal, c$mask, res_tag, iter, c$sa, c$d,
                      calibration = 'calibrated'))
     write.csv(dplyr::bind_rows(rows_raw, rows_cal), out, row.names = FALSE)
+
+    # per-point vectors for offline DCA x AOA-domain x prevalence-sweep (same cells as above).
+    pts_raw <- map_dfr(c(interp_cells, list(extrap_cell)), function(c)
+      point_subset(pred, c$mask, res_tag, iter, c$sa, c$d, calibration = 'raw'))
+    pts_cal <- if(is.null(platt_apply)) NULL else
+      map_dfr(interp_cells, function(c)
+        point_subset(pred_cal, c$mask, res_tag, iter, c$sa, c$d, calibration = 'calibrated'))
+    pts <- dplyr::bind_rows(pts_raw, pts_cal)
+    if(nrow(pts)) pts <- dplyr::mutate(pts, tree = tree, model = model_id, .before = 1)
+    write.csv(pts, out_pts, row.names = FALSE)
 
     if(i %% 25 == 0 || i == length(model_files))
       message('  ', i, ' / ', length(model_files))

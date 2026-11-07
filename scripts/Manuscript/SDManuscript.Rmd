@@ -284,9 +284,10 @@ The accuracy of models fit in iteration 1 using the random CV strategy, at a fix
 This variance was attributed to three possible sources: (1) the identity of the pseudo-absence draw, (2) the train–test partition (which presences fall in the test versus the training fold), and (3) genuine differences in model performance.
 To separate the first two sources, we introduced two spatial cross-validation strategies.
 Leave-multiple-populations-out (LMPO) targets prediction of habitat for population discovery, and a spatial subsetting approach (spatial mapping) targets prediction of known occupied habitat [DESCRIBED IN APPENDIX XX].
-These CV strategies allow using both the same single train–test split, and the same presences in each CV fold per replicate, varying only the pseudo-absence draw allowing us to address 1. 
-To address (2), the outer train–test split and the composition of each CV fold were allowed to vary across each PA ratio at five replicates for each spatial CV strategy. 
-These strategies have a degree of spatial constraint in their splits, which we hypothesised would reduce variation in holdout variance. 
+These CV strategies allow using both the same single train-test split, and the same presences in each CV fold per replicate, varying only the pseudo-absence draw allowing us to address 1. 
+To address (2), the outer train-test split and the composition of each CV fold were allowed to vary across each PA ratio at five replicates for each spatial CV strategy. 
+These strategies have a degree of spatial constraint in their splits, which we hypothesised w−0.119 [−0.242, −0.056]
+ould reduce variation in holdout variance. 
 The third source, whether variation in accuracy was due to actual model performance was tested using fixed effects modelling of the iteration 1 classic CV strategy and results from (2), using nAP on ground truthed data as a function of heldout nAP, with effects for modelling strategies. 
 
 For overall model classification we report three complementary discrimination metrics: the Boyce index, ROC-AUC, and normalized average precision (nAP) which corrects PR-AUC across different presence to absence ratios [@flach2015precision].
@@ -610,15 +611,15 @@ NOT ENOUGH DATA WILL BE REMOVED FROM MANUSCRIPT.
 ```{r Refinement Metric Grid by Holdout, out.width='100%', fig.width=12, fig.height=11}
 grid_metrics <- read.csv(file.path(PROJ_ROOT, 'results_summary', 'all_fit_metrics.csv'))
 holdout_cols <- c(
-  Results_random_iter1a_high_pa         = 'Classic split\n(20/80 random, occ-stratified)',
-  Results_spatialmapping_iter1a_high_pa = 'Spatial mapping\n(spatial CV)',
-  Results_LMPO_iter1a_high_pa           = 'Leave Multiple (sub-)Populations Out\n(LMPO CV)')
+  Results_random_iter1a_high_pa            = 'Classic split\n(20/80 random, occ-stratified)',
+  Results_spatialmapping_splittau_phase2   = 'Spatial mapping\n(spatial CV)',
+  Results_LMPO_splittau_phase2             = 'Leave Multiple (sub-)Populations Out\n(LMPO CV)')
 ## selected PA ratio per design x resolution (select_pa_ratio.R). A black cross is dropped on
 ## each series' regression line at this ratio; the annotation appends '// Selected: ZZ', the
 ## EXACT selected model's observed metric value (the median replicate at the chosen ratio).
 design2tree <- c(classic = 'Results_random_iter1a_high_pa',
-                 spatial_mapping = 'Results_spatialmapping_iter1a_high_pa',
-                 lmpo = 'Results_LMPO_iter1a_high_pa')
+                 spatial_mapping = 'Results_spatialmapping_splittau_phase2',
+                 lmpo = 'Results_LMPO_splittau_phase2')
 sel <- read.csv(file.path(PROJ_ROOT, 'results_summary', 'pa-ratio-selection.csv'))
 sel_stars <- data.frame(tree = design2tree[sel$design],
                         resolution = sel$resolution, ratio = sel$chosen_ratio)
@@ -713,38 +714,62 @@ ratioGrid(gt_metrics, holdouts = holdout_cols, xlim = c(1, 30), stars = sel_star
 ```
 
 ```{r Variance Decomposition, echo=FALSE}
-## Pseudo-absence draw vs train-test partition, measured WITHIN the spatial
+## Pseudo-absence draw vs train-test partition, measured WITHIN each spatial
 ## design (spatial-mapping, LMPO) so the partition structure is held constant
-## (no confound with random CV). Holdout diagnostics from all_fit_metrics.
-## Design per cell (strategy x resolution x PAratio): 5 partition replicates.
-## One replicate carries 3 PA-draw seeds with the partition + CV-fold presences
-## fixed; the other four carry 1 seed each with the partition varied.
-##   Source (1) PA draw   = within-cell SD across the 3 seeds of the 3-seed
-##                          replicate (computable now - in file).
-##   Source (2) partition = SD across the 5 partition replicates.
-##                          PENDING: the four 1-seed replicates are still
-##                          fitting and are not yet in the data file.
+## within a source (no confound with random CV). Holdout diagnostics from
+## all_fit_metrics. A cell = (tree x resolution x PAratio); within a cell only
+## the replicate seed varies, so within-cell SD isolates one variance source:
+##   Source (1) PA draw   = *_iter1a_high_pa trees: partition + CV-fold presences
+##                          FIXED, 3 PA-draw seeds per cell (all resolutions).
+##   Source (2) partition = *_splittau_phase2 trees: 5 replicates per cell, each
+##                          a distinct outer train-test split (seeds 5101-5501;
+##                          phase2 fit at 1arc only).
+## Random CV (Results_random_iter1a_high_pa) varies everything at once and is the
+## unconstrained baseline the two spatial sources are read against (1arc, matched
+## to phase2). ratio_* is the paired partition/PA-draw within-cell SD ratio on
+## the family x PAratio cells present in both sources at 1arc.
 vd <- read.csv(file.path(PROJ_ROOT, 'results_summary', 'all_fit_metrics.csv'))
-vd_grp <- c(Results_spatialmapping_iter1a_high_pa = 'structured',
-            Results_LMPO_iter1a_high_pa = 'structured')
-vd <- vd[vd$tree %in% names(vd_grp) & vd$PAratio <= 30, ]
-vd$grp <- vd_grp[vd$tree]
 vd$nAP <- (vd$pr_auc - 1/(1 + vd$PAratio)) / (1 - 1/(1 + vd$PAratio))
-sd_cell <- function(d) c(nAP = sd(d$nAP), roc = sd(d$roc_auc), slope = sd(d$cox_slope))
-n_seed  <- 3                                   # the fixed-partition replicate's PA-draw seeds
-## Source (1): within-cell SD across the 3 PA-draw seeds, median over cells.
-abs_sd  <- do.call(rbind, lapply(
-  Filter(function(d) nrow(d) >= n_seed, split(vd, with(vd, paste(tree, resolution, PAratio)))),
-  sd_cell))
+sd_cell  <- function(d) c(nAP = sd(d$nAP), roc = sd(d$roc_auc), slope = sd(d$cox_slope))
+n_seed   <- 3
+## median within-cell SD over all cells (of the given trees) with >= n_seed reps
+cell_sds <- function(trees, res = NULL){
+  d <- vd[vd$tree %in% trees & vd$PAratio <= 30, ]
+  if(!is.null(res)) d <- d[d$resolution %in% res, ]
+  do.call(rbind, lapply(
+    Filter(function(x) nrow(x) >= n_seed, split(d, with(d, paste(tree, resolution, PAratio)))),
+    sd_cell))
+}
+pa_trees   <- c('Results_spatialmapping_iter1a_high_pa',  'Results_LMPO_iter1a_high_pa')
+part_trees <- c('Results_spatialmapping_splittau_phase2', 'Results_LMPO_splittau_phase2')
+abs_sd  <- cell_sds(pa_trees)                              # Source (1) PA draw
+part_sd <- cell_sds(part_trees)                            # Source (2) partition (1arc)
+rnd_sd  <- cell_sds('Results_random_iter1a_high_pa', res = '1arc')   # unconstrained baseline
+
+## paired partition/PA-draw SD ratio on matched family x PAratio cells at 1arc
+vfam <- function(t) ifelse(grepl('LMPO', t), 'LMPO', 'map')
+pa1  <- vd[vd$tree %in% pa_trees   & vd$resolution == '1arc' & vd$PAratio <= 30, ]
+pt1  <- vd[vd$tree %in% part_trees & vd$resolution == '1arc' & vd$PAratio <= 30, ]
+asd  <- tapply(pa1$nAP, paste(vfam(pa1$tree), pa1$PAratio), sd)
+psd  <- tapply(pt1$nAP, paste(vfam(pt1$tree), pt1$PAratio), sd)
+mk   <- intersect(names(asd), names(psd))
+sd_ratio <- psd[mk] / asd[mk]
+
+med  <- function(x, j) median(x[, j], na.rm = TRUE)
 vdec <- list(
-  abs_nAP = median(abs_sd[, 'nAP'], na.rm = TRUE), abs_roc = median(abs_sd[, 'roc'], na.rm = TRUE),
-  abs_slope = median(abs_sd[, 'slope'], na.rm = TRUE))
+  abs_nAP  = med(abs_sd,  'nAP'), abs_roc  = med(abs_sd,  'roc'), abs_slope  = med(abs_sd,  'slope'),
+  part_nAP = med(part_sd, 'nAP'), part_roc = med(part_sd, 'roc'), part_slope = med(part_sd, 'slope'),
+  rand_nAP = med(rnd_sd,  'nAP'), rand_roc = med(rnd_sd,  'roc'), rand_slope = med(rnd_sd,  'slope'),
+  ratio_nAP = median(sd_ratio, na.rm = TRUE),
+  ratio_lo  = min(sd_ratio, na.rm = TRUE), ratio_hi = max(sd_ratio, na.rm = TRUE),
+  part_frac_rand = med(part_sd, 'nAP') / med(rnd_sd, 'nAP'),
+  n_part_cells = nrow(part_sd), n_ratio_cells = length(mk))
 f3 <- function(x) formatC(x, format = 'f', digits = 3)
 ```
 
 
-These CV strategies allow using both the same single train–test split, and the same presences in each CV fold per replicate, varying only the pseudo-absence draw allowing us to address 1. 
-To address (2), the outer train–test split and the composition of each CV fold were allowed to vary across each PA ratio at five replicates for each spatial CV strategy. 
+These CV strategies allow using both the same single train-test split, and the same presences in each CV fold per replicate, varying only the pseudo-absence draw allowing us to address 1. 
+To address (2), the outer train-test split and the composition of each CV fold were allowed to vary across each PA ratio at five replicates for each spatial CV strategy. 
 
 #### 3.6.1 The effect of psuedo-absences on model evaluation
 
@@ -786,43 +811,30 @@ results_txt <- sprintf(
   pr2_term(oosgt, 'tree'), fmt_p(pval_term(oosgt, 'tree')), int_p)
 ```
 
-## 3.6.2 Whether different test and train hold outs actually affect model accuracy
+## 3.6.2 Whether perfomance metrics of hold-outs transferred to on the ground accuracy
 
 `r results_txt`
 
 ```{r}
-rm(oos_m, gt_m, reg_df, oosgt, ci, int_p, results_txt, vd, vd_grp, sd_cell, n_seed, abs_sd, vdec, f3)
+rm(oos_m, gt_m, reg_df, oosgt, ci, int_p, results_txt, vd, sd_cell, n_seed, cell_sds,
+   pa_trees, part_trees, abs_sd, part_sd, rnd_sd, vfam, pa1, pt1, asd, psd, mk, sd_ratio,
+   med, vdec, f3)
 ```
 
-### 3.6.2 The effect of different presences in train and test splits on model evaluation
+### 3.6.3 The effect of different presences in train and test splits on model evaluation
 
 
 ### 3.7 | Final Results
 
 ```{r Final Suitability Map, out.width='100%'}
-## Title/subtitle, extent-box letter tags, the shifted+padded coche box,
-## north-arrow placement, and larger legend are all implemented in
-## maps.qmd (verified against the real single-run test raster in its
-## 'Theme preview' section). Still blocked on real data:
-##   - the binary sens/spec_sens cut overlay and the iter0-vs-iter1 diff
-##     appendix panel both need rasters that don't exist yet (see the
-##     TODOs in maps.qmd's 'Final Suitability and Density Maps' and
-##     'Suitability Iteration Diffs Appendix' chunks).
+
 img <- file.path(PROJ_ROOT, 'scripts', 'Manuscript', 'figures','suitability_final.png')
 if (file.exists(img)) knitr::include_graphics(img)
 ```
 
 ```{r Final Density Map, out.height='40%'}
-## Title/subtitle, the km-not-m scale bar fix on panels B/D/F, and shared
-## extents on A/C/E (by construction - see maps.qmd) are implemented. Still
-## open: whether the B/D/F zoom crops need an actual named-locality label
-## beyond the region name they already carry - flagged in maps.qmd, not
-## guessed here.
 img <- file.path(PROJ_ROOT, 'scripts', 'Manuscript', 'figures','density_final.png')
-## dpi = NA: skip knitr's auto width-from-pixel-size calculation, so only
-## out.height constrains the figure and LaTeX scales width proportionally
-## (otherwise a fixed, often page-overflowing width gets forced alongside
-## out.height).
+
 if (file.exists(img)) knitr::include_graphics(img, dpi = NA)
 ```
 
@@ -855,7 +867,31 @@ Hence these masks should always be created to refine the understanding of where 
 
 As expected the relationship between evaluation metrics calculated on held out test data and independent performance are weak, indicating considerable variation in model performance is due to variation in test/train split partitions rather than actual model performance.
 
-...
+<!-- ================================================================= -->
+<!-- RAW DISTILLED FINDINGS DUMP - unpolished scaffolding, REWRITE.    -->
+<!-- Several of these are controversial and need careful handling.     -->
+<!-- ================================================================= -->
+
+**1. Holdout metrics do not predict field performance -- for any metric.**
+Regressing field (ground-truth) score on holdout score, controlling for domain, resolution and CV strategy, the holdout metric carries essentially no unique signal: partial R^2^ <= 0.017 and non-significant for nAP, ROC-AUC, Cox slope and Cox intercept, with every slope confidence interval spanning zero. Field performance is instead governed by prediction domain and predictor resolution (e.g. ROC-AUC domain partial R^2^ = 0.75). Selecting or ensembling model families by holdout score therefore weights by noise; models are better compared by their known, mechanism-level strengths and weaknesses.
+
+**2. Holdout metrics are wildly optimistic -- spatial CV included.**
+Holdout nAP (0.67-0.77) and ROC-AUC (0.95-0.97) far exceed field values (nAP 0.35-0.50, ROC-AUC 0.57-0.75): roughly 0.3-0.4 nAP of pure optimism. Spatial cross-validation calibrates better but does not escape this discrimination optimism, which is a shared artifact of holdout prevalence and residual spatial leakage.
+
+**3. SDMs are weak on rare-species near-field biology; usefulness is a landscape question.**
+Within roughly a dispersal distance of a known occurrence (<=270 m) discrimination is weakest (ROC-AUC ~0.57, nAP ~0.35): presence/absence there is set by fine microhabitat and stochastic colonization that environmental predictors do not carry. Mapping occupied habitat is a landscape, not a niche, problem, and value accrues at landscape prevalence as a decision aid -- strongest in the far-interpolation band (ROC-AUC ~0.70). [TODO: verify net benefit via decision-curve analysis.]
+
+**4. Multi-scale predictors win; finer resolution helps -- but only under spatial CV.**
+Under spatial-mapping and LMPO cross-validation the near-field resolution gradient is monotonic (1-3arc > 1arc > 3arc; nAP 0.48 > 0.41 > 0.31). Under classic random CV the fine-resolution advantage is erased -- 1arc and 3arc are statistically indistinguishable (0.35 vs 0.38 against a ~0.3 spread). The resolution-performance gradient thus acts as a diagnostic for spatial overfitting: a clean finer-is-better curve indicates CV controlled autocorrelation, whereas a flattened 1arc-vs-3arc contrast is the fingerprint of random CV absorbing near-presence pseudo-absence contamination at the finest grain. A multi-scale (1-3arc) predictor stack is worth the compute throughout.
+
+**5. Spatial CV reduces bias and improves calibration -- at the cost of stability.**
+Spatial mapping yields the best-calibrated field probabilities (>270 m Cox slope ~1.03, intercept ~-0.12, versus classic's under-confident 0.68 and LMPO's over-steep 1.24) and recovers the correct resolution ordering (finding 4). It is, however, finicky and higher-variance: the winning >270 m slope cohort ranged [0.32, 1.31] -- best in expectation, least stable.
+
+**6. The field-optimal pseudo-absence ratio approximates local prevalence and is domain-dependent.**
+Tuning the PA ratio on the field data per domain, the near-field prefers lean ratios (2-8, higher local prevalence) while the far band prefers the ratio cap (30, implied prevalence ~0.03) for both spatial designs -- and both differ sharply from the holdout-chosen ratios. This suggests setting the PA ratio to estimated landscape prevalence rather than a holdout optimum. Both spatial designs hit the ratio cap at >270 m, so the true far-band optimum is censored and a higher-cap re-run would be needed to locate it.
+
+<!-- ================= END RAW DISTILLED FINDINGS DUMP ================ -->
+
 This separates the two tasks SDMs are routinely asked to perform but which biased data force into a trade-off: mapping the known, occupied niche versus characterising the fundamental niche [@thuiller2004effects; @jimenezvalverde2012insights; @leeyaw2022biology]. The usual evidence for this trade-off is simulated (virtual species); here the 2026 field data let us observe it directly -- field-verified presences in predictor space the model scored unsuitable -- making the distinction between a biased model and an inadequate one empirically, rather than theoretically, visible.
 
 ## 5 | Conclusions

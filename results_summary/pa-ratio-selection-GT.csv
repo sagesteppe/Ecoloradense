@@ -1,0 +1,11 @@
+"design","resolution","domain","best_ratio","best_composite","chosen_ratio"
+"classic","1-3arc","Interp <=270m",25,0.081045525116474,25
+"classic","1-3arc","Interp >270m",16,0.162888738425558,16
+"classic","1arc","Interp <=270m",2,0.162829767913117,2
+"classic","1arc","Interp >270m",4,0.159871503391102,3
+"classic","3arc","Interp <=270m",2,0.0309542884802003,2
+"classic","3arc","Interp >270m",3,0.32236112625247,3
+"lmpo","1arc","Interp <=270m",2,0.117138749829303,2
+"lmpo","1arc","Interp >270m",30,0.0386099839909767,30
+"spatial_mapping","1arc","Interp <=270m",8,0.070578434852427,8
+"spatial_mapping","1arc","Interp >270m",30,0.103610867257074,30
