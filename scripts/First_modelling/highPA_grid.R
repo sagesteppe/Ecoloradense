@@ -69,13 +69,22 @@ if(mode %in% c('classic', 'lopo')) n_splits <- 1
 
 ratios <- c(1:4, 5:10, seq(12, 20, by = 2), seq(25, 50, by = 5))
 lopo_ratios <- c(4, 20) # current production ratio vs. well past it
+# Phase 2 split-variance probe: optional ratio override via env (e.g. PHASE2_RATIOS=30).
+phase2_ratios <- Sys.getenv('PHASE2_RATIOS', unset = '')
+if(nzchar(phase2_ratios)){
+  ratios <- as.integer(strsplit(phase2_ratios, '[,[:space:]]+')[[1]])
+  message('Phase 2 ratios override: ', paste(ratios, collapse = ', '))
+}
 # Split k's knndm draw is seeded 5000 + resolution + 1000 * (k - 1), and its model seeds are
 # 5000 + 100 * (k - 1) + 1..n_seeds: modeller()'s file stem carries the seed but not the
 # split, so seeds must be unique across splits or split k's fits would reload split 1's.
 # Split 1 (split seed 5000 + resolution, model seeds 5001-5003) is the original single-
 # split run, so its fits are reused as-is.
-split_seed_of <- function(k) 5000 + resolution + 1000 * (k - 1)
-seeds_of <- function(k) 5000 + 100 * (k - 1) + seq_len(n_seeds)
+k_offset <- as.integer(Sys.getenv('PHASE2_K_OFFSET', unset = '0'))
+if(k_offset != 0) message('Phase 2 k offset: +', k_offset,
+  ' (split/model seeds shift to avoid overlap with production)')
+split_seed_of <- function(k) 5000 + resolution + 1000 * (k - 1 + k_offset)
+seeds_of <- function(k) 5000 + 100 * (k - 1 + k_offset) + seq_len(n_seeds)
 # Keep every manually placed field absence (the absences stored in each resolution's
 # presence file, median ~160-355 m from a presence) in every fit, and subsample only the
 # background absences (median ~30 km away) to reach each ratio. Without this a
@@ -96,6 +105,13 @@ results_root <- file.path(PROJ_ROOT, switch(mode,
   spatial_mapping = 'Results_spatialmapping_iter1a_high_pa',
   LMPO            = 'Results_LMPO_iter1a_high_pa'
 ))
+# Phase 2 split-variance probe: optional scratch tree for spatial_mapping / LMPO,
+# so new outer-split replicates don't collide with production caches or logs.
+phase2_scratch <- Sys.getenv('PHASE2_SCRATCH', unset = '')
+if(nzchar(phase2_scratch) && mode %in% c('spatial_mapping', 'LMPO')){
+  results_root <- file.path(PROJ_ROOT, phase2_scratch)
+  message('Phase 2 scratch tree: ', results_root)
+}
 p2proc <- file.path('..', 'data', 'spatial', 'processed')
 p2dat  <- file.path('..', 'data', 'Data4modelling')
 iteration <- 1
